@@ -56,6 +56,12 @@ jobs:
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
 
       - name: Deploy to App Runner
+        env:
+          APP_RUNNER_SERVICE_NAME: amethyst-api-prod
         run: |
-          aws apprunner start-deployment \
-            --service-arn arn:aws:apprunner:us-east-1:ACCOUNT_ID:service/amethyst-api/SERVICE_ID
+          SERVICE_ARN=$(aws apprunner list-services --query "ServiceSummaryList[?ServiceName=='${APP_RUNNER_SERVICE_NAME}'].ServiceArn | [0]" --output text)
+          if [ -z "$SERVICE_ARN" ] || [ "$SERVICE_ARN" = "None" ]; then
+            echo "App Runner service '${APP_RUNNER_SERVICE_NAME}' not found in us-east-1"
+            exit 1
+          fi
+          aws apprunner start-deployment --service-arn "$SERVICE_ARN"
