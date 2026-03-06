@@ -24,6 +24,7 @@
     "socket.io": "^4.8.3"
   },
   "devDependencies": {
+    "@eslint/js": "^9.39.1",
     "@types/bcryptjs": "^3.0.0",
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
@@ -31,6 +32,7 @@
     "@types/node": "^25.3.0",
     "eslint": "^9.39.1",
     "typescript": "^5.9.3",
+    "typescript-eslint": "^8.18.2",
     "nodemon": "^3.1.13",
     "ts-node": "^10.9.2"
   }

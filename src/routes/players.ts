@@ -17,6 +17,7 @@ const getPlayers: RequestHandler = async (req: Request, res: Response): Promise<
     const players = await Player.find({}).sort(sortOptions).lean();
 
     const normalizedPlayers = players.map((player) => {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const { _id, __v, ...rest } = player as Record<string, unknown>;
       return {
         ...rest,
