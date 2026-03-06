@@ -60,8 +60,25 @@ jobs:
           APP_RUNNER_SERVICE_NAME: amethyst-standalone-api
         run: |
           SERVICE_ARN=$(aws apprunner list-services --query "ServiceSummaryList[?ServiceName=='${APP_RUNNER_SERVICE_NAME}'].ServiceArn | [0]" --output text)
+          
           if [ -z "$SERVICE_ARN" ] || [ "$SERVICE_ARN" = "None" ]; then
-            echo "App Runner service '${APP_RUNNER_SERVICE_NAME}' not found in us-east-1"
+            echo "Error: App Runner service '${APP_RUNNER_SERVICE_NAME}' not found."
             exit 1
           fi
-          aws apprunner start-deployment --service-arn "$SERVICE_ARN"
+
+          echo "Found Service ARN: $SERVICE_ARN"
+
+          # Wait up to 5 minutes for any existing operations (like a previous push) to finish
+          for i in {1..10}; do
+            STATUS=$(aws apprunner describe-service --service-arn "$SERVICE_ARN" --query "Service.Status" --output text)
+            if [ "$STATUS" = "RUNNING" ]; then
+              echo "Service is RUNNING. Starting deployment..."
+              aws apprunner start-deployment --service-arn "$SERVICE_ARN"
+              exit 0
+            fi
+            echo "Service is currently $STATUS. Waiting 30s before retry ($i/10)..."
+            sleep 30
+          done
+          
+          echo "Error: Service did not return to RUNNING state in time."
+          exit 1
