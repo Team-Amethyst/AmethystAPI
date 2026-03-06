@@ -57,7 +57,7 @@ jobs:
 
       - name: Deploy to App Runner
         env:
-          APP_RUNNER_SERVICE_NAME: amethyst-api-prod
+          APP_RUNNER_SERVICE_NAME: amethyst-standalone-api
         run: |
           SERVICE_ARN=$(aws apprunner list-services --query "ServiceSummaryList[?ServiceName=='${APP_RUNNER_SERVICE_NAME}'].ServiceArn | [0]" --output text)
           if [ -z "$SERVICE_ARN" ] || [ "$SERVICE_ARN" = "None" ]; then
