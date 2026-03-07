@@ -38,8 +38,9 @@ RUN pnpm install --prod
 # Copy built application from builder
 COPY --from=builder /app/dist ./dist
 
-# Expose port
-EXPOSE 3001
+# App Runner routes external HTTPS → container port 8080 by default.
+# Override at the service level via the PORT env var if needed.
+EXPOSE 8080
 
 # Start application
 CMD ["node", "dist/index.js"]

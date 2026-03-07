@@ -2,12 +2,26 @@ import express, { Request, Response, NextFunction } from "express";
 import cors from "cors";
 import mongoose from "mongoose";
 import dotenv from "dotenv";
+
+// Existing routes
 import authRoutes from "./routes/auth";
 import playersRoutes from "./routes/players";
 
+// Amethyst Engine — analytical engine routes
+import valuationRoutes from "./routes/valuation";
+import scarcityRoutes from "./routes/scarcity";
+import simulationRoutes from "./routes/simulation";
+import signalsRoutes from "./routes/signals";
+
+// Licensing middleware
+import apiKeyMiddleware from "./middleware/apiKey";
+
+// Redis (eager connect so it's ready before first request)
+import { getRedisClient } from "./lib/redis";
+
 dotenv.config();
 
-// Validate required environment variables
+// ── Environment validation ────────────────────────────────────────────────────
 const requiredEnvVars = ["MONGO_URI", "JWT_SECRET"];
 requiredEnvVars.forEach((varName) => {
   if (!process.env[varName]) {
@@ -29,36 +43,52 @@ app.use(
 
 app.use(express.json());
 
-app.get("/", (req, res) => {
-  res.send("Amethyst Draft Info API - Online");
+// ── Public routes ─────────────────────────────────────────────────────────────
+app.get("/", (_req, res) => {
+  res.send("Amethyst Engine — Fantasy Baseball Analytical API — Online");
 });
 
-// Routes
+app.get("/api/health", (_req, res) => {
+  res.json({
+    status: "ok",
+    service: "Amethyst Engine",
+    version: "1.0.0",
+    timestamp: new Date().toISOString(),
+  });
+});
+
 app.use("/api/auth", authRoutes);
 app.use("/api/players", playersRoutes);
 
-// Health check
-app.get("/api/health", (req, res) => {
-  res.json({ status: "ok", message: "Draftroom API is running" });
-});
+// ── Amethyst Engine — licensed analytical endpoints (require x-api-key) ────────
+//
+// All routes below are gated by the API key middleware.
+// Usage is tracked per-key to support the 5% net-revenue royalty model.
+app.use("/valuation", apiKeyMiddleware, valuationRoutes);
+app.use("/analysis/scarcity", apiKeyMiddleware, scarcityRoutes);
+app.use("/simulation", apiKeyMiddleware, simulationRoutes);
+app.use("/signals", apiKeyMiddleware, signalsRoutes);
 
-// Error handling middleware
-app.use((err: Error, req: Request, res: Response, _next: NextFunction) => {
+// ── Global error handler ──────────────────────────────────────────────────────
+app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
   console.error(err.stack);
-  res.status(500).json({ message: "Something went wrong!" });
+  res.status(500).json({ error: "Internal Server Error", message: err.message });
 });
 
+// ── Startup ───────────────────────────────────────────────────────────────────
 const PORT = process.env.PORT || 3001;
 
 mongoose
   .connect(process.env.MONGO_URI as string)
   .then(() => {
-    console.log("Connected to MongoDB");
+    console.log("[MongoDB] Connected");
+    // Eagerly connect to Redis — errors are non-fatal
+    getRedisClient().connect().catch(() => {});
     app.listen(PORT, () =>
-      console.log("API running on http://localhost:" + PORT),
+      console.log(`[Amethyst Engine] Running on http://localhost:${PORT}`)
     );
   })
   .catch((err) => {
-    console.error("MongoDB connection error:", err);
+    console.error("[MongoDB] Connection error:", err);
     process.exit(1);
   });
