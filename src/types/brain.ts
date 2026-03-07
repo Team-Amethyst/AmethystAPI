@@ -39,6 +39,8 @@ export interface MockPickTeam {
 
 export interface LeanPlayer {
   _id: unknown;
+  /** Numeric MLB player ID — used as the canonical player_id in all Engine requests */
+  mlbId?: number;
   name: string;
   team: string;
   position: string;

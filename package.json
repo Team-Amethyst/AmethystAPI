@@ -10,7 +10,8 @@
     "build": "tsc",
     "start": "node dist/index.js",
     "lint": "eslint src --max-warnings 0",
-    "check-types": "tsc --noEmit"
+    "check-types": "tsc --noEmit",
+    "sync-players": "ts-node --project tsconfig.scripts.json scripts/sync-players.ts"
   },
   "keywords": [
     "api",

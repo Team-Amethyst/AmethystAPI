@@ -17,8 +17,12 @@ import {
 const STEAL_SLOPE = 1.25; // ADP rank ≥ 25% later than value rank
 const REACH_SLOPE = 0.75; // ADP rank ≥ 25% earlier than value rank
 
+/**
+ * Returns the canonical ID used to match this player against drafted_players.
+ * Prefers mlbId (string) since that's what Draftroom sends; falls back to _id.
+ */
 function getPlayerId(player: LeanPlayer): string {
-  return String(player._id);
+  return player.mlbId != null ? String(player.mlbId) : String(player._id);
 }
 
 /**

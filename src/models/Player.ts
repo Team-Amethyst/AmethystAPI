@@ -38,6 +38,8 @@ interface IPlayerProjection {
 }
 
 export interface IPlayer extends Document {
+  /** Numeric MLB player ID — matches the id Draftroom fetches from MLB Stats API */
+  mlbId?: number;
   name: string;
   team: string;
   position: string;
@@ -52,6 +54,7 @@ export interface IPlayer extends Document {
 
 const playerSchema = new Schema<IPlayer>(
   {
+    mlbId: { type: Number, index: true, sparse: true },
     name: { type: String, required: true, trim: true },
     team: { type: String, default: "" },
     position: { type: String, default: "" },

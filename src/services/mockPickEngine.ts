@@ -8,8 +8,12 @@ import {
   RosterSlot,
 } from "../types/brain";
 
+/**
+ * Returns the canonical ID used to match this player against drafted_players.
+ * Prefers mlbId (string) since that's what Draftroom sends; falls back to _id.
+ */
 function getPlayerId(p: LeanPlayer): string {
-  return String(p._id);
+  return p.mlbId != null ? String(p.mlbId) : String(p._id);
 }
 
 /**

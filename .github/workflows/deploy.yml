@@ -4,10 +4,41 @@ on:
   push:
     branches:
       - main
+  schedule:
+    # Runs at 06:00 UTC every day during MLB season (March–October)
+    - cron: '0 6 * 3-10 *'
 
 jobs:
+  sync-players:
+    runs-on: ubuntu-latest
+    # Only run on schedule; skip on push triggers
+    if: github.event_name == 'schedule'
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'pnpm'
+
+      - name: Install Dependencies
+        run: pnpm install
+
+      - name: Sync MLB Players
+        env:
+          MONGO_URI: ${{ secrets.MONGO_URI }}
+        run: pnpm sync-players
+
   deploy:
     runs-on: ubuntu-latest
+    if: github.event_name == 'push'
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
