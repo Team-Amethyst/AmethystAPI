@@ -3,10 +3,6 @@ import cors from "cors";
 import mongoose from "mongoose";
 import dotenv from "dotenv";
 
-// Existing routes
-import authRoutes from "./routes/auth";
-import playersRoutes from "./routes/players";
-
 // Amethyst Engine — analytical engine routes
 import valuationRoutes from "./routes/valuation";
 import scarcityRoutes from "./routes/scarcity";
@@ -22,13 +18,10 @@ import { getRedisClient } from "./lib/redis";
 dotenv.config();
 
 // ── Environment validation ────────────────────────────────────────────────────
-const requiredEnvVars = ["MONGO_URI", "JWT_SECRET"];
-requiredEnvVars.forEach((varName) => {
-  if (!process.env[varName]) {
-    console.error(`Missing required environment variable: ${varName}`);
-    process.exit(1);
-  }
-});
+if (!process.env.MONGO_URI) {
+  console.error("Missing required environment variable: MONGO_URI");
+  process.exit(1);
+}
 
 const app = express();
 
@@ -56,9 +49,6 @@ app.get("/api/health", (_req, res) => {
     timestamp: new Date().toISOString(),
   });
 });
-
-app.use("/api/auth", authRoutes);
-app.use("/api/players", playersRoutes);
 
 // ── Amethyst Engine — licensed analytical endpoints (require x-api-key) ────────
 //

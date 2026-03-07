@@ -117,7 +117,7 @@ pnpm install
 
 # Configure environment
 cp .env.example .env
-# Fill in MONGO_URI and JWT_SECRET
+# Fill in MONGO_URI
 
 # Start dev server (port 3002 — avoids conflict with draftroom on 3001)
 pnpm dev
@@ -138,7 +138,6 @@ curl -X POST http://localhost:3002/valuation/calculate \
 | Variable | Local | Production (App Runner) |
 |---|---|---|
 | `MONGO_URI` | Atlas connection string | Same |
-| `JWT_SECRET` | Random hex (64 bytes) | Same value |
 | `PORT` | `3002` | `8080` |
 | `CORS_ORIGIN` | `http://localhost:5173` | Production frontend URL |
 | `REDIS_URL` | `redis://localhost:6379` | Upstash URL (when ready) |
@@ -181,7 +180,6 @@ src/
   middleware/
     apiKey.ts           # x-api-key validation + usage tracking
     cache.ts            # Redis response cache
-    auth.ts             # JWT auth (existing user routes)
   models/
     ApiKey.ts           # Licensee key model
     Player.ts           # Master player data
@@ -195,7 +193,5 @@ src/
     scarcity.ts         # POST /analysis/scarcity
     simulation.ts       # POST /simulation/mock-pick
     signals.ts          # GET /signals/news
-    auth.ts             # POST /api/auth/* (existing)
-    players.ts          # GET /api/players (existing)
 ```
 
