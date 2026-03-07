@@ -38,6 +38,9 @@ RUN pnpm install --prod
 # Copy built application from builder
 COPY --from=builder /app/dist ./dist
 
+# Copy static developer portal
+COPY public ./public
+
 # App Runner routes external HTTPS → container port 8080 by default.
 # Override at the service level via the PORT env var if needed.
 EXPOSE 8080

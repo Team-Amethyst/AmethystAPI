@@ -2,12 +2,14 @@ import express, { Request, Response, NextFunction } from "express";
 import cors from "cors";
 import mongoose from "mongoose";
 import dotenv from "dotenv";
+import path from "path";
 
 // Amethyst Engine — analytical engine routes
 import valuationRoutes from "./routes/valuation";
 import scarcityRoutes from "./routes/scarcity";
 import simulationRoutes from "./routes/simulation";
 import signalsRoutes from "./routes/signals";
+import usageRoutes from "./routes/usage";
 
 // Licensing middleware
 import apiKeyMiddleware from "./middleware/apiKey";
@@ -30,17 +32,16 @@ const corsOrigin = process.env.CORS_ORIGIN || "http://localhost:5173";
 app.use(
   cors({
     origin: corsOrigin,
-    credentials: true,
   }),
 );
 
 app.use(express.json());
 
-// ── Public routes ─────────────────────────────────────────────────────────────
-app.get("/", (_req, res) => {
-  res.send("Amethyst Engine — Fantasy Baseball Analytical API — Online");
-});
+// Serve developer portal from public/
+// __dirname resolves to src/ in dev (ts-node) and dist/ in prod — both point to ../public
+app.use(express.static(path.join(__dirname, "../public")));
 
+// ── Public routes ─────────────────────────────────────────────────────────────
 app.get("/api/health", (_req, res) => {
   res.json({
     status: "ok",
@@ -49,6 +50,8 @@ app.get("/api/health", (_req, res) => {
     timestamp: new Date().toISOString(),
   });
 });
+
+app.use("/api/usage", usageRoutes);
 
 // ── Amethyst Engine — licensed analytical endpoints (require x-api-key) ────────
 //

@@ -1,0 +1,1072 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Amethyst Engine — Developer Portal</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:         #0b0b12;
+      --surface:    #13131f;
+      --surface-2:  #1a1a28;
+      --border:     #22223a;
+      --text:       #ededf5;
+      --muted:      #7878a0;
+      --accent:     #8b5cf6;
+      --accent-glow:#6d28d9;
+      --green:      #34d399;
+      --blue:       #60a5fa;
+      --orange:     #fb923c;
+      --red:        #f87171;
+      --code-bg:    #0d0d1a;
+      --radius:     8px;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+      font-size: 14px;
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    /* ── Header ── */
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(11,11,18,0.92);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      padding: 0 32px;
+    }
+    .header-inner {
+      max-width: 960px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 56px;
+      gap: 16px;
+    }
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 600;
+      font-size: 15px;
+      color: var(--text);
+      letter-spacing: -0.01em;
+    }
+    .logo svg { flex-shrink: 0; }
+    .header-meta {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .version-badge {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--muted);
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: 2px 10px;
+      letter-spacing: 0.04em;
+    }
+    .status-dot {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--muted);
+      transition: background 0.3s;
+    }
+    .dot.online { background: var(--green); box-shadow: 0 0 6px var(--green); }
+    .dot.offline { background: var(--red); }
+
+    /* ── Tabs ── */
+    .tabs-bar {
+      background: var(--bg);
+      border-bottom: 1px solid var(--border);
+      padding: 0 32px;
+    }
+    .tabs-inner {
+      max-width: 960px;
+      margin: 0 auto;
+      display: flex;
+      gap: 0;
+    }
+    .tab-btn {
+      background: none;
+      border: none;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 500;
+      padding: 12px 20px;
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      transition: color 0.15s, border-color 0.15s;
+      letter-spacing: 0.01em;
+    }
+    .tab-btn:hover { color: var(--text); }
+    .tab-btn.active {
+      color: var(--text);
+      border-bottom-color: var(--accent);
+    }
+
+    /* ── Main layout ── */
+    main {
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 40px 32px 80px;
+    }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+
+    /* ── Section headings ── */
+    h2 {
+      font-size: 20px;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 6px;
+      letter-spacing: -0.02em;
+    }
+    h3 {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 16px;
+    }
+    .section { margin-bottom: 48px; }
+    .section-desc {
+      color: var(--muted);
+      margin-bottom: 20px;
+      max-width: 600px;
+    }
+
+    /* ── Cards ── */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+    .card + .card { margin-top: 12px; }
+
+    /* ── Endpoint cards ── */
+    .endpoint {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      margin-bottom: 16px;
+      overflow: hidden;
+    }
+    .endpoint-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 14px 18px;
+      cursor: pointer;
+      user-select: none;
+      transition: background 0.15s;
+    }
+    .endpoint-header:hover { background: var(--surface-2); }
+    .method-badge {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      padding: 3px 9px;
+      border-radius: 4px;
+      flex-shrink: 0;
+    }
+    .method-post { background: rgba(96,165,250,0.15); color: var(--blue); }
+    .method-get  { background: rgba(52,211,153,0.15); color: var(--green); }
+    .endpoint-path {
+      font-family: "SF Mono", "Fira Code", "Fira Mono", monospace;
+      font-size: 13px;
+      color: var(--text);
+      flex: 1;
+    }
+    .endpoint-desc {
+      font-size: 12px;
+      color: var(--muted);
+      flex: 2;
+      text-align: right;
+    }
+    .chevron {
+      color: var(--muted);
+      font-size: 12px;
+      transition: transform 0.2s;
+    }
+    .endpoint.open .chevron { transform: rotate(90deg); }
+    .endpoint-body {
+      display: none;
+      padding: 0 18px 18px;
+      border-top: 1px solid var(--border);
+    }
+    .endpoint.open .endpoint-body { display: block; }
+    .endpoint-body .when {
+      font-size: 12px;
+      color: var(--muted);
+      padding: 12px 0 16px;
+    }
+    .block-label {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 6px;
+      margin-top: 16px;
+    }
+
+    /* ── Code blocks ── */
+    .code-block {
+      position: relative;
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      overflow: hidden;
+    }
+    .code-block pre {
+      overflow-x: auto;
+      padding: 14px 16px;
+      font-family: "SF Mono", "Fira Code", "Fira Mono", monospace;
+      font-size: 12px;
+      line-height: 1.7;
+      color: #c9d1d9;
+    }
+    .copy-btn {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 500;
+      padding: 3px 10px;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: color 0.15s, background 0.15s;
+    }
+    .copy-btn:hover { background: var(--surface-2); color: var(--text); }
+    .copy-btn.copied { color: var(--green); border-color: var(--green); }
+
+    /* Syntax highlight tokens */
+    .t-key    { color: #79c0ff; }
+    .t-str    { color: #a5d6ff; }
+    .t-num    { color: #f2cc60; }
+    .t-bool   { color: #ff7b72; }
+    .t-null   { color: var(--muted); }
+    .t-cmt    { color: #5a6070; font-style: italic; }
+    .t-method { color: var(--green); font-weight: 600; }
+    .t-path   { color: var(--text); }
+    .t-header { color: var(--orange); }
+    .t-val    { color: #a5d6ff; }
+
+    /* ── Auth section ── */
+    .auth-example {
+      position: relative;
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+    }
+    .auth-example pre {
+      padding: 14px 16px;
+      font-family: "SF Mono","Fira Code","Fira Mono",monospace;
+      font-size: 12px;
+      line-height: 1.8;
+      overflow-x: auto;
+    }
+
+    /* ── Rate limit / tier table ── */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+    th {
+      text-align: left;
+      color: var(--muted);
+      font-weight: 600;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--border);
+    }
+    td {
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--border);
+      color: var(--text);
+    }
+    tr:last-child td { border-bottom: none; }
+    .tier-badge {
+      font-size: 11px;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 4px;
+      text-transform: capitalize;
+    }
+    .tier-free     { background: rgba(120,120,160,0.2); color: var(--muted); }
+    .tier-standard { background: rgba(96,165,250,0.15); color: var(--blue); }
+    .tier-premium  { background: rgba(139,92,246,0.2);  color: #a78bfa; }
+
+    /* ── Usage tab ── */
+    .key-form {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 24px;
+    }
+    .key-input-wrap {
+      position: relative;
+      flex: 1;
+    }
+    .key-input {
+      width: 100%;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text);
+      font-family: "SF Mono","Fira Code","Fira Mono",monospace;
+      font-size: 12px;
+      padding: 10px 40px 10px 14px;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    .key-input:focus { border-color: var(--accent); }
+    .key-input::placeholder { color: var(--muted); }
+    .toggle-key {
+      position: absolute;
+      right: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      color: var(--muted);
+      cursor: pointer;
+      font-size: 14px;
+      padding: 2px;
+    }
+    .load-btn {
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: var(--radius);
+      font-size: 13px;
+      font-weight: 600;
+      padding: 10px 22px;
+      cursor: pointer;
+      transition: background 0.15s;
+      white-space: nowrap;
+    }
+    .load-btn:hover { background: var(--accent-glow); }
+    .load-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .usage-error {
+      display: none;
+      background: rgba(248,113,113,0.1);
+      border: 1px solid rgba(248,113,113,0.3);
+      color: var(--red);
+      border-radius: var(--radius);
+      padding: 12px 16px;
+      font-size: 13px;
+      margin-bottom: 16px;
+    }
+
+    .stats-card {
+      display: none;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+    .stats-header {
+      padding: 16px 20px 14px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .stats-owner {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--text);
+    }
+    .stats-active {
+      font-size: 11px;
+      font-weight: 600;
+      padding: 3px 10px;
+      border-radius: 999px;
+      background: rgba(52,211,153,0.15);
+      color: var(--green);
+    }
+    .stats-active.inactive {
+      background: rgba(248,113,113,0.15);
+      color: var(--red);
+    }
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 0;
+    }
+    .stat-item {
+      padding: 18px 20px;
+      border-right: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+    }
+    .stat-item:last-child { border-right: none; }
+    .stat-label {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 6px;
+    }
+    .stat-value {
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--text);
+      letter-spacing: -0.02em;
+    }
+    .stat-sub {
+      font-size: 12px;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+
+    .axios-note {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-left: 3px solid var(--accent);
+      border-radius: var(--radius);
+      padding: 14px 18px;
+      margin-bottom: 32px;
+      font-size: 13px;
+      color: var(--muted);
+    }
+    .axios-note strong { color: var(--text); }
+
+    @media (max-width: 600px) {
+      header, .tabs-bar { padding: 0 16px; }
+      main { padding: 24px 16px 60px; }
+      .endpoint-desc { display: none; }
+      .key-form { flex-direction: column; }
+      .stats-grid { grid-template-columns: 1fr 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="header-inner">
+    <div class="logo">
+      <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
+        <path d="M11 2L3 7.5V14.5L11 20L19 14.5V7.5L11 2Z" fill="#8b5cf6" fill-opacity="0.3" stroke="#8b5cf6" stroke-width="1.5" stroke-linejoin="round"/>
+        <path d="M11 2L11 20M3 7.5L19 7.5M3 14.5L19 14.5" stroke="#8b5cf6" stroke-width="1" stroke-opacity="0.5"/>
+      </svg>
+      Amethyst Engine
+    </div>
+    <div class="header-meta">
+      <div class="status-dot">
+        <span class="dot" id="statusDot"></span>
+        <span id="statusText">checking...</span>
+      </div>
+      <span class="version-badge">v1.0.0</span>
+    </div>
+  </div>
+</header>
+
+<div class="tabs-bar">
+  <div class="tabs-inner">
+    <button class="tab-btn active" data-tab="reference">API Reference</button>
+    <button class="tab-btn" data-tab="licensing">Licensing</button>
+    <button class="tab-btn" data-tab="usage">My Usage</button>
+  </div>
+</div>
+
+<main>
+
+  <!-- ═══════════════════ REFERENCE TAB ═══════════════════ -->
+  <div class="tab-content active" id="tab-reference">
+
+    <!-- Overview -->
+    <div class="section">
+      <h2>Fantasy Baseball Analytical Engine</h2>
+      <p class="section-desc">
+        Stateless SDaaS API that receives draft state and league settings,
+        returns mathematical valuations, scarcity analysis, and draft simulations.
+        No session state is written — pass the full draft context in every request.
+      </p>
+    </div>
+
+    <!-- Authentication -->
+    <div class="section">
+      <h3>Authentication</h3>
+      <p class="section-desc">All analytical endpoints require an <code style="color:var(--orange);background:rgba(251,146,60,0.1);padding:1px 6px;border-radius:3px;font-size:12px;">x-api-key</code> header. Usage is tracked per-key.</p>
+      <div class="auth-example code-block">
+        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        <pre><span class="t-cmt"># curl</span>
+<span class="t-method">curl</span> -X POST https://q6dbuvmuvh.us-east-1.awsapprunner.com/valuation/calculate \
+  -H <span class="t-str">"Content-Type: application/json"</span> \
+  -H <span class="t-str">"x-api-key: <span style="opacity:.5">your-api-key</span>"</span> \
+  -d <span class="t-str">'{ ... }'</span>
+
+<span class="t-cmt"># axios (recommended)</span>
+<span class="t-key">const</span> amethyst = axios.create({
+  baseURL: process.env.AMETHYST_API_URL,
+  headers: { <span class="t-str">'x-api-key'</span>: process.env.AMETHYST_API_KEY },
+  timeout: <span class="t-num">10000</span>,
+});</pre>
+      </div>
+    </div>
+
+    <!-- Endpoints -->
+    <div class="section">
+      <h3>Endpoints</h3>
+
+      <!-- /valuation/calculate -->
+      <div class="endpoint" id="ep-valuation">
+        <div class="endpoint-header" onclick="toggleEndpoint('ep-valuation')">
+          <span class="method-badge method-post">POST</span>
+          <span class="endpoint-path">/valuation/calculate</span>
+          <span class="endpoint-desc">Inflation-adjusted auction values + Steal/Reach indicators</span>
+          <span class="chevron">▶</span>
+        </div>
+        <div class="endpoint-body">
+          <p class="when">Call after every auction pick. Returns every undrafted player ranked by adjusted value.</p>
+          <div class="block-label">Request</div>
+          <div class="code-block">
+            <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+            <pre>{
+  <span class="t-key">"roster_slots"</span>:        [{ <span class="t-key">"position"</span>: <span class="t-str">"OF"</span>, <span class="t-key">"count"</span>: <span class="t-num">3</span> }, <span class="t-cmt">/* ... */</span>],
+  <span class="t-key">"scoring_categories"</span>:  [{ <span class="t-key">"name"</span>: <span class="t-str">"HR"</span>, <span class="t-key">"type"</span>: <span class="t-str">"batting"</span> }, <span class="t-cmt">/* ... */</span>],
+  <span class="t-key">"total_budget"</span>:        <span class="t-num">260</span>,         <span class="t-cmt">// per-team auction budget</span>
+  <span class="t-key">"num_teams"</span>:           <span class="t-num">12</span>,          <span class="t-cmt">// optional, default 12</span>
+  <span class="t-key">"league_scope"</span>:        <span class="t-str">"Mixed"</span>,     <span class="t-cmt">// "Mixed" | "AL" | "NL"</span>
+  <span class="t-key">"drafted_players"</span>: [{
+    <span class="t-key">"player_id"</span>:  <span class="t-str">"695243"</span>,    <span class="t-cmt">// String(mlbId) — canonical key</span>
+    <span class="t-key">"name"</span>:       <span class="t-str">"Player Name"</span>,
+    <span class="t-key">"position"</span>:   <span class="t-str">"OF"</span>,
+    <span class="t-key">"team"</span>:       <span class="t-str">"NYY"</span>,
+    <span class="t-key">"team_id"</span>:    <span class="t-str">"team_1"</span>,
+    <span class="t-key">"paid"</span>:       <span class="t-num">42</span>           <span class="t-cmt">// optional auction price</span>
+  }]
+}</pre>
+          </div>
+          <div class="block-label">Response</div>
+          <div class="code-block"><pre>{
+  <span class="t-key">"inflation_factor"</span>:      <span class="t-num">1.12</span>,    <span class="t-cmt">// &gt;1.0 = inflated market</span>
+  <span class="t-key">"total_budget_remaining"</span>: <span class="t-num">2184</span>,
+  <span class="t-key">"pool_value_remaining"</span>:   <span class="t-num">1948</span>,
+  <span class="t-key">"players_remaining"</span>:      <span class="t-num">496</span>,
+  <span class="t-key">"valuations"</span>: [{
+    <span class="t-key">"player_id"</span>:      <span class="t-str">"660271"</span>,
+    <span class="t-key">"name"</span>:           <span class="t-str">"Shohei Ohtani"</span>,
+    <span class="t-key">"position"</span>:       <span class="t-str">"DH"</span>,
+    <span class="t-key">"tier"</span>:           <span class="t-num">1</span>,
+    <span class="t-key">"baseline_value"</span>: <span class="t-num">58</span>,
+    <span class="t-key">"adjusted_value"</span>: <span class="t-num">65</span>,        <span class="t-cmt">// use this for price target</span>
+    <span class="t-key">"indicator"</span>:      <span class="t-str">"Steal"</span>     <span class="t-cmt">// "Steal" | "Reach" | "Fair Value"</span>
+  }],
+  <span class="t-key">"calculated_at"</span>: <span class="t-str">"2026-03-07T17:39:19Z"</span>
+}</pre>
+          </div>
+        </div>
+      </div>
+
+      <!-- /analysis/scarcity -->
+      <div class="endpoint" id="ep-scarcity">
+        <div class="endpoint-header" onclick="toggleEndpoint('ep-scarcity')">
+          <span class="method-badge method-post">POST</span>
+          <span class="endpoint-path">/analysis/scarcity</span>
+          <span class="endpoint-desc">Positional depth scores + monopoly warnings</span>
+          <span class="chevron">▶</span>
+        </div>
+        <div class="endpoint-body">
+          <p class="when">Call after each pick round. Surfaces scarce positions and category monopoly risks.</p>
+          <div class="block-label">Request</div>
+          <div class="code-block">
+            <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+            <pre>{
+  <span class="t-key">"drafted_players"</span>:     [ <span class="t-cmt">/* same DraftedPlayer shape as above */</span> ],
+  <span class="t-key">"scoring_categories"</span>:  [{ <span class="t-key">"name"</span>: <span class="t-str">"SV"</span>, <span class="t-key">"type"</span>: <span class="t-str">"pitching"</span> }],
+  <span class="t-key">"position"</span>:           <span class="t-str">"SS"</span>,    <span class="t-cmt">// optional — filter to one position</span>
+  <span class="t-key">"num_teams"</span>:          <span class="t-num">12</span>,
+  <span class="t-key">"league_scope"</span>:       <span class="t-str">"Mixed"</span>
+}</pre>
+          </div>
+          <div class="block-label">Response</div>
+          <div class="code-block"><pre>{
+  <span class="t-key">"positions"</span>: [{
+    <span class="t-key">"position"</span>:          <span class="t-str">"SS"</span>,
+    <span class="t-key">"elite_remaining"</span>:   <span class="t-num">2</span>,     <span class="t-cmt">// tier-1 still available</span>
+    <span class="t-key">"mid_tier_remaining"</span>:<span class="t-num">5</span>,
+    <span class="t-key">"total_remaining"</span>:   <span class="t-num">18</span>,
+    <span class="t-key">"scarcity_score"</span>:    <span class="t-num">74</span>,    <span class="t-cmt">// 0–100, higher = more scarce</span>
+    <span class="t-key">"alert"</span>:             <span class="t-str">"Only 2 elite SS remain"</span>
+  }],
+  <span class="t-key">"monopoly_warnings"</span>: [{
+    <span class="t-key">"team_id"</span>:           <span class="t-str">"team_3"</span>,
+    <span class="t-key">"category"</span>:          <span class="t-str">"SV"</span>,
+    <span class="t-key">"share_percentage"</span>:  <span class="t-num">62</span>,
+    <span class="t-key">"message"</span>:           <span class="t-str">"team_3 controls 62% of SV"</span>
+  }]
+}</pre>
+          </div>
+        </div>
+      </div>
+
+      <!-- /simulation/mock-pick -->
+      <div class="endpoint" id="ep-simulation">
+        <div class="endpoint-header" onclick="toggleEndpoint('ep-simulation')">
+          <span class="method-badge method-post">POST</span>
+          <span class="endpoint-path">/simulation/mock-pick</span>
+          <span class="endpoint-desc">ADP + roster-need heuristic pick predictions</span>
+          <span class="chevron">▶</span>
+        </div>
+        <div class="endpoint-body">
+          <p class="when">Powers AI opponent picks in the Practice Draft environment. Not cached — every call returns fresh predictions based on state.</p>
+          <div class="block-label">Request</div>
+          <div class="code-block">
+            <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+            <pre>{
+  <span class="t-key">"pick_order"</span>:   [<span class="t-str">"team_1"</span>, <span class="t-str">"team_2"</span>],   <span class="t-cmt">// team_ids in draft order</span>
+  <span class="t-key">"roster_slots"</span>: [{ <span class="t-key">"position"</span>: <span class="t-str">"SP"</span>, <span class="t-key">"count"</span>: <span class="t-num">5</span> }],
+  <span class="t-key">"league_scope"</span>: <span class="t-str">"Mixed"</span>,
+  <span class="t-key">"teams"</span>: [{
+    <span class="t-key">"team_id"</span>:         <span class="t-str">"team_1"</span>,
+    <span class="t-key">"budget_remaining"</span>: <span class="t-num">180</span>,       <span class="t-cmt">// optional</span>
+    <span class="t-key">"roster"</span>:          [ <span class="t-cmt">/* DraftedPlayer[] already on this team */</span> ]
+  }],
+  <span class="t-key">"available_player_ids"</span>: [<span class="t-str">"695243"</span>, <span class="t-cmt">/* ... */</span>]  <span class="t-cmt">// optional explicit pool</span>
+}</pre>
+          </div>
+          <div class="block-label">Response</div>
+          <div class="code-block"><pre>{
+  <span class="t-key">"predictions"</span>: [{
+    <span class="t-key">"team_id"</span>:     <span class="t-str">"team_1"</span>,
+    <span class="t-key">"pick_position"</span>: <span class="t-num">1</span>,
+    <span class="t-key">"confidence"</span>:  <span class="t-num">0.82</span>,              <span class="t-cmt">// 0–1</span>
+    <span class="t-key">"predicted_player"</span>: {
+      <span class="t-key">"player_id"</span>: <span class="t-str">"660271"</span>,
+      <span class="t-key">"name"</span>:      <span class="t-str">"Shohei Ohtani"</span>,
+      <span class="t-key">"position"</span>: <span class="t-str">"DH"</span>,
+      <span class="t-key">"adp"</span>:       <span class="t-num">1</span>,
+      <span class="t-key">"reason"</span>:    <span class="t-str">"Team needs DH (urgency 90%); best available by ADP."</span>
+    }
+  }]
+}</pre>
+          </div>
+        </div>
+      </div>
+
+      <!-- /signals/news -->
+      <div class="endpoint" id="ep-signals">
+        <div class="endpoint-header" onclick="toggleEndpoint('ep-signals')">
+          <span class="method-badge method-get">GET</span>
+          <span class="endpoint-path">/signals/news</span>
+          <span class="endpoint-desc">Injuries, trades, promotions, demotions from MLB Transactions</span>
+          <span class="chevron">▶</span>
+        </div>
+        <div class="endpoint-body">
+          <p class="when">Surface player news in the draftroom UI. Cached 15 minutes — cheap to call on every page load.</p>
+          <div class="block-label">Query Parameters</div>
+          <div class="code-block">
+            <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+            <pre><span class="t-cmt"># days     — lookback window (default: 7)</span>
+<span class="t-cmt"># signal_type — filter: injury | role_change | trade | demotion | promotion</span>
+
+GET /signals/news?days=<span class="t-num">3</span>&signal_type=<span class="t-str">injury</span></pre>
+          </div>
+          <div class="block-label">Response</div>
+          <div class="code-block"><pre>{
+  <span class="t-key">"signals"</span>: [{
+    <span class="t-key">"player_id"</span>:     <span class="t-str">"695243"</span>,     <span class="t-cmt">// present when matched to DB player</span>
+    <span class="t-key">"player_name"</span>:   <span class="t-str">"Player Name"</span>,
+    <span class="t-key">"signal_type"</span>:   <span class="t-str">"injury"</span>,
+    <span class="t-key">"severity"</span>:      <span class="t-str">"high"</span>,       <span class="t-cmt">// "low" | "medium" | "high"</span>
+    <span class="t-key">"description"</span>:   <span class="t-str">"Placed on 10-day IL"</span>,
+    <span class="t-key">"effective_date"</span>:<span class="t-str">"2026-03-07"</span>,
+    <span class="t-key">"source"</span>:        <span class="t-str">"MLB Transactions API"</span>
+  }],
+  <span class="t-key">"count"</span>: <span class="t-num">4</span>
+}</pre>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Player ID contract -->
+    <div class="section">
+      <h3>Player ID Contract</h3>
+      <p class="section-desc">
+        All <code style="color:var(--orange);background:rgba(251,146,60,0.1);padding:1px 6px;border-radius:3px;font-size:12px;">player_id</code> fields are the numeric MLB Stats API player ID cast to a string.
+        Use <code style="color:var(--orange);background:rgba(251,146,60,0.1);padding:1px 6px;border-radius:3px;font-size:12px;">String(player.id)</code> from any MLB Stats API response.
+      </p>
+      <div class="code-block"><pre><span class="t-cmt">// ✅ correct</span>
+player_id: String(player.id)   <span class="t-cmt">// e.g. "660271"</span>
+
+<span class="t-cmt">// ❌ wrong</span>
+player_id: player._id          <span class="t-cmt">// MongoDB ObjectId — not recognized</span></pre>
+      </div>
+    </div>
+
+    <!-- Error codes -->
+    <div class="section">
+      <h3>Error Responses</h3>
+      <div class="card">
+        <table>
+          <thead>
+            <tr><th>Status</th><th>Meaning</th><th>Action</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><span style="color:var(--orange)">401</span></td><td>Missing or invalid x-api-key</td><td>Check header is present and key matches issued value</td></tr>
+            <tr><td><span style="color:var(--red)">403</span></td><td>API key deactivated</td><td>Contact Amethyst Industries to reactivate</td></tr>
+            <tr><td><span style="color:var(--orange)">400</span></td><td>Validation error</td><td>Read <code style="font-size:11px">error</code> field — missing required field</td></tr>
+            <tr><td><span style="color:var(--red)">5xx</span></td><td>Server error</td><td>Degrade gracefully — draft should continue</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Caching -->
+    <div class="section">
+      <h3>Caching</h3>
+      <div class="card">
+        <table>
+          <thead><tr><th>Endpoint</th><th>TTL</th><th>Key</th></tr></thead>
+          <tbody>
+            <tr><td>/valuation/calculate</td><td>120s</td><td>Hash of request body</td></tr>
+            <tr><td>/analysis/scarcity</td><td>120s</td><td>Hash of request body</td></tr>
+            <tr><td>/simulation/mock-pick</td><td>No cache</td><td>Stateful per call</td></tr>
+            <tr><td>/signals/news</td><td>900s</td><td>Date range + signal type</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div><!-- /tab-reference -->
+
+
+  <!-- ═══════════════════ LICENSING TAB ═══════════════════ -->
+  <div class="tab-content" id="tab-licensing">
+
+    <div class="section">
+      <h2>Licensing</h2>
+      <p class="section-desc">
+        Amethyst Engine is a generalized Sports Data as a Service (SDaaS) platform.
+        The core API is available for commercial licensing under a revenue-share model.
+        Licensee-specific data instances and strategic configurations remain private and isolated.
+      </p>
+    </div>
+
+    <!-- Tiers -->
+    <div class="section">
+      <h3>License Tiers</h3>
+      <div class="card">
+        <table>
+          <thead>
+            <tr><th>Tier</th><th>Use Case</th><th>Features</th><th>Pricing</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="tier-badge tier-free">free</span></td>
+              <td>Evaluation &amp; prototyping</td>
+              <td>All endpoints, rate-limited</td>
+              <td style="color:var(--muted)">Contact us</td>
+            </tr>
+            <tr>
+              <td><span class="tier-badge tier-standard">standard</span></td>
+              <td>Production applications</td>
+              <td>Full access, standard rate limits, usage reporting</td>
+              <td style="color:var(--muted)">Revenue share — contact us</td>
+            </tr>
+            <tr>
+              <td><span class="tier-badge tier-premium">premium</span></td>
+              <td>High-volume &amp; enterprise</td>
+              <td>Elevated rate limits, priority support, custom league scope extensions</td>
+              <td style="color:var(--muted)">Custom — contact us</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Revenue share model -->
+    <div class="section">
+      <h3>Revenue Share Model</h3>
+      <p class="section-desc">
+        Commercial licenses are structured as a percentage of net revenue generated
+        by your application through use of the Amethyst Engine API.
+        This aligns our incentives with your product's success.
+      </p>
+      <div class="card" style="padding:0">
+        <div style="display:grid;grid-template-columns:1fr 1fr;border-bottom:1px solid var(--border)">
+          <div style="padding:20px 24px;border-right:1px solid var(--border)">
+            <div style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px">Model</div>
+            <div style="font-size:28px;font-weight:700;color:var(--accent);letter-spacing:-0.03em">5%</div>
+            <div style="font-size:13px;color:var(--muted);margin-top:4px">of net licensing revenue</div>
+          </div>
+          <div style="padding:20px 24px">
+            <div style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px">Term</div>
+            <div style="font-size:28px;font-weight:700;color:var(--text);letter-spacing:-0.03em">5 yr</div>
+            <div style="font-size:13px;color:var(--muted);margin-top:4px">from first commercial sale</div>
+          </div>
+        </div>
+        <div style="padding:16px 24px;font-size:13px;color:var(--muted);line-height:1.7">
+          Under the Reuse Clause of the Amethyst Industries Product Contract, the founding customer
+          receives a <strong style="color:var(--text)">5% royalty on net licensing revenue</strong> for a period of
+          five years following the first commercial sale. This royalty is calculated and reported quarterly
+          based on cumulative API key usage tracked per licensee.
+        </div>
+      </div>
+    </div>
+
+    <!-- Infrastructure -->
+    <div class="section">
+      <h3>Infrastructure &amp; Maintenance</h3>
+      <div class="card">
+        <table>
+          <thead><tr><th>Component</th><th>Stack</th><th>Notes</th></tr></thead>
+          <tbody>
+            <tr><td>API Runtime</td><td>Node.js 20 + Express 5 on AWS App Runner</td><td>Managed container, auto-scaling</td></tr>
+            <tr><td>Database</td><td>MongoDB Atlas</td><td>Document-based player &amp; key schemas</td></tr>
+            <tr><td>Cache</td><td>Redis</td><td>Low-latency live-draft response caching</td></tr>
+            <tr><td>Player Data</td><td>MLB Stats API sync</td><td>Daily refresh during season (Mar–Oct)</td></tr>
+            <tr><td>Monitoring</td><td>AWS App Runner health checks</td><td>Automatic restart on failure</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Contact -->
+    <div class="section">
+      <h3>Get a License</h3>
+      <div style="background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--accent);border-radius:var(--radius);padding:20px 24px">
+        <p style="font-size:14px;color:var(--text);margin-bottom:6px;font-weight:600">Interested in licensing the Amethyst Engine for your fantasy sports product?</p>
+        <p style="font-size:13px;color:var(--muted);line-height:1.7">
+          The API is sport-agnostic and architected for plug-and-play expansion into additional domains.
+          Licensing terms are negotiated per application. Reach out to discuss your use case,
+          expected volume, and integration timeline.
+        </p>
+        <p style="margin-top:14px">
+          <a href="mailto:licensing@amethystindustries.com" style="color:var(--accent);font-weight:600;font-size:13px">licensing@amethystindustries.com</a>
+        </p>
+      </div>
+    </div>
+
+  </div><!-- /tab-licensing -->
+
+
+  <!-- ═══════════════════ USAGE TAB ═══════════════════ -->
+  <div class="tab-content" id="tab-usage">
+
+    <div class="section">
+      <h2>My Usage</h2>
+      <p class="section-desc">Enter your API key to view request counts, tier, and account status.</p>
+    </div>
+
+    <div class="key-form">
+      <div class="key-input-wrap">
+        <input
+          class="key-input"
+          id="keyInput"
+          type="password"
+          placeholder="Paste your x-api-key here"
+          autocomplete="off"
+          spellcheck="false"
+        />
+        <button class="toggle-key" onclick="toggleKeyVisibility()" title="Show/hide key">👁</button>
+      </div>
+      <button class="load-btn" id="loadBtn" onclick="loadUsage()">Load Stats</button>
+    </div>
+
+    <div class="usage-error" id="usageError"></div>
+
+    <div class="stats-card" id="statsCard">
+      <div class="stats-header">
+        <span class="stats-owner" id="statsOwner"></span>
+        <span class="stats-active" id="statsActive"></span>
+      </div>
+      <div class="stats-grid">
+        <div class="stat-item">
+          <div class="stat-label">Total Requests</div>
+          <div class="stat-value" id="statRequests">—</div>
+          <div class="stat-sub">cumulative API calls</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-label">Tier</div>
+          <div class="stat-value" id="statTier">—</div>
+          <div class="stat-sub" id="statTierSub"></div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-label">Last Used</div>
+          <div class="stat-value" id="statLastUsed" style="font-size:15px;padding-top:4px">—</div>
+          <div class="stat-sub" id="statLastUsedSub"></div>
+        </div>
+        <div class="stat-item" style="border-right:none">
+          <div class="stat-label">Member Since</div>
+          <div class="stat-value" id="statSince" style="font-size:15px;padding-top:4px">—</div>
+          <div class="stat-sub" id="statEmail"></div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /tab-usage -->
+
+</main>
+
+<script>
+  // ── Tab switching ──────────────────────────────────────────────
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+    });
+  });
+
+  // ── Endpoint expand/collapse ──────────────────────────────────
+  function toggleEndpoint(id) {
+    document.getElementById(id).classList.toggle('open');
+  }
+
+  // ── Copy button ───────────────────────────────────────────────
+  function copyCode(btn) {
+    const pre = btn.closest('.code-block').querySelector('pre');
+    navigator.clipboard.writeText(pre.innerText).then(() => {
+      btn.textContent = 'Copied!';
+      btn.classList.add('copied');
+      setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 2000);
+    });
+  }
+
+  // ── Service status check ──────────────────────────────────────
+  async function checkStatus() {
+    const dot = document.getElementById('statusDot');
+    const txt = document.getElementById('statusText');
+    try {
+      const r = await fetch('/api/health');
+      if (r.ok) {
+        dot.className = 'dot online';
+        txt.textContent = 'operational';
+      } else {
+        throw new Error('non-ok');
+      }
+    } catch {
+      dot.className = 'dot offline';
+      txt.textContent = 'unavailable';
+    }
+  }
+  checkStatus();
+
+  // ── Key visibility toggle ─────────────────────────────────────
+  function toggleKeyVisibility() {
+    const input = document.getElementById('keyInput');
+    input.type = input.type === 'password' ? 'text' : 'password';
+  }
+
+  // ── Load usage stats ─────────────────────────────────────────
+  async function loadUsage() {
+    const key = document.getElementById('keyInput').value.trim();
+    const errEl = document.getElementById('usageError');
+    const cardEl = document.getElementById('statsCard');
+    const btn = document.getElementById('loadBtn');
+
+    errEl.style.display = 'none';
+    cardEl.style.display = 'none';
+
+    if (!key) {
+      errEl.textContent = 'Please enter your API key.';
+      errEl.style.display = 'block';
+      return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = 'Loading…';
+
+    try {
+      const r = await fetch('/api/usage', {
+        headers: { 'x-api-key': key }
+      });
+      const data = await r.json();
+
+      if (!r.ok) {
+        errEl.textContent = data.error || 'Invalid API key.';
+        errEl.style.display = 'block';
+        return;
+      }
+
+      // Populate card
+      document.getElementById('statsOwner').textContent = data.owner;
+
+      const activeEl = document.getElementById('statsActive');
+      activeEl.textContent = data.isActive ? 'Active' : 'Inactive';
+      activeEl.className = 'stats-active' + (data.isActive ? '' : ' inactive');
+
+      document.getElementById('statRequests').textContent = data.usageCount.toLocaleString();
+
+      const tierEl = document.getElementById('statTier');
+      const VALID_TIERS = ['free', 'standard', 'premium'];
+      const safeTier = VALID_TIERS.includes(data.tier) ? data.tier : 'free';
+      tierEl.innerHTML = `<span class="tier-badge tier-${safeTier}">${safeTier}</span>`;
+
+      document.getElementById('statLastUsed').textContent =
+        data.lastUsed ? timeAgo(new Date(data.lastUsed)) : 'Never';
+      document.getElementById('statLastUsedSub').textContent =
+        data.lastUsed ? new Date(data.lastUsed).toLocaleString() : '';
+
+      document.getElementById('statSince').textContent =
+        data.createdAt
+          ? new Date(data.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+          : 'N/A';
+      document.getElementById('statEmail').textContent = data.email || '';
+
+      cardEl.style.display = 'block';
+    } catch {
+      errEl.textContent = 'Could not reach the server. Try again.';
+      errEl.style.display = 'block';
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Load Stats';
+    }
+  }
+
+  // Allow Enter key in input
+  document.getElementById('keyInput').addEventListener('keydown', e => {
+    if (e.key === 'Enter') loadUsage();
+  });
+
+  // ── Relative time helper ──────────────────────────────────────
+  function timeAgo(date) {
+    const sec = Math.floor((Date.now() - date) / 1000);
+    if (sec < 60) return 'just now';
+    if (sec < 3600) return Math.floor(sec / 60) + ' minutes ago';
+    if (sec < 86400) return Math.floor(sec / 3600) + ' hours ago';
+    return Math.floor(sec / 86400) + ' days ago';
+  }
+</script>
+
+</body>
+</html>
