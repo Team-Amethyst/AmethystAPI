@@ -3,6 +3,7 @@ import Player from "../models/Player";
 import { calculateInflation } from "../services/inflationEngine";
 import { cacheMiddleware } from "../middleware/cache";
 import { LeanPlayer, ValuationRequest } from "../types/brain";
+import { ValidationError } from "../lib/appError";
 
 const router: Router = Router();
 
@@ -21,27 +22,31 @@ const calculate: RequestHandler = async (
 
   // ── Input validation ────────────────────────────────────────────────────
   if (!Array.isArray(body.roster_slots) || body.roster_slots.length === 0) {
-    res.status(400).json({ error: "roster_slots must be a non-empty array." });
-    return;
+    // res.status(400).json({ error: "roster_slots must be a non-empty array." });
+    // return;
+    throw new ValidationError("roster_slots must be a non-empty array.", 400, "Validation failed", { field: "roster_slots" });
   }
   if (
     !Array.isArray(body.scoring_categories) ||
     body.scoring_categories.length === 0
   ) {
-    res
-      .status(400)
-      .json({ error: "scoring_categories must be a non-empty array." });
-    return;
+    // res
+    //   .status(400)
+    //   .json({ error: "scoring_categories must be a non-empty array." });
+    // return;
+    throw new ValidationError("scoring_categories must be a non-empty array.", 400, "Validation failed", { field: "scoring_categories" });
   }
   if (typeof body.total_budget !== "number" || body.total_budget <= 0) {
-    res
-      .status(400)
-      .json({ error: "total_budget must be a positive number." });
-    return;
+    // res
+    //   .status(400)
+    //   .json({ error: "total_budget must be a positive number." });
+    // return;
+    throw new ValidationError("total_budget must be a positive number.", 400, "Validation failed", { field: "total_budget" });
   }
   if (!Array.isArray(body.drafted_players)) {
-    res.status(400).json({ error: "drafted_players must be an array." });
-    return;
+    // res.status(400).json({ error: "drafted_players must be an array." });
+    // return;
+    throw new ValidationError("drafted_players must be an array.", 400, "Validation failed", { field: "drafted_players" });
   }
 
   const numTeams =
