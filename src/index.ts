@@ -67,10 +67,6 @@ app.use("/simulation", apiKeyMiddleware, simulationRoutes);
 app.use("/signals", apiKeyMiddleware, signalsRoutes);
 
 // ── Global error handler ──────────────────────────────────────────────────────
-// app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
-//   console.error(err.stack);
-//   res.status(500).json({ error: "Internal Server Error", message: err.message });
-// });
 // 404 for unknown routes
 app.use((_req: Request, _res: Response, next: NextFunction) => {
   next(new NotFoundError("Route not found", 404,"ROUTE_NOT_FOUND"));

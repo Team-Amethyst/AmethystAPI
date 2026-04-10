@@ -27,11 +27,6 @@ const apiKeyMiddleware = async (
   const rawKey = req.headers["x-api-key"];
 
   if (!rawKey || typeof rawKey !== "string" || rawKey.trim() === "") {
-    // res.status(401).json({
-    //   error: "Unauthorized",
-    //   message: "A valid x-api-key header is required to access the Amethyst Engine API.",
-    // });
-    // return;
     throw new UnauthorizedError("A valid x-api-key header is required to access the Amethyst Engine API.", 401, "API_KEY_MISSING");
   }
 
@@ -39,11 +34,6 @@ const apiKeyMiddleware = async (
 
   // Reject keys that don't match the expected format — prevents injection
   if (!/^[a-zA-Z0-9_-]{16,128}$/.test(key)) {
-    // res.status(401).json({
-    //   error: "Unauthorized",
-    //   message: "Invalid API key format.",
-    // });
-    // return;
     throw new UnauthorizedError("Invalid API key format.", 401, "API_KEY_INVALID_FORMAT");
   }
 
@@ -58,17 +48,9 @@ const apiKeyMiddleware = async (
     if (!cached) {
       const doc = await ApiKey.findOne({ key }).lean();
       if (!doc) {
-        // res
-        //   .status(401)
-        //   .json({ error: "Unauthorized", message: "API key not recognized." });
-        // return;
         throw new UnauthorizedError("API key not recognized.", 401, "API_KEY_NOT_FOUND");
       }
       if (!doc.isActive) {
-        // res
-        //   .status(403)
-        //   .json({ error: "Forbidden", message: "API key has been deactivated." });
-        // return;
         throw new ForbiddenError("API key has been deactivated.", 403, "API_KEY_DEACTIVATED");
       }
       cached = { owner: doc.owner, tier: doc.tier, isActive: doc.isActive };
@@ -87,11 +69,6 @@ const apiKeyMiddleware = async (
     req.apiKeyTier = cached.tier;
     next();
   } catch (err) {
-    // console.error("[ApiKey] Middleware error:", err);
-    // res.status(500).json({
-    //   error: "Internal Server Error",
-    //   message: "Authentication check failed.",
-    // });
     next(err);
   }
 };

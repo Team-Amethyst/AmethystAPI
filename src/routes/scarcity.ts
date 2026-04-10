@@ -22,8 +22,6 @@ const scarcity: RequestHandler = async (
 
   // ── Input validation ────────────────────────────────────────────────────
   if (!Array.isArray(body.drafted_players)) {
-    // res.status(400).json({ error: "drafted_players must be an array." });
-    // return;
     throw new ValidationError("drafted_players must be an array.", 400, "Validation failed", { field: "drafted_players" });
   }
 
