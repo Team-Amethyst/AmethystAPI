@@ -1,0 +1,21 @@
+{
+  "schemaVersion": "1.0.0",
+  "checkpoint": "pre_draft",
+  "league": {
+    "roster_slots": [{ "position": "OF", "count": 3 }],
+    "scoring_categories": [{ "name": "HR", "type": "batting" }],
+    "total_budget": 260,
+    "num_teams": 12,
+    "league_scope": "Mixed",
+    "scoring_format": "5x5",
+    "hitter_budget_pct": 0.65,
+    "pos_eligibility_threshold": 5
+  },
+  "draft_state": [],
+  "pre_draft_rosters": {
+    "team_1": []
+  },
+  "minors": {},
+  "taxi": {},
+  "deterministic": true
+}

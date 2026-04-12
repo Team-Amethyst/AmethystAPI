@@ -1,9 +1,9 @@
 import { Router, Request, Response, RequestHandler } from "express";
 import Player from "../models/Player";
+import { parseValuationRequest } from "../lib/valuationRequest";
 import { calculateInflation } from "../services/inflationEngine";
 import { cacheMiddleware } from "../middleware/cache";
-import { LeanPlayer, ValuationRequest } from "../types/brain";
-import { ValidationError } from "../lib/appError";
+import { LeanPlayer } from "../types/brain";
 
 const router: Router = Router();
 
@@ -14,43 +14,40 @@ const router: Router = Router();
  * with an inflation-adjusted auction value and a Steal / Reach / Fair Value
  * indicator — no persistent state is written.
  */
-const calculate: RequestHandler = async (
+export const valuationCalculateHandler: RequestHandler = async (
   req: Request,
   res: Response
 ): Promise<void> => {
-  const body = req.body as Partial<ValuationRequest>;
-
-  // ── Input validation ────────────────────────────────────────────────────
-  if (!Array.isArray(body.roster_slots) || body.roster_slots.length === 0) {
-    throw new ValidationError("roster_slots must be a non-empty array.", 400, "Validation failed", { field: "roster_slots" });
-  }
-  if (
-    !Array.isArray(body.scoring_categories) ||
-    body.scoring_categories.length === 0
-  ) {
-    throw new ValidationError("scoring_categories must be a non-empty array.", 400, "Validation failed", { field: "scoring_categories" });
-  }
-  if (typeof body.total_budget !== "number" || body.total_budget <= 0) {
-    throw new ValidationError("total_budget must be a positive number.", 400, "Validation failed", { field: "total_budget" });
-  }
-  if (!Array.isArray(body.drafted_players)) {
-    throw new ValidationError("drafted_players must be an array.", 400, "Validation failed", { field: "drafted_players" });
+  const parsed = parseValuationRequest(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ errors: parsed.errors });
+    return;
   }
 
-  const numTeams =
-    typeof body.num_teams === "number" && body.num_teams > 0
-      ? body.num_teams
-      : 12;
+  const n = parsed.normalized;
+  const logParts = [
+    `[valuation]`,
+    n.checkpoint != null ? `checkpoint=${n.checkpoint}` : null,
+    `schema_version=${n.schemaVersion}`,
+    n.seed != null ? `seed=${n.seed}` : null,
+  ].filter(Boolean);
+  console.info(logParts.join(" "));
 
   const players = (await Player.find({}).lean()) as unknown as LeanPlayer[];
 
   const result = calculateInflation(
     players,
-    body.drafted_players,
-    body.total_budget,
-    numTeams,
-    body.roster_slots,
-    body.league_scope ?? "Mixed"
+    n.drafted_players,
+    n.total_budget,
+    n.num_teams,
+    n.roster_slots,
+    n.league_scope,
+    {
+      deterministic: n.deterministic,
+      seed: n.seed,
+      playerIdsFilter: n.player_ids,
+      budgetByTeamId: n.budget_by_team_id,
+    }
   );
 
   res.json(result);
@@ -64,6 +61,10 @@ function bodyHash(req: Request): string {
   return `ae:valuation:${JSON.stringify(req.body)}`;
 }
 
-router.post("/calculate", cacheMiddleware(120, bodyHash), calculate);
+router.post(
+  "/calculate",
+  cacheMiddleware(120, bodyHash),
+  valuationCalculateHandler
+);
 
 export default router;

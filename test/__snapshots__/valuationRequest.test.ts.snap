@@ -1,0 +1,179 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`calculateInflation with normalized fixtures > legacy-empty deterministic snapshot 1`] = `
+{
+  "calculated_at": "1970-01-01T00:00:00.000Z",
+  "inflation_factor": 60,
+  "players_remaining": 2,
+  "pool_value_remaining": 52,
+  "total_budget_remaining": 3120,
+  "valuations": [
+    {
+      "adjusted_value": 2400,
+      "adp": 5,
+      "baseline_value": 40,
+      "indicator": "Fair Value",
+      "inflation_factor": 60,
+      "name": "Alpha",
+      "player_id": "1",
+      "position": "OF",
+      "team": "NYY",
+      "tier": 1,
+    },
+    {
+      "adjusted_value": 720,
+      "adp": 50,
+      "baseline_value": 12,
+      "indicator": "Fair Value",
+      "inflation_factor": 60,
+      "name": "Beta",
+      "player_id": "2",
+      "position": "SP",
+      "team": "BOS",
+      "tier": 3,
+    },
+  ],
+}
+`;
+
+exports[`calculateInflation with normalized fixtures > nested-after-pick applies player_ids filter 1`] = `
+{
+  "calculated_at": "1970-01-01T00:00:00.000Z",
+  "inflation_factor": 255.4167,
+  "players_remaining": 1,
+  "pool_value_remaining": 12,
+  "total_budget_remaining": 3065,
+  "valuations": [
+    {
+      "adjusted_value": 3065,
+      "adp": 50,
+      "baseline_value": 12,
+      "indicator": "Fair Value",
+      "inflation_factor": 255.4167,
+      "name": "Beta",
+      "player_id": "2",
+      "position": "SP",
+      "team": "BOS",
+      "tier": 3,
+    },
+  ],
+}
+`;
+
+exports[`parseValuationRequest + root fixtures > normalizes legacy-empty.json 1`] = `
+{
+  "budget_by_team_id": undefined,
+  "checkpoint": undefined,
+  "deterministic": false,
+  "drafted_players": [],
+  "hitter_budget_pct": undefined,
+  "league_scope": "Mixed",
+  "minors": undefined,
+  "num_teams": 12,
+  "player_ids": undefined,
+  "pos_eligibility_threshold": undefined,
+  "pre_draft_rosters": undefined,
+  "roster_slots": [
+    {
+      "count": 3,
+      "position": "OF",
+    },
+  ],
+  "schemaVersion": "0.0.0",
+  "scoring_categories": [
+    {
+      "name": "HR",
+      "type": "batting",
+    },
+  ],
+  "scoring_format": undefined,
+  "seed": undefined,
+  "taxi": undefined,
+  "total_budget": 260,
+}
+`;
+
+exports[`parseValuationRequest + root fixtures > normalizes nested-after-pick.json 1`] = `
+{
+  "budget_by_team_id": undefined,
+  "checkpoint": "after_pick_1",
+  "deterministic": true,
+  "drafted_players": [
+    {
+      "is_keeper": false,
+      "name": "Star Player",
+      "paid": 55,
+      "pick_number": 1,
+      "player_id": "1",
+      "position": "OF",
+      "positions": [
+        "OF",
+        "DH",
+      ],
+      "team": "NYY",
+      "team_id": "team_1",
+    },
+  ],
+  "hitter_budget_pct": undefined,
+  "league_scope": "Mixed",
+  "minors": undefined,
+  "num_teams": 12,
+  "player_ids": [
+    "2",
+  ],
+  "pos_eligibility_threshold": undefined,
+  "pre_draft_rosters": undefined,
+  "roster_slots": [
+    {
+      "count": 3,
+      "position": "OF",
+    },
+  ],
+  "schemaVersion": "1.0.0",
+  "scoring_categories": [
+    {
+      "name": "HR",
+      "type": "batting",
+    },
+  ],
+  "scoring_format": undefined,
+  "seed": undefined,
+  "taxi": undefined,
+  "total_budget": 260,
+}
+`;
+
+exports[`parseValuationRequest + root fixtures > normalizes nested-pre-draft.json 1`] = `
+{
+  "budget_by_team_id": undefined,
+  "checkpoint": "pre_draft",
+  "deterministic": true,
+  "drafted_players": [],
+  "hitter_budget_pct": 0.65,
+  "league_scope": "Mixed",
+  "minors": {},
+  "num_teams": 12,
+  "player_ids": undefined,
+  "pos_eligibility_threshold": 5,
+  "pre_draft_rosters": {
+    "team_1": [],
+  },
+  "roster_slots": [
+    {
+      "count": 3,
+      "position": "OF",
+    },
+  ],
+  "schemaVersion": "1.0.0",
+  "scoring_categories": [
+    {
+      "name": "HR",
+      "type": "batting",
+    },
+  ],
+  "scoring_format": "5x5",
+  "seed": undefined,
+  "taxi": {},
+  "total_budget": 260,
+}
+`;

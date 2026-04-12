@@ -554,24 +554,35 @@
           <span class="chevron">▶</span>
         </div>
         <div class="endpoint-body">
-          <p class="when">Call after every auction pick. Returns every undrafted player ranked by adjusted value.</p>
-          <div class="block-label">Request</div>
+          <p class="when">Call after every auction pick. Returns every undrafted player ranked by adjusted value. AmethystDraft POSTs a single flat JSON body (see <code>schemas/valuation-request.v1.schema.json</code>); nested <code>league</code> + <code>draft_state</code> is still accepted. Invalid bodies return <code>400</code> with <code>{ "errors": [{ "field", "message" }] }</code> (JSON path in <code>field</code>).</p>
+          <div class="block-label">Request (legacy flat)</div>
           <div class="code-block">
             <button class="copy-btn" onclick="copyCode(this)">Copy</button>
             <pre>{
+  <span class="t-key">"schema_version"</span>:       <span class="t-str">"1.0.0"</span>,     <span class="t-cmt">// optional; alias schemaVersion</span>
+  <span class="t-key">"checkpoint"</span>:           <span class="t-str">"pre_draft"</span>, <span class="t-cmt">// optional</span>
   <span class="t-key">"roster_slots"</span>:        [{ <span class="t-key">"position"</span>: <span class="t-str">"OF"</span>, <span class="t-key">"count"</span>: <span class="t-num">3</span> }, <span class="t-cmt">/* ... */</span>],
   <span class="t-key">"scoring_categories"</span>:  [{ <span class="t-key">"name"</span>: <span class="t-str">"HR"</span>, <span class="t-key">"type"</span>: <span class="t-str">"batting"</span> }, <span class="t-cmt">/* ... */</span>],
   <span class="t-key">"total_budget"</span>:        <span class="t-num">260</span>,         <span class="t-cmt">// per-team auction budget</span>
   <span class="t-key">"num_teams"</span>:           <span class="t-num">12</span>,          <span class="t-cmt">// optional, default 12</span>
   <span class="t-key">"league_scope"</span>:        <span class="t-str">"Mixed"</span>,     <span class="t-cmt">// "Mixed" | "AL" | "NL"</span>
+  <span class="t-key">"scoring_format"</span>:      <span class="t-str">"5x5"</span>,       <span class="t-cmt">// optional: 5x5 | 6x6 | points</span>
   <span class="t-key">"drafted_players"</span>: [{
     <span class="t-key">"player_id"</span>:  <span class="t-str">"695243"</span>,    <span class="t-cmt">// String(mlbId) — canonical key</span>
     <span class="t-key">"name"</span>:       <span class="t-str">"Player Name"</span>,
-    <span class="t-key">"position"</span>:   <span class="t-str">"OF"</span>,
+    <span class="t-key">"position"</span>:   <span class="t-str">"OF"</span>,        <span class="t-cmt">// or use positions[] / roster_slot</span>
     <span class="t-key">"team"</span>:       <span class="t-str">"NYY"</span>,
     <span class="t-key">"team_id"</span>:    <span class="t-str">"team_1"</span>,
-    <span class="t-key">"paid"</span>:       <span class="t-num">42</span>           <span class="t-cmt">// optional auction price</span>
-  }]
+    <span class="t-key">"paid"</span>:       <span class="t-num">42</span>,          <span class="t-cmt">// optional auction price</span>
+    <span class="t-key">"is_keeper"</span>:   <span class="t-key">false</span>,       <span class="t-cmt">// optional</span>
+    <span class="t-key">"pick_number"</span>: <span class="t-num">3</span>            <span class="t-cmt">// optional</span>
+  }],
+  <span class="t-key">"deterministic"</span>:      <span class="t-key">false</span>,       <span class="t-cmt">// optional — stable timestamps for tests</span>
+  <span class="t-key">"seed"</span>:                 <span class="t-num">42</span>,            <span class="t-cmt">// optional — with deterministic, stable tie-breaks</span>
+  <span class="t-key">"player_ids"</span>:          [<span class="t-str">"660271"</span>],   <span class="t-cmt">// optional — subset of undrafted ids</span>
+  <span class="t-key">"budget_by_team_id"</span>:  { <span class="t-str">"team_1"</span>: <span class="t-num">200</span> }, <span class="t-cmt">// optional — per-team $ remaining</span>
+  <span class="t-key">"minors"</span>:              [],              <span class="t-cmt">// optional — [{ team_id, players[] }]</span>
+  <span class="t-key">"taxi"</span>:                []               <span class="t-cmt">// optional</span>
 }</pre>
           </div>
           <div class="block-label">Response</div>
@@ -590,6 +601,40 @@
     <span class="t-key">"indicator"</span>:      <span class="t-str">"Steal"</span>     <span class="t-cmt">// "Steal" | "Reach" | "Fair Value"</span>
   }],
   <span class="t-key">"calculated_at"</span>: <span class="t-str">"2026-03-07T17:39:19Z"</span>
+}</pre>
+          </div>
+        </div>
+      </div>
+
+      <!-- /catalog/batch-values -->
+      <div class="endpoint" id="ep-catalog">
+        <div class="endpoint-header" onclick="toggleEndpoint('ep-catalog')">
+          <span class="method-badge method-post">POST</span>
+          <span class="endpoint-path">/catalog/batch-values</span>
+          <span class="endpoint-desc">Baseline value / tier / adp from engine catalog</span>
+          <span class="chevron">▶</span>
+        </div>
+        <div class="endpoint-body">
+          <p class="when">Use from the Draft app to merge engine baselines with MLB player bios. Same <code>x-api-key</code> as other Brain routes.</p>
+          <div class="block-label">Request</div>
+          <div class="code-block">
+            <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+            <pre>{
+  <span class="t-key">"player_ids"</span>:     [<span class="t-str">"660271"</span>, <span class="t-str">"592450"</span>],
+  <span class="t-key">"league_scope"</span>:   <span class="t-str">"Mixed"</span>
+}</pre>
+          </div>
+          <div class="block-label">Response</div>
+          <div class="code-block"><pre>{
+  <span class="t-key">"players"</span>: [{
+    <span class="t-key">"player_id"</span>: <span class="t-str">"660271"</span>,
+    <span class="t-key">"name"</span>:      <span class="t-str">"Shohei Ohtani"</span>,
+    <span class="t-key">"position"</span>:  <span class="t-str">"DH"</span>,
+    <span class="t-key">"team"</span>:      <span class="t-str">"LAD"</span>,
+    <span class="t-key">"value"</span>:     <span class="t-num">58</span>,
+    <span class="t-key">"tier"</span>:      <span class="t-num">1</span>,
+    <span class="t-key">"adp"</span>:       <span class="t-num">1</span>
+  }]
 }</pre>
           </div>
         </div>

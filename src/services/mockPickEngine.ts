@@ -1,5 +1,7 @@
 import { filterByScope } from "../lib/leagueScope";
+import { getPlayerId } from "./inflationEngine";
 import {
+  DraftedPlayer,
   LeanPlayer,
   LeagueScope,
   MockPickTeam,
@@ -9,14 +11,6 @@ import {
 } from "../types/brain";
 
 /**
- * Returns the canonical ID used to match this player against drafted_players.
- * Prefers mlbId (string) since that's what Draftroom sends; falls back to _id.
- */
-function getPlayerId(p: LeanPlayer): string {
-  return p.mlbId != null ? String(p.mlbId) : String(p._id);
-}
-
-/**
  * Returns true if a player is eligible for the given roster slot.
  * Handles multi-position eligibility (e.g. "2B/SS") and flex slots.
  */
@@ -24,6 +18,13 @@ function fitsSlot(playerPosition: string, slotPosition: string): boolean {
   const slot = slotPosition.toUpperCase();
   if (slot === "BN" || slot === "UTIL") return true; // flex slots accept anyone
   return playerPosition.toUpperCase().includes(slot);
+}
+
+function draftedPlayerFitsSlot(dp: DraftedPlayer, slotPosition: string): boolean {
+  if (fitsSlot(dp.position, slotPosition)) return true;
+  return (
+    dp.positions?.some((pos) => fitsSlot(pos, slotPosition)) ?? false
+  );
 }
 
 /**
@@ -44,7 +45,7 @@ function calcTeamNeeds(
       if (
         slot.position !== "BN" &&
         slot.position !== "UTIL" &&
-        fitsSlot(dp.position, slot.position)
+        draftedPlayerFitsSlot(dp, slot.position)
       ) {
         currentCounts.set(
           slot.position,

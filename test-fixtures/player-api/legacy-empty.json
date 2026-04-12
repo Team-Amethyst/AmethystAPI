@@ -1,0 +1,8 @@
+{
+  "roster_slots": [{ "position": "OF", "count": 3 }],
+  "scoring_categories": [{ "name": "HR", "type": "batting" }],
+  "total_budget": 260,
+  "num_teams": 12,
+  "drafted_players": [],
+  "league_scope": "Mixed"
+}

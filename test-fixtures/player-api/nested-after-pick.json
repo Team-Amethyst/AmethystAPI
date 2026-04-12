@@ -1,0 +1,25 @@
+{
+  "schemaVersion": "1.0.0",
+  "checkpoint": "after_pick_1",
+  "league": {
+    "roster_slots": [{ "position": "OF", "count": 3 }],
+    "scoring_categories": [{ "name": "HR", "type": "batting" }],
+    "total_budget": 260,
+    "num_teams": 12,
+    "league_scope": "Mixed"
+  },
+  "draft_state": [
+    {
+      "player_id": "1",
+      "name": "Star Player",
+      "positions": ["OF", "DH"],
+      "team": "NYY",
+      "team_id": "team_1",
+      "paid": 55,
+      "pick_number": 1,
+      "is_keeper": false
+    }
+  ],
+  "deterministic": true,
+  "player_ids": ["2"]
+}

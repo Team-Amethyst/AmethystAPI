@@ -1,4 +1,5 @@
 import { filterByScope } from "../lib/leagueScope";
+import { getPlayerId } from "./inflationEngine";
 import {
   DraftedPlayer,
   LeanPlayer,
@@ -20,14 +21,6 @@ const MULTI_SLOT_POSITIONS: Record<string, number> = {
 
 /** Monopoly threshold: one team controls ≥ this share of a category */
 const MONOPOLY_THRESHOLD = 0.40;
-
-/**
- * Returns the canonical ID used to match this player against drafted_players.
- * Prefers mlbId (string) since that's what Draftroom sends; falls back to _id.
- */
-function getPlayerId(p: LeanPlayer): string {
-  return p.mlbId != null ? String(p.mlbId) : String(p._id);
-}
 
 /**
  * Returns a 0–100 scarcity score for a given position.

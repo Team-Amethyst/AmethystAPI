@@ -10,6 +10,7 @@ import scarcityRoutes from "./routes/scarcity";
 import simulationRoutes from "./routes/simulation";
 import signalsRoutes from "./routes/signals";
 import usageRoutes from "./routes/usage";
+import catalogRoutes from "./routes/catalog";
 
 // Licensing middleware
 import apiKeyMiddleware from "./middleware/apiKey";
@@ -62,6 +63,7 @@ app.use("/api/usage", usageRoutes);
 // All routes below are gated by the API key middleware.
 // Usage is tracked per-key to support the 5% net-revenue royalty model.
 app.use("/valuation", apiKeyMiddleware, valuationRoutes);
+app.use("/catalog", apiKeyMiddleware, catalogRoutes);
 app.use("/analysis/scarcity", apiKeyMiddleware, scarcityRoutes);
 app.use("/simulation", apiKeyMiddleware, simulationRoutes);
 app.use("/signals", apiKeyMiddleware, signalsRoutes);
@@ -69,7 +71,7 @@ app.use("/signals", apiKeyMiddleware, signalsRoutes);
 // ── Global error handler ──────────────────────────────────────────────────────
 // 404 for unknown routes
 app.use((_req: Request, _res: Response, next: NextFunction) => {
-  next(new NotFoundError("Route not found", 404,"ROUTE_NOT_FOUND"));
+  next(new NotFoundError("Route not found", 404, "ROUTE_NOT_FOUND"));
 });
 
 // Global typed error handler

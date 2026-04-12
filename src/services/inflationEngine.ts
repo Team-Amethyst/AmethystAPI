@@ -1,5 +1,6 @@
 import { filterByScope } from "../lib/leagueScope";
 import {
+  CalculateInflationOptions,
   DraftedPlayer,
   LeanPlayer,
   LeagueScope,
@@ -17,12 +18,62 @@ import {
 const STEAL_SLOPE = 1.25; // ADP rank ≥ 25% later than value rank
 const REACH_SLOPE = 0.75; // ADP rank ≥ 25% earlier than value rank
 
+const DETERMINISTIC_CALCULATED_AT = "1970-01-01T00:00:00.000Z";
+
 /**
  * Returns the canonical ID used to match this player against drafted_players.
  * Prefers mlbId (string) since that's what Draftroom sends; falls back to _id.
  */
-function getPlayerId(player: LeanPlayer): string {
+export function getPlayerId(player: LeanPlayer): string {
   return player.mlbId != null ? String(player.mlbId) : String(player._id);
+}
+
+/** Deterministic 32-bit mix for seeded tie-breaks (grading / CI). */
+function hash32(seed: number, s: string): number {
+  let h = seed >>> 0;
+  for (let i = 0; i < s.length; i++) {
+    h = Math.imul(31, h) + s.charCodeAt(i);
+    h >>>= 0;
+  }
+  return h >>> 0;
+}
+
+function compareByValueDesc(
+  a: LeanPlayer,
+  b: LeanPlayer,
+  options?: CalculateInflationOptions
+): number {
+  const diff = (b.value || 0) - (a.value || 0);
+  if (diff !== 0) return diff;
+  if (
+    options?.deterministic &&
+    options.seed != null &&
+    Number.isFinite(options.seed)
+  ) {
+    return (
+      hash32(options.seed, getPlayerId(a)) - hash32(options.seed, getPlayerId(b))
+    );
+  }
+  return getPlayerId(a).localeCompare(getPlayerId(b));
+}
+
+function compareByAdpAsc(
+  a: LeanPlayer,
+  b: LeanPlayer,
+  options?: CalculateInflationOptions
+): number {
+  const diff = (a.adp || 9999) - (b.adp || 9999);
+  if (diff !== 0) return diff;
+  if (
+    options?.deterministic &&
+    options.seed != null &&
+    Number.isFinite(options.seed)
+  ) {
+    return (
+      hash32(options.seed, getPlayerId(a)) - hash32(options.seed, getPlayerId(b))
+    );
+  }
+  return getPlayerId(a).localeCompare(getPlayerId(b));
 }
 
 /**
@@ -42,32 +93,45 @@ export function calculateInflation(
   totalBudgetPerTeam: number,
   numTeams: number,
   _rosterSlots: RosterSlot[], // reserved for future per-slot budget attribution
-  leagueScope: LeagueScope = "Mixed"
+  leagueScope: LeagueScope = "Mixed",
+  options?: CalculateInflationOptions
 ): ValuationResponse {
   const draftedIds = new Set(draftedPlayers.map((d) => d.player_id));
 
   const scoped = filterByScope(allPlayers, leagueScope);
-  const undrafted = scoped.filter((p) => !draftedIds.has(getPlayerId(p)));
+  let undrafted = scoped.filter((p) => !draftedIds.has(getPlayerId(p)));
 
-  // ── Budget math ────────────────────────────────────────────────────────────
+  if (options?.playerIdsFilter && options.playerIdsFilter.length > 0) {
+    const allow = new Set(options.playerIdsFilter);
+    undrafted = undrafted.filter((p) => allow.has(getPlayerId(p)));
+  }
+
   const totalLeagueBudget = totalBudgetPerTeam * numTeams;
-  const budgetSpent = draftedPlayers.reduce(
-    (sum, dp) => sum + (dp.paid ?? 0),
-    0
-  );
-  const budgetRemaining = Math.max(0, totalLeagueBudget - budgetSpent);
+  let budgetRemaining: number;
+  if (
+    options?.budgetByTeamId &&
+    Object.keys(options.budgetByTeamId).length > 0
+  ) {
+    budgetRemaining = Object.values(options.budgetByTeamId).reduce(
+      (sum, v) => sum + v,
+      0
+    );
+  } else {
+    const budgetSpent = draftedPlayers.reduce(
+      (sum, dp) => sum + (dp.paid ?? 0),
+      0
+    );
+    budgetRemaining = Math.max(0, totalLeagueBudget - budgetSpent);
+  }
 
-  // Sum of all undrafted players' baseline projection values
   const poolValue = undrafted.reduce((sum, p) => sum + (p.value || 0), 0);
 
-  // Avoid division by zero; default to neutral inflation when pool is empty
   const inflationFactor = poolValue > 0 ? budgetRemaining / poolValue : 1;
 
-  // ── Rank maps for Steal / Reach detection ─────────────────────────────────
-  const byValue = [...undrafted].sort((a, b) => (b.value || 0) - (a.value || 0));
-  const byAdp = [...undrafted].sort(
-    (a, b) => (a.adp || 9999) - (b.adp || 9999)
+  const byValue = [...undrafted].sort((a, b) =>
+    compareByValueDesc(a, b, options)
   );
+  const byAdp = [...undrafted].sort((a, b) => compareByAdpAsc(a, b, options));
 
   const valueRank = new Map(byValue.map((p, i) => [getPlayerId(p), i + 1]));
   const adpRank = new Map(byAdp.map((p, i) => [getPlayerId(p), i + 1]));
@@ -82,9 +146,7 @@ export function calculateInflation(
     if (n > 0) {
       const vRank = valueRank.get(pid) ?? 0;
       const aRank = adpRank.get(pid) ?? 0;
-      // ADP says "grab them late" but value says "they're top-tier" → Steal
       if (aRank > vRank * STEAL_SLOPE) indicator = "Steal";
-      // ADP says "grab them early" but value doesn't support it → Reach
       else if (aRank < vRank * REACH_SLOPE) indicator = "Reach";
     }
 
@@ -102,12 +164,16 @@ export function calculateInflation(
     };
   });
 
+  const calculatedAt = options?.deterministic
+    ? DETERMINISTIC_CALCULATED_AT
+    : new Date().toISOString();
+
   return {
     inflation_factor: parseFloat(inflationFactor.toFixed(4)),
     total_budget_remaining: budgetRemaining,
     pool_value_remaining: parseFloat(poolValue.toFixed(2)),
     players_remaining: undrafted.length,
     valuations,
-    calculated_at: new Date().toISOString(),
+    calculated_at: calculatedAt,
   };
 }

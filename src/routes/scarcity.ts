@@ -1,11 +1,25 @@
 import { Router, Request, Response, RequestHandler } from "express";
+import { z } from "zod";
 import Player from "../models/Player";
 import { analyzeScarcity } from "../services/scarcityEngine";
 import { cacheMiddleware } from "../middleware/cache";
-import { LeanPlayer, ScarcityRequest } from "../types/brain";
-import { ValidationError } from "../lib/appError";
+import {
+  draftedPlayerInputSchema,
+  leagueScopeSchema,
+  scoringCategorySchema,
+} from "../lib/draftedPlayerZod";
+import { zodIssuesToFieldErrors } from "../lib/zodErrors";
+import { LeanPlayer } from "../types/brain";
 
 const router: Router = Router();
+
+const scarcityBodySchema = z.object({
+  drafted_players: z.array(draftedPlayerInputSchema),
+  scoring_categories: z.array(scoringCategorySchema).default([]),
+  position: z.string().optional(),
+  num_teams: z.number().int().positive().optional(),
+  league_scope: leagueScopeSchema.optional(),
+});
 
 /**
  * POST /analysis/scarcity
@@ -18,31 +32,24 @@ const scarcity: RequestHandler = async (
   req: Request,
   res: Response
 ): Promise<void> => {
-  const body = req.body as Partial<ScarcityRequest>;
-
-  // ── Input validation ────────────────────────────────────────────────────
-  if (!Array.isArray(body.drafted_players)) {
-    throw new ValidationError("drafted_players must be an array.", 400, "Validation failed", { field: "drafted_players" });
+  const parsed = scarcityBodySchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ errors: zodIssuesToFieldErrors(parsed.error.issues) });
+    return;
   }
 
-  const numTeams =
-    typeof body.num_teams === "number" && body.num_teams > 0
-      ? body.num_teams
-      : 12;
-
-  const scoringCategories = Array.isArray(body.scoring_categories)
-    ? body.scoring_categories
-    : [];
+  const input = parsed.data;
+  const numTeams = input.num_teams ?? 12;
 
   const players = (await Player.find({}).lean()) as unknown as LeanPlayer[];
 
   const result = analyzeScarcity(
     players,
-    body.drafted_players,
+    input.drafted_players,
     numTeams,
-    scoringCategories,
-    body.league_scope ?? "Mixed",
-    body.position
+    input.scoring_categories,
+    input.league_scope ?? "Mixed",
+    input.position
   );
 
   res.json(result);

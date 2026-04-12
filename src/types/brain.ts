@@ -16,10 +16,17 @@ export interface ScoringCategory {
 
 // ─── Draft State ─────────────────────────────────────────────────────────────
 
+/**
+ * Drafted or rostered player in engine requests.
+ * `player_id` is the string form of the MLB person id (same as Mongo `mlbId`), e.g. "660271".
+ */
 export interface DraftedPlayer {
   player_id: string;
   name: string;
+  /** Primary slot / display position; keep for backward compatibility. */
   position: string;
+  /** Full fantasy eligibility when known (engine may use for future scarcity / slot logic). */
+  positions?: string[];
   /** MLB team abbreviation, e.g. "NYY", "BOS" */
   team: string;
   /** Fantasy team identifier */
@@ -27,6 +34,10 @@ export interface DraftedPlayer {
   /** Auction price paid */
   paid?: number;
   adp?: number;
+  is_keeper?: boolean;
+  keeper_cost?: number;
+  pick_number?: number;
+  roster_slot?: string;
 }
 
 export interface MockPickTeam {
@@ -34,6 +45,14 @@ export interface MockPickTeam {
   roster: DraftedPlayer[];
   budget_remaining?: number;
 }
+
+/** Minors / taxi buckets from Draft fixtures (`{ team_id, players[] }[]`). */
+export interface TeamRosterBucket {
+  team_id: string;
+  players: DraftedPlayer[];
+}
+
+export type ScoringFormat = "5x5" | "6x6" | "points";
 
 // ─── Shared player shape returned from MongoDB lean queries ──────────────────
 
@@ -54,6 +73,7 @@ export interface LeanPlayer {
 
 // ─── Valuation ───────────────────────────────────────────────────────────────
 
+/** Legacy flat POST body (schemaVersion implicit 0.0.0). */
 export interface ValuationRequest {
   roster_slots: RosterSlot[];
   scoring_categories: ScoringCategory[];
@@ -64,6 +84,68 @@ export interface ValuationRequest {
   /** All drafted players across every fantasy team */
   drafted_players: DraftedPlayer[];
   league_scope?: LeagueScope;
+  /** Same as `schema_version`; Draft may send either. */
+  schemaVersion?: string;
+  /** Draft / fixture schema version (e.g. 1.0.0). */
+  schema_version?: string;
+  checkpoint?: string;
+  deterministic?: boolean;
+  /** With `deterministic`, influences tie-break ordering so CI can pin outputs. */
+  seed?: number;
+  /** Restrict valuation rows to these undrafted player ids (subset evaluation). */
+  player_ids?: string[];
+  /** When set, total remaining league budget = sum of values (ignores sum of paid). */
+  budget_by_team_id?: Record<string, number>;
+  scoring_format?: ScoringFormat;
+  hitter_budget_pct?: number;
+  pos_eligibility_threshold?: number;
+  minors?: TeamRosterBucket[];
+  taxi?: TeamRosterBucket[];
+}
+
+/** Nested league block for versioned valuation requests (schema 1.x). */
+export interface ValuationLeagueBlock {
+  roster_slots: RosterSlot[];
+  scoring_categories: ScoringCategory[];
+  total_budget: number;
+  num_teams?: number;
+  league_scope?: LeagueScope;
+  scoring_format?: ScoringFormat;
+  hitter_budget_pct?: number;
+  pos_eligibility_threshold?: number;
+}
+
+/**
+ * Normalized input after Zod parse — used by the inflation engine and tests.
+ * Optional sections are accepted and validated for forward compatibility; v1 math may ignore them.
+ */
+export interface NormalizedValuationInput {
+  schemaVersion: string;
+  checkpoint?: string;
+  roster_slots: RosterSlot[];
+  scoring_categories: ScoringCategory[];
+  total_budget: number;
+  num_teams: number;
+  league_scope: LeagueScope;
+  drafted_players: DraftedPlayer[];
+  scoring_format?: ScoringFormat;
+  hitter_budget_pct?: number;
+  pos_eligibility_threshold?: number;
+  pre_draft_rosters?: Record<string, unknown[]>;
+  /** Draft upstream uses `{ team_id, players[] }[]`; nested legacy fixtures may use a record map. */
+  minors?: TeamRosterBucket[] | Record<string, unknown[]>;
+  taxi?: TeamRosterBucket[] | Record<string, unknown[]>;
+  deterministic: boolean;
+  seed?: number;
+  player_ids?: string[];
+  budget_by_team_id?: Record<string, number>;
+}
+
+export interface CalculateInflationOptions {
+  deterministic?: boolean;
+  seed?: number;
+  playerIdsFilter?: string[];
+  budgetByTeamId?: Record<string, number>;
 }
 
 export type ValueIndicator = "Steal" | "Reach" | "Fair Value";
@@ -130,7 +212,7 @@ export interface ScarcityResponse {
   analyzed_at: string;
 }
 
-// ─── Mock Pick Simulation ─────────────────────────────────────────────────────
+// ─── Mock Pick Simulation ────────────────────────────────────────────────────
 
 export interface MockPickRequest {
   /** Ordered fantasy team_ids for the current round */
@@ -186,4 +268,28 @@ export interface SignalsResponse {
   signals: NewsSignal[];
   fetched_at: string;
   count: number;
+}
+
+// ─── Catalog / batch baseline values ─────────────────────────────────────────
+
+export interface CatalogBatchValuesRequest {
+  /** MLB person ids as strings (same as `player_id` / `mlbId`). */
+  player_ids: string[];
+  league_scope?: LeagueScope;
+  /** Reserved for future eligibility alignment with Draft catalog rules. */
+  pos_eligibility_threshold?: number;
+}
+
+export interface CatalogPlayerValueRow {
+  player_id: string;
+  name: string;
+  position: string;
+  team: string;
+  value: number;
+  tier: number;
+  adp: number;
+}
+
+export interface CatalogBatchValuesResponse {
+  players: CatalogPlayerValueRow[];
 }

@@ -23,13 +23,56 @@ All Brain endpoints require an `x-api-key` header. See [Authentication](#authent
 ### `POST /valuation/calculate`
 Returns every undrafted player with an inflation-adjusted auction value and a **Steal / Reach / Fair Value** indicator.
 
+The **AmethystDraft** API forwards a single JSON object (no extra wrapper): either the merged body from `buildEngineValuationCalculateBodyFromFixture` or live league/roster state. Canonical JSON Schema for the flat fixture shape: [schemas/valuation-request.v1.schema.json](schemas/valuation-request.v1.schema.json) (align with Draft `apps/api/schemas/valuation-request.v1.schema.json` when present). Nested `{ league, draft_state }` is still accepted for older tests; see [schemas/valuation-request-v1.json](schemas/valuation-request-v1.json).
+
+**Flat body (Draft upstream):**
+
 ```json
 {
+  "schema_version": "1.0.0",
+  "checkpoint": "pre_draft",
   "roster_slots": [{ "position": "OF", "count": 3 }],
   "scoring_categories": [{ "name": "HR", "type": "batting" }],
   "total_budget": 260,
   "num_teams": 12,
+  "league_scope": "Mixed",
+  "scoring_format": "5x5",
   "drafted_players": [],
+  "deterministic": true,
+  "seed": 42,
+  "minors": [],
+  "taxi": []
+}
+```
+
+(`schemaVersion` camelCase is accepted as an alias for `schema_version`.)
+
+**`drafted_players` / `draft_state` rows:** `player_id` is the **MLB Stats API person id** as a string (same as Draft `externalPlayerId` and Mongo `mlbId`). Use `position` as the primary slot; optional `positions[]` carries full eligibility. At least one of `position`, `positions[]`, or `roster_slot` must yield a primary position.
+
+**Optional fields:**
+
+| Field | Purpose |
+|---|---|
+| `schema_version` / `schemaVersion` | Contract version; majors `0` and `1` supported |
+| `checkpoint` | e.g. `pre_draft`, `after_pick_10`, … (logged, no PII) |
+| `budget_by_team_id` | `team_id` → **remaining** auction dollars; when set, total remaining = sum of values (ignores `sum(paid)`) |
+| `scoring_format` | `5x5` \| `6x6` \| `points` (validated; v1 inflation may ignore) |
+| `hitter_budget_pct`, `pos_eligibility_threshold` | Forward-compatible; v1 math may ignore |
+| `minors`, `taxi` | `{ team_id, players[] }[]` on flat bodies; nested fixtures may still use a legacy record map |
+| `deterministic` | Fixed `calculated_at` and stable sorts |
+| `seed` | With `deterministic`, seeded tie-breaks so CI can pin ordering |
+| `player_ids` | Value only these undrafted ids (subset / perf) |
+
+**Validation errors** return `400` with `{ "errors": [{ "field": "drafted_players.0.position", "message": "..." }] }` (JSON path style, no stack traces). Version failures use `field: "schema_version"`.
+
+**Auth:** Draft calls this route with `x-api-key` (`AMETHYST_API_KEY`). The Draft-only `PLAYER_API_TEST_KEY` is not used here.
+
+### `POST /catalog/batch-values`
+Returns baseline `value`, `tier`, and `adp` from the engine catalog (Mongo) for the requested `player_ids`. Merge with MLB bios in the Draft app. `league_scope` filters the result list. `pos_eligibility_threshold` is reserved for future eligibility alignment.
+
+```json
+{
+  "player_ids": ["660271", "592450"],
   "league_scope": "Mixed"
 }
 ```
@@ -171,12 +214,19 @@ Pass `league_scope` on any endpoint to filter the player pool:
 ## Project Structure
 
 ```
+schemas/
+  valuation-request.v1.schema.json  # Flat Draft upstream (canonical)
+  valuation-request-v1.json         # Nested league + draft_state (legacy tests)
+test-fixtures/player-api/         # Engine samples; checkpoints/ mirrors Draft Activity #9 names
 src/
   index.ts              # App entry point, route mounting
   types/brain.ts        # Shared TypeScript interfaces
   lib/
     redis.ts            # Redis client (non-fatal on failure)
     leagueScope.ts      # AL/NL/Mixed player filtering
+    draftedPlayerZod.ts # Zod schema for drafted-player rows
+    valuationRequest.ts # Zod parse + normalize (Draft flat vs nested v1)
+    zodErrors.ts        # { field, message } for 400 bodies
   middleware/
     apiKey.ts           # x-api-key validation + usage tracking
     cache.ts            # Redis response cache
@@ -190,8 +240,11 @@ src/
     newsService.ts      # MLB Transactions API signals
   routes/
     valuation.ts        # POST /valuation/calculate
+    catalog.ts          # POST /catalog/batch-values
     scarcity.ts         # POST /analysis/scarcity
     simulation.ts       # POST /simulation/mock-pick
     signals.ts          # GET /signals/news
 ```
+
+Run tests: `pnpm test` (Vitest + snapshots over `test-fixtures/player-api/`).
 

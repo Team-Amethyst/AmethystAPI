@@ -1,0 +1,126 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/amethyst/amethyst-api/schemas/valuation-request-v1.json",
+  "title": "Amethyst Engine valuation request (v1 nested fixture)",
+  "description": "Nested { league, draft_state } for older engine tests. AmethystDraft upstream uses the flat body in valuation-request.v1.schema.json. player_id is the string MLB person id (MLB Stats API).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["league", "draft_state"],
+  "properties": {
+    "schemaVersion": {
+      "type": "string",
+      "description": "Semver string; major 1 supported for this shape (e.g. 1.0.0).",
+      "default": "1.0.0"
+    },
+    "checkpoint": {
+      "type": "string",
+      "description": "Activity / grader checkpoint id (e.g. pre_draft, after_pick_10)."
+    },
+    "league": { "$ref": "#/$defs/league" },
+    "draft_state": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/draftedPlayer" }
+    },
+    "pre_draft_rosters": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "array"
+      }
+    },
+    "minors": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "array"
+      }
+    },
+    "taxi": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "array"
+      }
+    },
+    "deterministic": {
+      "type": "boolean",
+      "description": "When true, calculated_at is fixed and sorts are stable for snapshots."
+    },
+    "player_ids": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 },
+      "description": "Optional subset of undrafted player ids to value (dev / partial runs)."
+    },
+    "budget_by_team_id": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "number",
+        "minimum": 0
+      },
+      "description": "When set, total budget remaining = sum of values; ignores sum(paid)."
+    }
+  },
+  "$defs": {
+    "rosterSlot": {
+      "type": "object",
+      "required": ["position", "count"],
+      "additionalProperties": false,
+      "properties": {
+        "position": { "type": "string", "minLength": 1 },
+        "count": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "scoringCategory": {
+      "type": "object",
+      "required": ["name", "type"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "type": { "type": "string", "enum": ["batting", "pitching"] }
+      }
+    },
+    "league": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["roster_slots", "scoring_categories", "total_budget"],
+      "properties": {
+        "roster_slots": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/rosterSlot" }
+        },
+        "scoring_categories": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/scoringCategory" }
+        },
+        "total_budget": { "type": "number", "exclusiveMinimum": 0 },
+        "num_teams": { "type": "integer", "minimum": 1 },
+        "league_scope": { "type": "string", "enum": ["Mixed", "AL", "NL"] },
+        "scoring_format": { "type": "string" },
+        "hitter_budget_pct": { "type": "number" },
+        "pos_eligibility_threshold": { "type": "number" }
+      }
+    },
+    "draftedPlayer": {
+      "type": "object",
+      "description": "At least one of position, positions[0], or roster_slot must be present so a primary position can be derived.",
+      "additionalProperties": false,
+      "required": ["player_id", "name", "team", "team_id"],
+      "properties": {
+        "player_id": { "type": "string", "minLength": 1 },
+        "name": { "type": "string" },
+        "position": { "type": "string" },
+        "positions": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "team": { "type": "string" },
+        "team_id": { "type": "string" },
+        "paid": { "type": "number" },
+        "adp": { "type": "number" },
+        "pick_number": { "type": "integer" },
+        "is_keeper": { "type": "boolean" },
+        "keeper_cost": { "type": "number" },
+        "roster_slot": { "type": "string" }
+      }
+    }
+  }
+}

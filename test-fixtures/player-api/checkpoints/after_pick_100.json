@@ -1,0 +1,926 @@
+{
+  "schema_version": "1.0.0",
+  "checkpoint": "after_pick_100",
+  "roster_slots": [
+    {
+      "position": "OF",
+      "count": 3
+    }
+  ],
+  "scoring_categories": [
+    {
+      "name": "HR",
+      "type": "batting"
+    }
+  ],
+  "total_budget": 260,
+  "num_teams": 12,
+  "league_scope": "Mixed",
+  "scoring_format": "5x5",
+  "drafted_players": [
+    {
+      "player_id": "1",
+      "name": "P1",
+      "position": "OF",
+      "team": "NYY",
+      "team_id": "team_1",
+      "paid": 5,
+      "pick_number": 1
+    },
+    {
+      "player_id": "2",
+      "name": "P2",
+      "position": "OF",
+      "team": "NYY",
+      "team_id": "team_2",
+      "paid": 6,
+      "pick_number": 2
+    },
+    {
+      "player_id": "3",
+      "name": "P3",
+      "position": "OF",
+      "team": "NYY",
+      "team_id": "team_3",
+      "paid": 7,
+      "pick_number": 3
+    },
+    {
+      "player_id": "4",
+      "name": "P4",
+      "position": "OF",
+      "team": "NYY",
+      "team_id": "team_4",
+      "paid": 8,
+      "pick_number": 4
+    },
+    {
+      "player_id": "5",
+      "name": "P5",
+      "position": "OF",
+      "team": "NYY",
+      "team_id": "team_5",
+      "paid": 9,
+      "pick_number": 5
+    },
+    {
+      "player_id": "6",
+      "name": "P6",
+      "position": "OF",
+      "team": "NYY",
+      "team_id": "team_6",
+      "paid": 10,
+      "pick_number": 6
+    },
+    {
+      "player_id": "7",
+      "name": "P7",
+      "position": "OF",
+      "team": "NYY",
+      "team_id": "team_7",
+      "paid": 11,
+      "pick_number": 7
+    },
+    {
+      "player_id": "8",
+      "name": "P8",
+      "position": "OF",
+      "team": "NYY",
+      "team_id": "team_8",
+      "paid": 12,
+      "pick_number": 8
+    },
+    {
+      "player_id": "9",
+      "name": "P9",
+      "position": "OF",
+      "team": "NYY",
+      "team_id": "team_9",
+      "paid": 13,
+      "pick_number": 9
+    },
+    {
+      "player_id": "10",
+      "name": "P10",
+      "position": "OF",
+      "team": "NYY",
+      "team_id": "team_10",
+      "paid": 14,
+      "pick_number": 10
+    },
+    {
+      "player_id": "11",
+      "name": "P11",
+      "position": "OF",
+      "team": "NYY",
+      "team_id": "team_11",
+      "paid": 15,
+      "pick_number": 11
+    },
+    {
+      "player_id": "12",
+      "name": "P12",
+      "position": "OF",
+      "team": "NYY",
+      "team_id": "team_12",
+      "paid": 16,
+      "pick_number": 12
+    },
+    {
+      "player_id": "13",
+      "name": "P13",
+      "position": "OF",
+      "team": "NYY",
+      "team_id": "team_1",
+      "paid": 17,
+      "pick_number": 13
+    },
+    {
+      "player_id": "14",
+      "name": "P14",
+      "position": "OF",
+      "team": "NYY",
+      "team_id": "team_2",
+      "paid": 18,
+      "pick_number": 14
+    },
+    {
+      "player_id": "15",
+      "name": "P15",
+      "position": "OF",
+      "team": "NYY",
+      "team_id": "team_3",
+      "paid": 19,
+      "pick_number": 15
+    },
+    {
+      "player_id": "16",
+      "name": "P16",
+      "position": "OF",
+      "team": "NYY",
+      "team_id": "team_4",
+      "paid": 20,
+      "pick_number": 16
+    },
+    {
+      "player_id": "17",
+      "name": "P17",
+      "position": "OF",
+      "team": "NYY",
+      "team_id": "team_5",
+      "paid": 21,
+      "pick_number": 17
+    },
+    {
+      "player_id": "18",
+      "name": "P18",
+      "position": "OF",
+      "team": "NYY",
+      "team_id": "team_6",
+      "paid": 22,
+      "pick_number": 18
+    },
+    {
+      "player_id": "19",
+      "name": "P19",
+      "position": "OF",
+      "team": "NYY",
+      "team_id": "team_7",
+      "paid": 23,
+      "pick_number": 19
+    },
+    {
+      "player_id": "20",
+      "name": "P20",
+      "position": "OF",
+      "team": "NYY",
+      "team_id": "team_8",
+      "paid": 24,
+      "pick_number": 20
+    },
+    {
+      "player_id": "21",
+      "name": "P21",
+      "position": "OF",
+      "team": "NYY",
+      "team_id": "team_9",
+      "paid": 5,
+      "pick_number": 21
+    },
+    {
+      "player_id": "22",
+      "name": "P22",
+      "position": "OF",
+      "team": "NYY",
+      "team_id": "team_10",
+      "paid": 6,
+      "pick_number": 22
+    },
+    {
+      "player_id": "23",
+      "name": "P23",
+      "position": "OF",
+      "team": "NYY",
+      "team_id": "team_11",
+      "paid": 7,
+      "pick_number": 23
+    },
+    {
+      "player_id": "24",
+      "name": "P24",
+      "position": "OF",
+      "team": "NYY",
+      "team_id": "team_12",
+      "paid": 8,
+      "pick_number": 24
+    },
+    {
+      "player_id": "25",
+      "name": "P25",
+      "position": "OF",
+      "team": "NYY",
+      "team_id": "team_1",
+      "paid": 9,
+      "pick_number": 25
+    },
+    {
+      "player_id": "26",
+      "name": "P26",
+      "position": "OF",
+      "team": "NYY",
+      "team_id": "team_2",
+      "paid": 10,
+      "pick_number": 26
+    },
+    {
+      "player_id": "27",
+      "name": "P27",
+      "position": "OF",
+      "team": "NYY",
+      "team_id": "team_3",
+      "paid": 11,
+      "pick_number": 27
+    },
+    {
+      "player_id": "28",
+      "name": "P28",
+      "position": "OF",
+      "team": "NYY",
+      "team_id": "team_4",
+      "paid": 12,
+      "pick_number": 28
+    },
+    {
+      "player_id": "29",
+      "name": "P29",
+      "position": "OF",
+      "team": "NYY",
+      "team_id": "team_5",
+      "paid": 13,
+      "pick_number": 29
+    },
+    {
+      "player_id": "30",
+      "name": "P30",
+      "position": "OF",
+      "team": "NYY",
+      "team_id": "team_6",
+      "paid": 14,
+      "pick_number": 30
+    },
+    {
+      "player_id": "31",
+      "name": "P31",
+      "position": "OF",
+      "team": "NYY",
+      "team_id": "team_7",
+      "paid": 15,
+      "pick_number": 31
+    },
+    {
+      "player_id": "32",
+      "name": "P32",
+      "position": "OF",
+      "team": "NYY",
+      "team_id": "team_8",
+      "paid": 16,
+      "pick_number": 32
+    },
+    {
+      "player_id": "33",
+      "name": "P33",
+      "position": "OF",
+      "team": "NYY",
+      "team_id": "team_9",
+      "paid": 17,
+      "pick_number": 33
+    },
+    {
+      "player_id": "34",
+      "name": "P34",
+      "position": "OF",
+      "team": "NYY",
+      "team_id": "team_10",
+      "paid": 18,
+      "pick_number": 34
+    },
+    {
+      "player_id": "35",
+      "name": "P35",
+      "position": "OF",
+      "team": "NYY",
+      "team_id": "team_11",
+      "paid": 19,
+      "pick_number": 35
+    },
+    {
+      "player_id": "36",
+      "name": "P36",
+      "position": "OF",
+      "team": "NYY",
+      "team_id": "team_12",
+      "paid": 20,
+      "pick_number": 36
+    },
+    {
+      "player_id": "37",
+      "name": "P37",
+      "position": "OF",
+      "team": "NYY",
+      "team_id": "team_1",
+      "paid": 21,
+      "pick_number": 37
+    },
+    {
+      "player_id": "38",
+      "name": "P38",
+      "position": "OF",
+      "team": "NYY",
+      "team_id": "team_2",
+      "paid": 22,
+      "pick_number": 38
+    },
+    {
+      "player_id": "39",
+      "name": "P39",
+      "position": "OF",
+      "team": "NYY",
+      "team_id": "team_3",
+      "paid": 23,
+      "pick_number": 39
+    },
+    {
+      "player_id": "40",
+      "name": "P40",
+      "position": "OF",
+      "team": "NYY",
+      "team_id": "team_4",
+      "paid": 24,
+      "pick_number": 40
+    },
+    {
+      "player_id": "41",
+      "name": "P41",
+      "position": "OF",
+      "team": "NYY",
+      "team_id": "team_5",
+      "paid": 5,
+      "pick_number": 41
+    },
+    {
+      "player_id": "42",
+      "name": "P42",
+      "position": "OF",
+      "team": "NYY",
+      "team_id": "team_6",
+      "paid": 6,
+      "pick_number": 42
+    },
+    {
+      "player_id": "43",
+      "name": "P43",
+      "position": "OF",
+      "team": "NYY",
+      "team_id": "team_7",
+      "paid": 7,
+      "pick_number": 43
+    },
+    {
+      "player_id": "44",
+      "name": "P44",
+      "position": "OF",
+      "team": "NYY",
+      "team_id": "team_8",
+      "paid": 8,
+      "pick_number": 44
+    },
+    {
+      "player_id": "45",
+      "name": "P45",
+      "position": "OF",
+      "team": "NYY",
+      "team_id": "team_9",
+      "paid": 9,
+      "pick_number": 45
+    },
+    {
+      "player_id": "46",
+      "name": "P46",
+      "position": "OF",
+      "team": "NYY",
+      "team_id": "team_10",
+      "paid": 10,
+      "pick_number": 46
+    },
+    {
+      "player_id": "47",
+      "name": "P47",
+      "position": "OF",
+      "team": "NYY",
+      "team_id": "team_11",
+      "paid": 11,
+      "pick_number": 47
+    },
+    {
+      "player_id": "48",
+      "name": "P48",
+      "position": "OF",
+      "team": "NYY",
+      "team_id": "team_12",
+      "paid": 12,
+      "pick_number": 48
+    },
+    {
+      "player_id": "49",
+      "name": "P49",
+      "position": "OF",
+      "team": "NYY",
+      "team_id": "team_1",
+      "paid": 13,
+      "pick_number": 49
+    },
+    {
+      "player_id": "50",
+      "name": "P50",
+      "position": "OF",
+      "team": "NYY",
+      "team_id": "team_2",
+      "paid": 14,
+      "pick_number": 50
+    },
+    {
+      "player_id": "51",
+      "name": "P51",
+      "position": "OF",
+      "team": "NYY",
+      "team_id": "team_3",
+      "paid": 15,
+      "pick_number": 51
+    },
+    {
+      "player_id": "52",
+      "name": "P52",
+      "position": "OF",
+      "team": "NYY",
+      "team_id": "team_4",
+      "paid": 16,
+      "pick_number": 52
+    },
+    {
+      "player_id": "53",
+      "name": "P53",
+      "position": "OF",
+      "team": "NYY",
+      "team_id": "team_5",
+      "paid": 17,
+      "pick_number": 53
+    },
+    {
+      "player_id": "54",
+      "name": "P54",
+      "position": "OF",
+      "team": "NYY",
+      "team_id": "team_6",
+      "paid": 18,
+      "pick_number": 54
+    },
+    {
+      "player_id": "55",
+      "name": "P55",
+      "position": "OF",
+      "team": "NYY",
+      "team_id": "team_7",
+      "paid": 19,
+      "pick_number": 55
+    },
+    {
+      "player_id": "56",
+      "name": "P56",
+      "position": "OF",
+      "team": "NYY",
+      "team_id": "team_8",
+      "paid": 20,
+      "pick_number": 56
+    },
+    {
+      "player_id": "57",
+      "name": "P57",
+      "position": "OF",
+      "team": "NYY",
+      "team_id": "team_9",
+      "paid": 21,
+      "pick_number": 57
+    },
+    {
+      "player_id": "58",
+      "name": "P58",
+      "position": "OF",
+      "team": "NYY",
+      "team_id": "team_10",
+      "paid": 22,
+      "pick_number": 58
+    },
+    {
+      "player_id": "59",
+      "name": "P59",
+      "position": "OF",
+      "team": "NYY",
+      "team_id": "team_11",
+      "paid": 23,
+      "pick_number": 59
+    },
+    {
+      "player_id": "60",
+      "name": "P60",
+      "position": "OF",
+      "team": "NYY",
+      "team_id": "team_12",
+      "paid": 24,
+      "pick_number": 60
+    },
+    {
+      "player_id": "61",
+      "name": "P61",
+      "position": "OF",
+      "team": "NYY",
+      "team_id": "team_1",
+      "paid": 5,
+      "pick_number": 61
+    },
+    {
+      "player_id": "62",
+      "name": "P62",
+      "position": "OF",
+      "team": "NYY",
+      "team_id": "team_2",
+      "paid": 6,
+      "pick_number": 62
+    },
+    {
+      "player_id": "63",
+      "name": "P63",
+      "position": "OF",
+      "team": "NYY",
+      "team_id": "team_3",
+      "paid": 7,
+      "pick_number": 63
+    },
+    {
+      "player_id": "64",
+      "name": "P64",
+      "position": "OF",
+      "team": "NYY",
+      "team_id": "team_4",
+      "paid": 8,
+      "pick_number": 64
+    },
+    {
+      "player_id": "65",
+      "name": "P65",
+      "position": "OF",
+      "team": "NYY",
+      "team_id": "team_5",
+      "paid": 9,
+      "pick_number": 65
+    },
+    {
+      "player_id": "66",
+      "name": "P66",
+      "position": "OF",
+      "team": "NYY",
+      "team_id": "team_6",
+      "paid": 10,
+      "pick_number": 66
+    },
+    {
+      "player_id": "67",
+      "name": "P67",
+      "position": "OF",
+      "team": "NYY",
+      "team_id": "team_7",
+      "paid": 11,
+      "pick_number": 67
+    },
+    {
+      "player_id": "68",
+      "name": "P68",
+      "position": "OF",
+      "team": "NYY",
+      "team_id": "team_8",
+      "paid": 12,
+      "pick_number": 68
+    },
+    {
+      "player_id": "69",
+      "name": "P69",
+      "position": "OF",
+      "team": "NYY",
+      "team_id": "team_9",
+      "paid": 13,
+      "pick_number": 69
+    },
+    {
+      "player_id": "70",
+      "name": "P70",
+      "position": "OF",
+      "team": "NYY",
+      "team_id": "team_10",
+      "paid": 14,
+      "pick_number": 70
+    },
+    {
+      "player_id": "71",
+      "name": "P71",
+      "position": "OF",
+      "team": "NYY",
+      "team_id": "team_11",
+      "paid": 15,
+      "pick_number": 71
+    },
+    {
+      "player_id": "72",
+      "name": "P72",
+      "position": "OF",
+      "team": "NYY",
+      "team_id": "team_12",
+      "paid": 16,
+      "pick_number": 72
+    },
+    {
+      "player_id": "73",
+      "name": "P73",
+      "position": "OF",
+      "team": "NYY",
+      "team_id": "team_1",
+      "paid": 17,
+      "pick_number": 73
+    },
+    {
+      "player_id": "74",
+      "name": "P74",
+      "position": "OF",
+      "team": "NYY",
+      "team_id": "team_2",
+      "paid": 18,
+      "pick_number": 74
+    },
+    {
+      "player_id": "75",
+      "name": "P75",
+      "position": "OF",
+      "team": "NYY",
+      "team_id": "team_3",
+      "paid": 19,
+      "pick_number": 75
+    },
+    {
+      "player_id": "76",
+      "name": "P76",
+      "position": "OF",
+      "team": "NYY",
+      "team_id": "team_4",
+      "paid": 20,
+      "pick_number": 76
+    },
+    {
+      "player_id": "77",
+      "name": "P77",
+      "position": "OF",
+      "team": "NYY",
+      "team_id": "team_5",
+      "paid": 21,
+      "pick_number": 77
+    },
+    {
+      "player_id": "78",
+      "name": "P78",
+      "position": "OF",
+      "team": "NYY",
+      "team_id": "team_6",
+      "paid": 22,
+      "pick_number": 78
+    },
+    {
+      "player_id": "79",
+      "name": "P79",
+      "position": "OF",
+      "team": "NYY",
+      "team_id": "team_7",
+      "paid": 23,
+      "pick_number": 79
+    },
+    {
+      "player_id": "80",
+      "name": "P80",
+      "position": "OF",
+      "team": "NYY",
+      "team_id": "team_8",
+      "paid": 24,
+      "pick_number": 80
+    },
+    {
+      "player_id": "81",
+      "name": "P81",
+      "position": "OF",
+      "team": "NYY",
+      "team_id": "team_9",
+      "paid": 5,
+      "pick_number": 81
+    },
+    {
+      "player_id": "82",
+      "name": "P82",
+      "position": "OF",
+      "team": "NYY",
+      "team_id": "team_10",
+      "paid": 6,
+      "pick_number": 82
+    },
+    {
+      "player_id": "83",
+      "name": "P83",
+      "position": "OF",
+      "team": "NYY",
+      "team_id": "team_11",
+      "paid": 7,
+      "pick_number": 83
+    },
+    {
+      "player_id": "84",
+      "name": "P84",
+      "position": "OF",
+      "team": "NYY",
+      "team_id": "team_12",
+      "paid": 8,
+      "pick_number": 84
+    },
+    {
+      "player_id": "85",
+      "name": "P85",
+      "position": "OF",
+      "team": "NYY",
+      "team_id": "team_1",
+      "paid": 9,
+      "pick_number": 85
+    },
+    {
+      "player_id": "86",
+      "name": "P86",
+      "position": "OF",
+      "team": "NYY",
+      "team_id": "team_2",
+      "paid": 10,
+      "pick_number": 86
+    },
+    {
+      "player_id": "87",
+      "name": "P87",
+      "position": "OF",
+      "team": "NYY",
+      "team_id": "team_3",
+      "paid": 11,
+      "pick_number": 87
+    },
+    {
+      "player_id": "88",
+      "name": "P88",
+      "position": "OF",
+      "team": "NYY",
+      "team_id": "team_4",
+      "paid": 12,
+      "pick_number": 88
+    },
+    {
+      "player_id": "89",
+      "name": "P89",
+      "position": "OF",
+      "team": "NYY",
+      "team_id": "team_5",
+      "paid": 13,
+      "pick_number": 89
+    },
+    {
+      "player_id": "90",
+      "name": "P90",
+      "position": "OF",
+      "team": "NYY",
+      "team_id": "team_6",
+      "paid": 14,
+      "pick_number": 90
+    },
+    {
+      "player_id": "91",
+      "name": "P91",
+      "position": "OF",
+      "team": "NYY",
+      "team_id": "team_7",
+      "paid": 15,
+      "pick_number": 91
+    },
+    {
+      "player_id": "92",
+      "name": "P92",
+      "position": "OF",
+      "team": "NYY",
+      "team_id": "team_8",
+      "paid": 16,
+      "pick_number": 92
+    },
+    {
+      "player_id": "93",
+      "name": "P93",
+      "position": "OF",
+      "team": "NYY",
+      "team_id": "team_9",
+      "paid": 17,
+      "pick_number": 93
+    },
+    {
+      "player_id": "94",
+      "name": "P94",
+      "position": "OF",
+      "team": "NYY",
+      "team_id": "team_10",
+      "paid": 18,
+      "pick_number": 94
+    },
+    {
+      "player_id": "95",
+      "name": "P95",
+      "position": "OF",
+      "team": "NYY",
+      "team_id": "team_11",
+      "paid": 19,
+      "pick_number": 95
+    },
+    {
+      "player_id": "96",
+      "name": "P96",
+      "position": "OF",
+      "team": "NYY",
+      "team_id": "team_12",
+      "paid": 20,
+      "pick_number": 96
+    },
+    {
+      "player_id": "97",
+      "name": "P97",
+      "position": "OF",
+      "team": "NYY",
+      "team_id": "team_1",
+      "paid": 21,
+      "pick_number": 97
+    },
+    {
+      "player_id": "98",
+      "name": "P98",
+      "position": "OF",
+      "team": "NYY",
+      "team_id": "team_2",
+      "paid": 22,
+      "pick_number": 98
+    },
+    {
+      "player_id": "99",
+      "name": "P99",
+      "position": "OF",
+      "team": "NYY",
+      "team_id": "team_3",
+      "paid": 23,
+      "pick_number": 99
+    },
+    {
+      "player_id": "100",
+      "name": "P100",
+      "position": "OF",
+      "team": "NYY",
+      "team_id": "team_4",
+      "paid": 24,
+      "pick_number": 100
+    }
+  ],
+  "deterministic": true,
+  "seed": 42,
+  "minors": [],
+  "taxi": []
+}
