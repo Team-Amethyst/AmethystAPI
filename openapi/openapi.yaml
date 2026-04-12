@@ -34,6 +34,11 @@ info:
     **`POST /valuation/calculate`** is not Redis-cached. **`paid`** is non-negative; duplicate
     `player_id` in drafted rows is rejected; without `budget_by_team_id`, total paid cannot exceed
     `total_budget × num_teams`.
+
+    **Rate limits (per `x-api-key`, or IP if key missing):** Tunable via env — `RATE_LIMIT_ENABLED`
+    (`0`/`off` to disable), `RATE_LIMIT_VALUATION_MAX` + `RATE_LIMIT_VALUATION_WINDOW_MS`,
+    `RATE_LIMIT_CATALOG_MAX` + `RATE_LIMIT_CATALOG_WINDOW_MS`. Defaults ~300/min valuation,
+    ~1200/min catalog; **off automatically under Vitest** unless `RATE_LIMIT_ENABLED=1`.
   version: 1.0.0
 
 servers:
@@ -68,6 +73,18 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/FieldError"
+
+    RateLimitErrorBody:
+      type: object
+      properties:
+        message:
+          type: string
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              example: RATE_LIMIT_EXCEEDED
 
     ValuationResponse:
       type: object
@@ -196,20 +213,12 @@ paths:
               schema:
                 $ref: "#/components/schemas/ZodValidationErrorBody"
         "429":
-          description: Valuation rate limit exceeded
+          description: |
+            Per-key rate limit exceeded (`RATE_LIMIT_VALUATION_*`, or set `RATE_LIMIT_ENABLED=0`).
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                  error:
-                    type: object
-                    properties:
-                      code:
-                        type: string
-                        example: RATE_LIMIT_EXCEEDED
+                $ref: "#/components/schemas/RateLimitErrorBody"
 
   /catalog/batch-values:
     post:
@@ -254,3 +263,10 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ZodValidationErrorBody"
+        "429":
+          description: |
+            Per-key rate limit exceeded (`RATE_LIMIT_CATALOG_*`, or set `RATE_LIMIT_ENABLED=0`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RateLimitErrorBody"

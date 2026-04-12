@@ -1,4 +1,5 @@
 import type { LeanPlayer, NormalizedValuationInput, ValuationResponse } from "../types/brain";
+import { logger } from "../lib/logger";
 import { validateValuationResponse } from "../lib/valuationQuality";
 import { calculateInflation } from "./inflationEngine";
 
@@ -65,8 +66,9 @@ export function executeValuationWorkflow(
 
   const quality = validateValuationResponse(response);
   if (!quality.ok) {
-    console.warn(
-      `[valuation] output validation failed (422): ${quality.issues.join("; ")}`
+    logger.warn(
+      { issues: quality.issues, component: "valuationWorkflow" },
+      "valuation output validation failed (422)"
     );
     return { ok: false, issues: quality.issues };
   }

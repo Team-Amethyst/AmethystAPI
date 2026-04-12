@@ -1,5 +1,6 @@
 import type { Request } from "express";
 import { AppError } from "./appError";
+import { logger } from "./logger";
 
 type RequestWithUser = Request & {
 	user?: {
@@ -36,35 +37,28 @@ export function logRequestError(
 		requestId,
 	};
 
-	// AppError is a known, intentional API error (status/code/message chosen by us).
 	if (err instanceof AppError) {
-		console.error("[api] handled app error", {
-			...context,
-			name: err.name,
-			code: err.code,
-			statusCode: err.statusCode,
-			message: err.message,
-			details: err.details,
-			stack: err.stack,
-		});
+		logger.error(
+			{
+				...context,
+				errKind: "AppError",
+				code: err.code,
+				statusCode: err.statusCode,
+				details: err.details,
+				stack: err.stack,
+			},
+			err.message,
+		);
 		return;
 	}
 
-	// Standard Error is unexpected from the API contract perspective.
-	// We still log full details here before the middleware normalizes it.
 	if (err instanceof Error) {
-		console.error("[api] unhandled error", {
-			...context,
-			name: err.name,
-			message: err.message,
-			stack: err.stack,
-		});
+		logger.error(
+			{ ...context, err, stack: err.stack },
+			err.message,
+		);
 		return;
 	}
 
-	// JavaScript allows throwing non-Error values; log them explicitly.
-	console.error("[api] non-error throwable", {
-		...context,
-		err,
-	});
+	logger.error({ ...context, thrown: err }, "[api] non-error throwable");
 }

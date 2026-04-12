@@ -1,4 +1,5 @@
 import { Redis } from "ioredis";
+import { logger } from "./logger";
 
 let redisClient: Redis | null = null;
 
@@ -11,10 +12,10 @@ export function getRedisClient(): Redis {
       enableOfflineQueue: false,
     });
     redisClient.on("error", (err: Error) => {
-      console.error("[Redis] Connection error:", err.message);
+      logger.warn({ err: err.message }, "Redis connection error");
     });
     redisClient.on("connect", () => {
-      console.log("[Redis] Connected");
+      logger.info("Redis connected");
     });
   }
   return redisClient;

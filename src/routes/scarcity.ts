@@ -9,6 +9,7 @@ import {
   scoringCategorySchema,
 } from "../lib/draftedPlayerZod";
 import { zodIssuesToFieldErrors } from "../lib/zodErrors";
+import { PLAYER_CATALOG_LEAN_SELECT } from "../lib/playerCatalogProjection";
 import { LeanPlayer } from "../types/brain";
 
 const router: Router = Router();
@@ -41,7 +42,9 @@ const scarcity: RequestHandler = async (
   const input = parsed.data;
   const numTeams = input.num_teams ?? 12;
 
-  const players = (await Player.find({}).lean()) as unknown as LeanPlayer[];
+  const players = (await Player.find({})
+    .select(PLAYER_CATALOG_LEAN_SELECT)
+    .lean()) as unknown as LeanPlayer[];
 
   const result = analyzeScarcity(
     players,

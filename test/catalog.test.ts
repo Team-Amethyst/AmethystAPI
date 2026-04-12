@@ -5,22 +5,26 @@ import type { LeanPlayer } from "../src/types/brain";
 
 vi.mock("../src/models/Player", () => ({
   default: {
-    find: vi.fn(() => ({
-      lean: vi.fn(() =>
-        Promise.resolve([
-          {
-            _id: "x",
-            mlbId: 660271,
-            name: "Shohei",
-            team: "LAD",
-            position: "DH",
-            value: 55,
-            tier: 1,
-            adp: 1,
-          },
-        ] as LeanPlayer[])
-      ),
-    })),
+    find: vi.fn(() => {
+      const q = {
+        select: vi.fn(() => q),
+        lean: vi.fn(() =>
+          Promise.resolve([
+            {
+              _id: "x",
+              mlbId: 660271,
+              name: "Shohei",
+              team: "LAD",
+              position: "DH",
+              value: 55,
+              tier: 1,
+              adp: 1,
+            },
+          ] as LeanPlayer[])
+        ),
+      };
+      return q;
+    }),
   },
 }));
 

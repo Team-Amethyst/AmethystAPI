@@ -1,7 +1,9 @@
 import { Router, Request, Response, RequestHandler } from "express";
 import Player from "../models/Player";
 import { getRequestId } from "../lib/requestContext";
+import { logger } from "../lib/logger";
 import { normalizeCatalogPlayers } from "../lib/playerCatalog";
+import { PLAYER_CATALOG_LEAN_SELECT } from "../lib/playerCatalogProjection";
 import { parseValuationRequest } from "../lib/valuationRequest";
 import {
   executeValuationWorkflow,
@@ -28,19 +30,23 @@ export const valuationCalculateHandler: RequestHandler = async (
   }
 
   const n = parsed.normalized;
-  const logParts = [
-    `[valuation]`,
-    `request_id=${getRequestId(res)}`,
-    n.checkpoint != null ? `checkpoint=${n.checkpoint}` : null,
-    `schema_version=${n.schemaVersion}`,
-    `scoring_mode=${resolveScoringMode(n)}`,
-    n.seed != null ? `seed=${n.seed}` : null,
-  ].filter(Boolean);
-  console.info(logParts.join(" "));
+  const reqLog = logger.child({
+    requestId: getRequestId(res),
+    route: "valuation/calculate",
+  });
+  reqLog.info(
+    {
+      checkpoint: n.checkpoint ?? null,
+      schema_version: n.schemaVersion,
+      scoring_mode: resolveScoringMode(n),
+      seed: n.seed ?? null,
+    },
+    "valuation request"
+  );
 
-  const rawDocs = await Player.find({}).lean();
+  const rawDocs = await Player.find({}).select(PLAYER_CATALOG_LEAN_SELECT).lean();
   const players = normalizeCatalogPlayers(rawDocs, (msg) =>
-    console.warn(`[valuation] catalog: ${msg} request_id=${getRequestId(res)}`)
+    reqLog.warn({ msg }, "catalog field coerced")
   );
 
   const outcome = executeValuationWorkflow(players, n);

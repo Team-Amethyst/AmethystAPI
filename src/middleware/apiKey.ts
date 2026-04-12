@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from "express";
 import ApiKey from "../models/ApiKey";
 import { getCached, setCache } from "../lib/redis";
 import { UnauthorizedError, ForbiddenError } from "../lib/appError";
+import { logger } from "../lib/logger";
 
 const CACHE_PREFIX = "ae:apikey:";
 const CACHE_TTL_SECONDS = 60;
@@ -61,7 +62,7 @@ const apiKeyMiddleware = async (
         { key },
         { $inc: { usageCount: 1 }, $set: { lastUsed: new Date() } }
       ).catch((err: Error) =>
-        console.error("[ApiKey] Usage tracking error:", err.message)
+        logger.warn({ err: err.message }, "ApiKey usage tracking error")
       );
     }
 

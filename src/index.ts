@@ -15,7 +15,10 @@ import catalogRoutes from "./routes/catalog";
 // Licensing middleware
 import apiKeyMiddleware from "./middleware/apiKey";
 import { requestIdMiddleware } from "./middleware/requestId";
-import { valuationRateLimiter } from "./middleware/valuationRateLimit";
+import {
+  catalogRateLimiter,
+  valuationRateLimiter,
+} from "./middleware/engineRateLimit";
 
 // Global error handler
 import { NotFoundError } from "./lib/appError";
@@ -23,12 +26,14 @@ import errorHandler from "./middleware/errorHandler";
 
 // Redis (eager connect so it's ready before first request)
 import { getRedisClient } from "./lib/redis";
+import { logger } from "./lib/logger";
+import { getReadiness, readinessHttpStatus } from "./lib/readiness";
 
 dotenv.config();
 
 // ── Environment validation ────────────────────────────────────────────────────
 if (!process.env.MONGO_URI) {
-  console.error("Missing required environment variable: MONGO_URI");
+  logger.fatal("Missing required environment variable: MONGO_URI");
   process.exit(1);
 }
 
@@ -59,14 +64,19 @@ app.get("/api/health", (_req, res) => {
   });
 });
 
+app.get("/api/health/ready", async (_req, res) => {
+  const body = await getReadiness();
+  res.status(readinessHttpStatus(body)).json(body);
+});
+
 app.use("/api/usage", usageRoutes);
 
 // ── Amethyst Engine — licensed analytical endpoints (require x-api-key) ────────
 //
 // All routes below are gated by the API key middleware.
 // Usage is tracked per-key to support the 5% net-revenue royalty model.
-app.use("/valuation", apiKeyMiddleware, valuationRateLimiter, valuationRoutes);
-app.use("/catalog", apiKeyMiddleware, catalogRoutes);
+app.use("/valuation", apiKeyMiddleware, valuationRateLimiter(), valuationRoutes);
+app.use("/catalog", apiKeyMiddleware, catalogRateLimiter(), catalogRoutes);
 app.use("/analysis/scarcity", apiKeyMiddleware, scarcityRoutes);
 app.use("/simulation", apiKeyMiddleware, simulationRoutes);
 app.use("/signals", apiKeyMiddleware, signalsRoutes);
@@ -86,14 +96,14 @@ const PORT = process.env.PORT || 3001;
 mongoose
   .connect(process.env.MONGO_URI as string)
   .then(() => {
-    console.log("[MongoDB] Connected");
+    logger.info("MongoDB connected");
     // Eagerly connect to Redis — errors are non-fatal
     getRedisClient().connect().catch(() => {});
     app.listen(PORT, () =>
-      console.log(`[Amethyst Engine] Running on http://localhost:${PORT}`)
+      logger.info({ port: PORT }, "Amethyst Engine listening")
     );
   })
   .catch((err) => {
-    console.error("[MongoDB] Connection error:", err);
+    logger.fatal({ err }, "MongoDB connection error");
     process.exit(1);
   });

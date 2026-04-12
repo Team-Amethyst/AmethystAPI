@@ -4,22 +4,26 @@ import { describe, expect, it, vi } from "vitest";
 import { ENGINE_CONTRACT_VERSION } from "../src/lib/engineContract";
 vi.mock("../src/models/Player", () => ({
   default: {
-    find: vi.fn(() => ({
-      lean: vi.fn(() =>
-        Promise.resolve([
-          {
-            _id: "a",
-            mlbId: 1,
-            name: "One",
-            team: "NYY",
-            position: "OF",
-            adp: 1,
-            tier: 1,
-            value: 10,
-          },
-        ])
-      ),
-    })),
+    find: vi.fn(() => {
+      const q = {
+        select: vi.fn(() => q),
+        lean: vi.fn(() =>
+          Promise.resolve([
+            {
+              _id: "a",
+              mlbId: 1,
+              name: "One",
+              team: "NYY",
+              position: "OF",
+              adp: 1,
+              tier: 1,
+              value: 10,
+            },
+          ])
+        ),
+      };
+      return q;
+    }),
   },
 }));
 

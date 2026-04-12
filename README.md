@@ -48,7 +48,11 @@ The Engine accepts the **flat** body Draft builds for server-to-server calls:
 
 **Draft economics (400):** Each `player_id` at most once in auction rows; **`paid` ≥ 0**; without **`budget_by_team_id`**, **Σ `paid` ≤ `total_budget × num_teams`**.
 
-**Operational hardening:** Request bodies are limited to **1 MB**. **`POST /valuation/calculate`** is **not** Redis-cached (avoids stale prices after player sync). **Rate limit:** 300 requests/minute per `x-api-key` (or per IP if the key is missing — should not happen on licensed routes).
+**Operational hardening:** Request bodies are limited to **1 MB**. **`POST /valuation/calculate`** is **not** Redis-cached (avoids stale prices after player sync). **Rate limits** (per `x-api-key`, or IP if the key is missing): defaults **~300/min** on `/valuation/calculate`, **~1200/min** on `/catalog/batch-values` — controlled with **`RATE_LIMIT_ENABLED`** (`0`/`off` to disable), **`RATE_LIMIT_VALUATION_MAX`**, **`RATE_LIMIT_VALUATION_WINDOW_MS`**, **`RATE_LIMIT_CATALOG_MAX`**, **`RATE_LIMIT_CATALOG_WINDOW_MS`**. Limits are **off under Vitest** unless **`RATE_LIMIT_ENABLED=1`**.
+
+**Logging:** JSON logs via **Pino**; set **`LOG_LEVEL`** (`debug`, `info`, `warn`, `error`, `silent`). Defaults to **`silent` in tests** unless `LOG_LEVEL` is set.
+
+**Health:** **`GET /api/health`** — liveness. **`GET /api/health/ready`** — MongoDB + optional Redis ping; **`503`** if Mongo is not connected. Set **`HEALTHCHECK_REDIS=0`** to skip the Redis check (status stays `ready` if Mongo is up).
 
 ---
 

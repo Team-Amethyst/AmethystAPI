@@ -1,4 +1,5 @@
 import axios from "axios";
+import { logger } from "../lib/logger";
 import { getCached, setCache } from "../lib/redis";
 import { NewsSignal, SignalsResponse, SignalSeverity, SignalType } from "../types/brain";
 
@@ -115,7 +116,10 @@ export async function fetchSignals(
     raw = data.transactions ?? [];
   } catch (err) {
     // External API failure is non-fatal; return empty signals rather than 500
-    console.warn("[NewsService] MLB API unavailable:", (err as Error).message);
+    logger.warn(
+      { err: (err as Error).message, component: "NewsService" },
+      "MLB API unavailable"
+    );
     raw = [];
   }
 

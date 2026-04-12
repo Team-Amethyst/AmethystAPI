@@ -19,9 +19,13 @@ vi.mock("../src/models/Player", () => {
   }));
   return {
     default: {
-      find: vi.fn(() => ({
-        lean: vi.fn(() => Promise.resolve(mockPool)),
-      })),
+      find: vi.fn(() => {
+        const q = {
+          select: vi.fn(() => q),
+          lean: vi.fn(() => Promise.resolve(mockPool)),
+        };
+        return q;
+      }),
     },
   };
 });

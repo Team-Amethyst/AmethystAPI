@@ -1,0 +1,100 @@
+import rateLimit from "express-rate-limit";
+import type { Request, RequestHandler } from "express";
+
+function apiKeyOrIpKey(req: Request): string {
+  const raw = req.headers["x-api-key"];
+  if (typeof raw === "string" && raw.trim().length > 0) {
+    return `k:${raw.trim().slice(0, 128)}`;
+  }
+  return `ip:${req.ip ?? "unknown"}`;
+}
+
+function parsePositiveInt(raw: string | undefined, fallback: number): number {
+  if (raw == null || raw === "") return fallback;
+  const n = Number.parseInt(raw, 10);
+  return Number.isFinite(n) && n > 0 ? n : fallback;
+}
+
+/**
+ * Master switch: `RATE_LIMIT_ENABLED=0|false|off` disables all engine limiters.
+ * Automatically off under Vitest unless `RATE_LIMIT_ENABLED=1` is set (for 429 tests).
+ */
+export function isEngineRateLimitingEnabled(): boolean {
+  const v = process.env.RATE_LIMIT_ENABLED?.trim().toLowerCase();
+  if (v === "0" || v === "false" || v === "off" || v === "no") {
+    return false;
+  }
+  if (v === "1" || v === "true" || v === "on" || v === "yes") {
+    return true;
+  }
+  if (process.env.VITEST === "true") {
+    return false;
+  }
+  return true;
+}
+
+const noop: RequestHandler = (_req, _res, next) => {
+  next();
+};
+
+function createLimiter(options: {
+  windowMs: number;
+  limit: number;
+  message: string;
+}): RequestHandler {
+  return rateLimit({
+    windowMs: options.windowMs,
+    limit: options.limit,
+    standardHeaders: "draft-7",
+    legacyHeaders: false,
+    keyGenerator: (req) => apiKeyOrIpKey(req),
+    message: {
+      message: options.message,
+      error: { code: "RATE_LIMIT_EXCEEDED" },
+    },
+  });
+}
+
+/**
+ * Full-catalog valuation: defaults 300 requests / minute / API key (or IP).
+ *
+ * Env: `RATE_LIMIT_VALUATION_WINDOW_MS`, `RATE_LIMIT_VALUATION_MAX`
+ */
+export function valuationRateLimiter(): RequestHandler {
+  if (!isEngineRateLimitingEnabled()) {
+    return noop;
+  }
+  const windowMs = parsePositiveInt(
+    process.env.RATE_LIMIT_VALUATION_WINDOW_MS,
+    60_000
+  );
+  const limit = parsePositiveInt(process.env.RATE_LIMIT_VALUATION_MAX, 300);
+  return createLimiter({
+    windowMs,
+    limit,
+    message:
+      "Too many valuation requests. Please slow down and try again shortly.",
+  });
+}
+
+/**
+ * Catalog batch-values: higher default ceiling than valuation (smaller per-request work).
+ *
+ * Env: `RATE_LIMIT_CATALOG_WINDOW_MS`, `RATE_LIMIT_CATALOG_MAX`
+ */
+export function catalogRateLimiter(): RequestHandler {
+  if (!isEngineRateLimitingEnabled()) {
+    return noop;
+  }
+  const windowMs = parsePositiveInt(
+    process.env.RATE_LIMIT_CATALOG_WINDOW_MS,
+    60_000
+  );
+  const limit = parsePositiveInt(process.env.RATE_LIMIT_CATALOG_MAX, 1200);
+  return createLimiter({
+    windowMs,
+    limit,
+    message:
+      "Too many catalog requests. Please slow down and try again shortly.",
+  });
+}

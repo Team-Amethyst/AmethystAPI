@@ -9,6 +9,8 @@ import type {
   LeanPlayer,
 } from "../types/brain";
 import { getRequestId } from "../lib/requestContext";
+import { logger } from "../lib/logger";
+import { PLAYER_CATALOG_LEAN_SELECT } from "../lib/playerCatalogProjection";
 import { zodIssuesToFieldErrors } from "../lib/zodErrors";
 import { cacheMiddleware } from "../middleware/cache";
 
@@ -36,8 +38,13 @@ const batchValues: RequestHandler = async (
     return;
   }
 
-  console.info(
-    `[catalog/batch-values] request_id=${getRequestId(res)} count=${parsed.data.player_ids.length}`
+  logger.info(
+    {
+      requestId: getRequestId(res),
+      route: "catalog/batch-values",
+      count: parsed.data.player_ids.length,
+    },
+    "catalog batch request"
   );
 
   const { player_ids, league_scope: leagueScope } = parsed.data;
@@ -52,7 +59,9 @@ const batchValues: RequestHandler = async (
 
   const docs = (await Player.find({
     mlbId: { $in: numericIds },
-  }).lean()) as unknown as LeanPlayer[];
+  })
+    .select(PLAYER_CATALOG_LEAN_SELECT)
+    .lean()) as unknown as LeanPlayer[];
 
   const idSet = new Set(player_ids);
   const byId = new Map<string, LeanPlayer>();
