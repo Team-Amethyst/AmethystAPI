@@ -1,7 +1,8 @@
 import axios from "axios";
 import { logger } from "../lib/logger";
+import { classifyMlbTransaction } from "../lib/mlbTransactionSignals";
 import { getCached, setCache } from "../lib/redis";
-import { NewsSignal, SignalsResponse, SignalSeverity, SignalType } from "../types/brain";
+import type { NewsSignal, SignalSeverity, SignalsResponse } from "../types/brain";
 
 const MLB_TRANSACTIONS_URL =
   "https://statsapi.mlb.com/api/v1/transactions";
@@ -22,58 +23,6 @@ interface MlbTransaction {
 
 interface MlbTransactionsResponse {
   transactions?: MlbTransaction[];
-}
-
-/**
- * Maps an MLB transaction type code + description to one of our signal types.
- */
-function classifySignal(
-  typeCode: string,
-  typeDesc: string
-): { type: SignalType; severity: SignalSeverity } | null {
-  const code = typeCode.toUpperCase();
-  const desc = typeDesc.toUpperCase();
-
-  if (code === "IL" || desc.includes("INJURED LIST") || desc.includes("DISABLED LIST")) {
-    let severity: SignalSeverity = "medium"; // default: 15-day IL
-    if (desc.includes("60-DAY") || desc.includes("60 DAY")) severity = "high";
-    else if (desc.includes("10-DAY") || desc.includes("10 DAY")) severity = "low";
-    return { type: "injury", severity };
-  }
-
-  if (
-    code === "RECALL" ||
-    desc.includes("RECALLED") ||
-    code === "ACTIVATE" ||
-    desc.includes("ACTIVATED")
-  ) {
-    return { type: "promotion", severity: "low" };
-  }
-
-  if (
-    code === "OPTION" ||
-    desc.includes("OPTIONED") ||
-    code === "DESIGNATE" ||
-    desc.includes("DESIGNATED FOR ASSIGNMENT")
-  ) {
-    return { type: "demotion", severity: "medium" };
-  }
-
-  if (code === "TRADE" || desc.includes("TRADED")) {
-    return { type: "trade", severity: "medium" };
-  }
-
-  // Role change: look for closer/setup/opener keywords
-  if (
-    desc.includes("CLOSER") ||
-    desc.includes("SETUP MAN") ||
-    desc.includes("OPENER") ||
-    desc.includes("ROLE CHANGE")
-  ) {
-    return { type: "role_change", severity: "high" };
-  }
-
-  return null; // Unknown transaction type — skip
 }
 
 /**
@@ -127,9 +76,12 @@ export async function fetchSignals(
 
   for (const tx of raw) {
     const typeCode = tx.typeCode ?? "";
-    const typeDesc = tx.typeDesc ?? tx.description ?? "";
-
-    const classified = classifySignal(typeCode, typeDesc);
+    const typeDesc = tx.typeDesc ?? "";
+    const classified = classifyMlbTransaction(
+      typeCode,
+      typeDesc,
+      tx.description ?? tx.typeDesc
+    );
     if (!classified) continue;
 
     // Apply optional filter

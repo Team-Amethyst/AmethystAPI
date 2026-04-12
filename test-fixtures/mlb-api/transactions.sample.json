@@ -1,0 +1,40 @@
+{
+  "copyright": "Sample trimmed from MLB Stats API GET /api/v1/transactions",
+  "transactions": [
+    {
+      "id": 897253,
+      "person": { "id": 675919, "fullName": "Nick Raquet" },
+      "toTeam": { "id": 138, "name": "St. Louis Cardinals" },
+      "date": "2026-04-05",
+      "effectiveDate": "2026-04-05",
+      "typeCode": "DES",
+      "typeDesc": "Designated for Assignment",
+      "description": "St. Louis Cardinals designated LHP Nick Raquet for assignment."
+    },
+    {
+      "id": 897208,
+      "person": { "id": 677592, "fullName": "Everson Pereira" },
+      "toTeam": { "id": 145, "name": "Chicago White Sox" },
+      "date": "2026-04-05",
+      "effectiveDate": "2026-04-02",
+      "typeCode": "SC",
+      "typeDesc": "Status Change",
+      "description": "Chicago White Sox placed CF Everson Pereira on the 10-day injured list retroactive to April 2, 2026. Left ankle sprain."
+    },
+    {
+      "id": 897241,
+      "person": { "id": 686613, "fullName": "Hunter Brown" },
+      "toTeam": { "id": 117, "name": "Houston Astros" },
+      "typeCode": "SC",
+      "typeDesc": "Status Change",
+      "description": "Houston Astros placed RHP Hunter Brown on the 15-day injured list retroactive to April 2, 2026. Right shoulder strain."
+    },
+    {
+      "id": 999001,
+      "person": { "id": 1, "fullName": "Unknown Trade" },
+      "typeCode": "TR",
+      "typeDesc": "Traded",
+      "description": "Player traded to new organization."
+    }
+  ]
+}

@@ -10,6 +10,13 @@
 
 import mongoose from "mongoose";
 import dotenv from "dotenv";
+import {
+  assignTier,
+  calcAge,
+  calcBatterValue,
+  calcPitcherValue,
+} from "../src/lib/mlbSyncFormulas";
+import { resolveMlbTeamAbbrev } from "../src/lib/mlbTeamResolve";
 import Player from "../src/models/Player";
 
 dotenv.config();
@@ -30,68 +37,16 @@ const SEASON = month >= 3 && month <= 10 ? now.getFullYear() : now.getFullYear()
 interface MlbPlayer {
   id: number;
   fullName: string;
-  currentTeam?: { abbreviation: string };
+  currentTeam?: { id?: number; abbreviation?: string };
   primaryPosition?: { abbreviation: string };
   birthDate?: string;
 }
 
 interface MlbStatSplit {
   player: { id: number; fullName: string };
-  team?: { abbreviation: string };
+  team?: { id?: number; abbreviation?: string };
   position?: { abbreviation: string };
   stat: Record<string, string | number>;
-}
-
-function calcAge(birthDate?: string): number {
-  if (!birthDate) return 0;
-  const birth = new Date(birthDate);
-  const today = new Date();
-  let age = today.getFullYear() - birth.getFullYear();
-  const m = today.getMonth() - birth.getMonth();
-  if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--;
-  return age;
-}
-
-function assignTier(value: number): number {
-  if (value >= 40) return 1;
-  if (value >= 25) return 2;
-  if (value >= 15) return 3;
-  if (value >= 5) return 4;
-  return 5;
-}
-
-function calcBatterValue(stat: Record<string, string | number>): number {
-  const hr = Number(stat.homeRuns ?? 0);
-  const rbi = Number(stat.rbi ?? 0);
-  const runs = Number(stat.runs ?? 0);
-  const sb = Number(stat.stolenBases ?? 0);
-  const avg = parseFloat(String(stat.avg ?? "0"));
-  const ab = Number(stat.atBats ?? 0);
-  if (ab < 100) return 0;
-  const score =
-    (hr - 18) * 2.8 +
-    (rbi - 72) * 0.9 +
-    (runs - 72) * 0.9 +
-    (sb - 8) * 3.2 +
-    (avg - 0.258) * ab * 3.5;
-  return Math.round(Math.max(1, score * 0.28 + 15));
-}
-
-function calcPitcherValue(stat: Record<string, string | number>): number {
-  const era = parseFloat(String(stat.era ?? "9"));
-  const whip = parseFloat(String(stat.whip ?? "2"));
-  const k = Number(stat.strikeOuts ?? 0);
-  const w = Number(stat.wins ?? 0);
-  const sv = Number(stat.saves ?? 0);
-  const ip = parseFloat(String(stat.inningsPitched ?? "0"));
-  if (ip < 20 && sv < 5) return 0;
-  const score =
-    (4.20 - era) * ip * 0.5 +
-    (1.28 - whip) * ip * 1.2 +
-    (k - 150) * 0.18 +
-    (w - 9) * 2.5 +
-    sv * 2.8;
-  return Math.round(Math.max(1, score * 0.22 + 12));
 }
 
 async function fetchJson<T>(url: string): Promise<T> {
@@ -116,6 +71,15 @@ async function sync() {
   const batSplits = batJson.stats?.[0]?.splits ?? [];
   const pitSplits = pitJson.stats?.[0]?.splits ?? [];
   console.log(`[MLB API] ${batSplits.length} batting splits, ${pitSplits.length} pitching splits`);
+
+  const teamsJson = await fetchJson<{ teams: { id: number; abbreviation: string }[] }>(
+    `${MLB_API}/teams?sportId=1&season=${SEASON}`
+  );
+  const teamIdToAbbr = new Map<number, string>();
+  for (const t of teamsJson.teams ?? []) {
+    teamIdToAbbr.set(t.id, t.abbreviation);
+  }
+  console.log(`[MLB API] Loaded ${teamIdToAbbr.size} team abbreviations`);
 
   // Fetch bio data for all players
   const playerIds = [
@@ -144,7 +108,7 @@ async function sync() {
     playerMap.set(s.player.id, {
       mlbId: s.player.id,
       name: s.player.fullName,
-      team: s.team?.abbreviation ?? bio?.currentTeam?.abbreviation ?? "--",
+      team: resolveMlbTeamAbbrev(s.team, bio?.currentTeam, teamIdToAbbr),
       position: s.position?.abbreviation ?? bio?.primaryPosition?.abbreviation ?? "OF",
       age: calcAge(bio?.birthDate),
       value,
@@ -183,7 +147,7 @@ async function sync() {
     playerMap.set(s.player.id, {
       mlbId: s.player.id,
       name: s.player.fullName,
-      team: s.team?.abbreviation ?? bio?.currentTeam?.abbreviation ?? "--",
+      team: resolveMlbTeamAbbrev(s.team, bio?.currentTeam, teamIdToAbbr),
       position: s.position?.abbreviation ?? bio?.primaryPosition?.abbreviation ?? "SP",
       age: calcAge(bio?.birthDate),
       value,
