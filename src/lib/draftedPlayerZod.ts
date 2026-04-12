@@ -25,7 +25,7 @@ export const draftedPlayerInputSchema = z
     positions: z.array(z.string()).optional(),
     team: z.string(),
     team_id: z.string(),
-    paid: z.number().optional(),
+    paid: z.number().nonnegative().optional(),
     adp: z.number().optional(),
     pick_number: z.number().optional(),
     is_keeper: z.boolean().optional(),

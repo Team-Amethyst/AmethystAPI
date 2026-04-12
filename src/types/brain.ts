@@ -164,6 +164,8 @@ export interface ValuedPlayer {
 }
 
 export interface ValuationResponse {
+  /** Engine HTTP/JSON contract major version (debug drift vs Draft). */
+  engine_contract_version: string;
   /** > 1.0 = inflated market; < 1.0 = deflated */
   inflation_factor: number;
   total_budget_remaining: number;
@@ -291,5 +293,6 @@ export interface CatalogPlayerValueRow {
 }
 
 export interface CatalogBatchValuesResponse {
+  engine_contract_version: string;
   players: CatalogPlayerValueRow[];
 }

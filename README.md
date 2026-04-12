@@ -11,8 +11,64 @@ Stateless analytical API for fantasy baseball. Receives draft state and league s
 | Runtime | Node.js 20 + Express 5 |
 | Language | TypeScript |
 | Database | MongoDB (player data, API keys) |
-| Cache | Redis (optional, degrades gracefully without it) |
+| Cache | Redis (API key cache, catalog batch-values — **not** used for `POST /valuation/calculate`) |
 | Deploy | AWS App Runner via GitHub Actions |
+
+---
+
+## API contract (Draft / Engine alignment)
+
+| Artifact | Role |
+|---|---|
+| [openapi/openapi.yaml](openapi/openapi.yaml) | **Human-facing API spec** — paths, headers, success/error shapes, budget rules, tracing. |
+| [schemas/valuation-request.v1.schema.json](schemas/valuation-request.v1.schema.json) | **Machine validation** for the flat `POST /valuation/calculate` body (keep in sync with Draft). |
+| [schemas/valuation-request-v1.json](schemas/valuation-request-v1.json) | Nested `{ league, draft_state }` alternate (fixtures / legacy). |
+
+### AmethystDraft BFF (`finalizeEngineValuationPostPayload`)
+
+The Engine accepts the **flat** body Draft builds for server-to-server calls:
+
+- **`drafted_players`:** auction picks only (keepers on rosters belong in **`pre_draft_rosters`**, not double-listed here, unless you intentionally mirror Draft’s model).
+- **`pre_draft_rosters`:** optional **map** (`team_id` → array of rows) **or** **array** of `{ team_id, players }` (same as Draft checkpoints).
+- **`schema_version` / `schemaVersion`:** both optional; if both are sent, **`schemaVersion` (camelCase) wins**.
+- **`player_ids`:** optional subset of undrafted MLB ids to value.
+- **Responses:** **`engine_contract_version: "1"`** on success; **`X-Request-Id`** echoed when sent.
+- **Errors:** **400** = request validation only, body **`{ errors: [{ field, message }] }`**. **422** = output sanity failure, same `errors` shape, **no** prices.
+
+**Budget (integration-tested):**
+
+| `budget_by_team_id` | Remaining league dollars |
+|---|---|
+| Absent or `{}` | `total_budget × num_teams` − **Σ `drafted_players[].paid`** (missing `paid` → 0). |
+| Present, non-empty | **Sum of map values**; **`paid` on drafted rows is ignored** for that request. |
+
+**Fixture paths:** CI uses [test-fixtures/player-api/checkpoints/](test-fixtures/player-api/checkpoints/). If AmethystDraft is a **sibling** repo (`…/dev/AmethystDraft`), tests prefer `apps/api/test-fixtures/player-api/checkpoints/pre_draft.json` when present so nested checkpoints run too (including `league.roster_slots` as a **slot → count** map, normalized server-side to `[{ position, count }, …]`).
+
+**`pre_draft_rosters` (v1 behavior):** Accepted as **map or array** (see above); rows do **not** remove players from the undrafted pool until those `player_id`s appear in **`drafted_players` / `draft_state`**. **`minors` / `taxi` do not affect spend** in v1.
+
+**Draft economics (400):** Each `player_id` at most once in auction rows; **`paid` ≥ 0**; without **`budget_by_team_id`**, **Σ `paid` ≤ `total_budget × num_teams`**.
+
+**Operational hardening:** Request bodies are limited to **1 MB**. **`POST /valuation/calculate`** is **not** Redis-cached (avoids stale prices after player sync). **Rate limit:** 300 requests/minute per `x-api-key` (or per IP if the key is missing — should not happen on licensed routes).
+
+---
+
+## Valuation model vs course activity (UML)
+
+The course diagram expects: ingest league + player state → choose **Rotisserie vs points** scoring → per-player projections/surplus → **auction dollars** → **validate reasonableness** (retry loop in your design doc).
+
+**This service today**
+
+| Diagram step | Where it lives now | Your “own model” (course) |
+|---|---|---|
+| League + draft state | Request body → `parseValuationRequest` / `NormalizedValuationInput` | Draft/fixtures build this; not outsourced. |
+| Eligible player bios & history | Mongo `players` (`stats`, `projection`, `value`, `tier`, `adp`, …) | **You** populate via sync/analytics (e.g. 3-year stats, age, role, injury) — not a third-party valuation API. |
+| Filter drafted / scope | `calculateInflation` + `league_scope` | Same. |
+| Scoring branch (Roto vs points) | `resolveScoringMode` in [`src/services/valuationWorkflow.ts`](src/services/valuationWorkflow.ts) — logged as `scoring_mode`; **v1 math still uses stored `value` for both** | Next increment: compute or rescale `value` per `scoring_format` + `scoring_categories` before inflation. |
+| Surplus / scarcity / market | Baseline `value` + inflation vs remaining budget + Steal/Reach vs ADP | Extend `inflationEngine` / scarcity as you add SABR-style signals. |
+| Auction dollars | `adjusted_value` on each row | Same. |
+| Validate prices | [`src/lib/valuationQuality.ts`](src/lib/valuationQuality.ts) — finite numbers, non-negative totals, valid indicators; failures → **HTTP 422** with `{ errors: [...] }` and **no** `valuations` payload (fail closed) | Add caps / recompute loop inside `executeValuationWorkflow` when you have tunables. |
+
+**Orchestration:** [`executeValuationWorkflow`](src/services/valuationWorkflow.ts) is the single entry used by `POST /valuation/calculate` so the pipeline stays explicit and testable.
 
 ---
 
@@ -55,7 +111,7 @@ The **AmethystDraft** API forwards a single JSON object (no extra wrapper): eith
 |---|---|
 | `schema_version` / `schemaVersion` | Contract version; majors `0` and `1` supported |
 | `checkpoint` | e.g. `pre_draft`, `after_pick_10`, … (logged, no PII) |
-| `budget_by_team_id` | `team_id` → **remaining** auction dollars; when set, total remaining = sum of values (ignores `sum(paid)`) |
+| `budget_by_team_id` | Per-team **remaining** $; when non-empty, league remaining = **sum(map)** and **`paid` ignored** — see [API contract](#api-contract-draft--engine-alignment) |
 | `scoring_format` | `5x5` \| `6x6` \| `points` (validated; v1 inflation may ignore) |
 | `hitter_budget_pct`, `pos_eligibility_threshold` | Forward-compatible; v1 math may ignore |
 | `minors`, `taxi` | `{ team_id, players[] }[]` on flat bodies; nested fixtures may still use a legacy record map |
@@ -68,7 +124,7 @@ The **AmethystDraft** API forwards a single JSON object (no extra wrapper): eith
 **Auth:** Draft calls this route with `x-api-key` (`AMETHYST_API_KEY`). The Draft-only `PLAYER_API_TEST_KEY` is not used here.
 
 ### `POST /catalog/batch-values`
-Returns baseline `value`, `tier`, and `adp` from the engine catalog (Mongo) for the requested `player_ids`. Merge with MLB bios in the Draft app. `league_scope` filters the result list. `pos_eligibility_threshold` is reserved for future eligibility alignment.
+First-class baseline read: same **`player_id`** rules as valuation (string MLB id / `mlbId`). Returns **`engine_contract_version`** plus `players[]`. Responses are **cached 120s** per request body (Redis when configured). Merge with MLB bios in Draft. `league_scope` filters the list. `pos_eligibility_threshold` is reserved for future eligibility rules.
 
 ```json
 {
@@ -214,6 +270,8 @@ Pass `league_scope` on any endpoint to filter the player pool:
 ## Project Structure
 
 ```
+openapi/
+  openapi.yaml                      # OpenAPI 3.1 — API source of truth (with JSON Schema refs in prose)
 schemas/
   valuation-request.v1.schema.json  # Flat Draft upstream (canonical)
   valuation-request-v1.json         # Nested league + draft_state (legacy tests)
@@ -224,6 +282,7 @@ src/
   lib/
     redis.ts            # Redis client (non-fatal on failure)
     leagueScope.ts      # AL/NL/Mixed player filtering
+    valuationQuality.ts # Reasonableness checks on valuation responses
     draftedPlayerZod.ts # Zod schema for drafted-player rows
     valuationRequest.ts # Zod parse + normalize (Draft flat vs nested v1)
     zodErrors.ts        # { field, message } for 400 bodies
@@ -234,6 +293,7 @@ src/
     ApiKey.ts           # Licensee key model
     Player.ts           # Master player data
   services/
+    valuationWorkflow.ts # UML-aligned orchestration + quality gate
     inflationEngine.ts  # Auction inflation + Steal/Reach/Fair Value
     scarcityEngine.ts   # Positional scarcity + Monopoly Detection
     mockPickEngine.ts   # ADP + team-need draft simulator
@@ -246,5 +306,5 @@ src/
     signals.ts          # GET /signals/news
 ```
 
-Run tests: `pnpm test` (Vitest + snapshots over `test-fixtures/player-api/`).
+Run tests: `pnpm test` (Vitest; CI runs this on every deploy). Watch mode: `pnpm test:watch`. Lint includes `test/` and `vitest.config.ts`.
 

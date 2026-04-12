@@ -1,0 +1,27 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`POST /valuation/calculate — AmethystDraft BFF alignment > pre_draft.json from Draft repo (if present) or local mirror: deterministic snapshot of aggregates 1`] = `
+{
+  "calculated_at": "1970-01-01T00:00:00.000Z",
+  "engine_contract_version": "1",
+  "inflation_factor": 0.1624,
+  "players_remaining": 280,
+  "pool_value_remaining": 19215,
+  "total_budget_remaining": 3120,
+}
+`;
+
+exports[`POST /valuation/calculate — AmethystDraft BFF alignment > pre_draft.json from Draft repo (if present) or local mirror: deterministic snapshot of aggregates 2`] = `
+{
+  "adjusted_value": 14.61,
+  "adp": 1,
+  "baseline_value": 90,
+  "indicator": "Fair Value",
+  "inflation_factor": 0.1624,
+  "name": "Player_1",
+  "player_id": "1",
+  "position": "OF",
+  "team": "NYY",
+  "tier": 1,
+}
+`;

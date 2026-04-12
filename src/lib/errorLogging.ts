@@ -20,6 +20,12 @@ export function logRequestError(
 		? String(reqWithUser.user._id)
 		: undefined;
 
+	const rid = req.headers["x-request-id"];
+	const requestId =
+		typeof rid === "string" && rid.trim().length > 0
+			? rid.trim().slice(0, 128)
+			: undefined;
+
 	const context = {
 		source,
 		method: req.method,
@@ -27,6 +33,7 @@ export function logRequestError(
 		params: req.params,
 		query: req.query,
 		userId,
+		requestId,
 	};
 
 	// AppError is a known, intentional API error (status/code/message chosen by us).

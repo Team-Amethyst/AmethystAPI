@@ -24,13 +24,42 @@ const teamBucketSchema = z.object({
   players: z.array(draftedPlayerInputSchema),
 });
 
+/** Draft BFF may send keepers as a map or as `[{ team_id, players[] }, …]` sections. */
+const preDraftRostersInputSchema = z.union([
+  z.record(z.string(), z.array(z.unknown())),
+  z.array(teamBucketSchema),
+]);
+
+function normalizePreDraftRostersInput(
+  v: z.infer<typeof preDraftRostersInputSchema>
+): Record<string, unknown[]> {
+  if (Array.isArray(v)) {
+    const out: Record<string, unknown[]> = {};
+    for (const b of v) {
+      out[b.team_id] = b.players as unknown[];
+    }
+    return out;
+  }
+  return v;
+}
+
 const minorsTaxiNestedUnion = z.union([
   z.array(teamBucketSchema),
   z.record(z.string(), z.array(z.unknown())),
 ]);
 
+/** Nested fixtures (e.g. AmethystDraft checkpoints) may use a map of slot → count. */
+const rosterSlotsNestedUnion = z.union([
+  z.array(rosterSlotSchema).min(1),
+  z
+    .record(z.string(), z.number().int().positive())
+    .transform((rec) =>
+      Object.entries(rec).map(([position, count]) => ({ position, count }))
+    ),
+]);
+
 const leagueBlockSchema = z.object({
-  roster_slots: z.array(rosterSlotSchema).min(1),
+  roster_slots: rosterSlotsNestedUnion,
   scoring_categories: z.array(scoringCategorySchema).min(1),
   total_budget: z.number().positive(),
   num_teams: z.number().int().positive().optional(),
@@ -46,11 +75,11 @@ const nestedValuationBodySchema = z.object({
   checkpoint: z.string().optional(),
   league: leagueBlockSchema,
   draft_state: z.array(draftedPlayerInputSchema),
-  pre_draft_rosters: z.record(z.string(), z.array(z.unknown())).optional(),
+  pre_draft_rosters: preDraftRostersInputSchema.optional(),
   minors: minorsTaxiNestedUnion.optional(),
   taxi: minorsTaxiNestedUnion.optional(),
   deterministic: z.boolean().optional(),
-  seed: z.number().optional(),
+  seed: z.number().finite().optional(),
   player_ids: z.array(z.string().min(1)).optional(),
   budget_by_team_id: budgetByTeamSchema.optional(),
 });
@@ -73,9 +102,9 @@ const flatValuationBodySchema = z.object({
   minors: z.array(teamBucketSchema).optional(),
   taxi: z.array(teamBucketSchema).optional(),
   deterministic: z.boolean().optional(),
-  seed: z.number().optional(),
+  seed: z.number().finite().optional(),
   player_ids: z.array(z.string().min(1)).optional(),
-  pre_draft_rosters: z.record(z.string(), z.array(z.unknown())).optional(),
+  pre_draft_rosters: preDraftRostersInputSchema.optional(),
 });
 
 function isNestedValuationBody(body: Record<string, unknown>): boolean {
@@ -133,7 +162,9 @@ function buildNormalizedFromNested(
     scoring_format: league.scoring_format,
     hitter_budget_pct: league.hitter_budget_pct,
     pos_eligibility_threshold: league.pos_eligibility_threshold,
-    pre_draft_rosters: rest.pre_draft_rosters,
+    pre_draft_rosters: rest.pre_draft_rosters
+      ? normalizePreDraftRostersInput(rest.pre_draft_rosters)
+      : undefined,
     minors: rest.minors,
     taxi: rest.taxi,
     deterministic: rest.deterministic ?? false,
@@ -141,6 +172,40 @@ function buildNormalizedFromNested(
     player_ids: rest.player_ids,
     budget_by_team_id: rest.budget_by_team_id,
   };
+}
+
+/**
+ * Rejects duplicate `player_id` in auction rows and impossible spend when not using
+ * `budget_by_team_id` (sum of `paid` must not exceed `total_budget * num_teams`).
+ */
+export function validateDraftEconomics(
+  n: NormalizedValuationInput
+): FieldError | null {
+  const seen = new Set<string>();
+  for (const dp of n.drafted_players) {
+    if (seen.has(dp.player_id)) {
+      return {
+        field: "drafted_players",
+        message: `Duplicate player_id "${dp.player_id}"; each id must appear at most once.`,
+      };
+    }
+    seen.add(dp.player_id);
+  }
+
+  const map = n.budget_by_team_id;
+  const usesTeamBudgets = map != null && Object.keys(map).length > 0;
+  if (!usesTeamBudgets) {
+    const cap = n.total_budget * n.num_teams;
+    const spent = n.drafted_players.reduce((s, d) => s + (d.paid ?? 0), 0);
+    if (spent > cap) {
+      return {
+        field: "drafted_players",
+        message: `Sum of paid (${spent}) exceeds total league auction dollars (${cap} = total_budget × num_teams).`,
+      };
+    }
+  }
+
+  return null;
 }
 
 function buildNormalizedFromFlat(
@@ -159,7 +224,9 @@ function buildNormalizedFromFlat(
     scoring_format: parsed.scoring_format,
     hitter_budget_pct: parsed.hitter_budget_pct,
     pos_eligibility_threshold: parsed.pos_eligibility_threshold,
-    pre_draft_rosters: parsed.pre_draft_rosters,
+    pre_draft_rosters: parsed.pre_draft_rosters
+      ? normalizePreDraftRostersInput(parsed.pre_draft_rosters)
+      : undefined,
     minors: parsed.minors,
     taxi: parsed.taxi,
     deterministic: parsed.deterministic ?? false,
@@ -202,9 +269,14 @@ export function parseValuationRequest(raw: unknown): ParseValuationResult {
         errors: [{ field: "schema_version", message: verErr }],
       };
     }
+    const nestedNorm = buildNormalizedFromNested(result.data);
+    const eco = validateDraftEconomics(nestedNorm);
+    if (eco) {
+      return { success: false, errors: [eco] };
+    }
     return {
       success: true,
-      normalized: buildNormalizedFromNested(result.data),
+      normalized: nestedNorm,
     };
   }
 
@@ -225,8 +297,13 @@ export function parseValuationRequest(raw: unknown): ParseValuationResult {
       errors: [{ field: "schema_version", message: verErr }],
     };
   }
+  const flatNorm = buildNormalizedFromFlat(result.data);
+  const ecoFlat = validateDraftEconomics(flatNorm);
+  if (ecoFlat) {
+    return { success: false, errors: [ecoFlat] };
+  }
   return {
     success: true,
-    normalized: buildNormalizedFromFlat(result.data),
+    normalized: flatNorm,
   };
 }

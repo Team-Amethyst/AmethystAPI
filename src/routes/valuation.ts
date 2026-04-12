@@ -1,9 +1,12 @@
 import { Router, Request, Response, RequestHandler } from "express";
 import Player from "../models/Player";
+import { getRequestId } from "../lib/requestContext";
+import { normalizeCatalogPlayers } from "../lib/playerCatalog";
 import { parseValuationRequest } from "../lib/valuationRequest";
-import { calculateInflation } from "../services/inflationEngine";
-import { cacheMiddleware } from "../middleware/cache";
-import { LeanPlayer } from "../types/brain";
+import {
+  executeValuationWorkflow,
+  resolveScoringMode,
+} from "../services/valuationWorkflow";
 
 const router: Router = Router();
 
@@ -27,44 +30,30 @@ export const valuationCalculateHandler: RequestHandler = async (
   const n = parsed.normalized;
   const logParts = [
     `[valuation]`,
+    `request_id=${getRequestId(res)}`,
     n.checkpoint != null ? `checkpoint=${n.checkpoint}` : null,
     `schema_version=${n.schemaVersion}`,
+    `scoring_mode=${resolveScoringMode(n)}`,
     n.seed != null ? `seed=${n.seed}` : null,
   ].filter(Boolean);
   console.info(logParts.join(" "));
 
-  const players = (await Player.find({}).lean()) as unknown as LeanPlayer[];
-
-  const result = calculateInflation(
-    players,
-    n.drafted_players,
-    n.total_budget,
-    n.num_teams,
-    n.roster_slots,
-    n.league_scope,
-    {
-      deterministic: n.deterministic,
-      seed: n.seed,
-      playerIdsFilter: n.player_ids,
-      budgetByTeamId: n.budget_by_team_id,
-    }
+  const rawDocs = await Player.find({}).lean();
+  const players = normalizeCatalogPlayers(rawDocs, (msg) =>
+    console.warn(`[valuation] catalog: ${msg} request_id=${getRequestId(res)}`)
   );
 
-  res.json(result);
+  const outcome = executeValuationWorkflow(players, n);
+  if (!outcome.ok) {
+    res.status(422).json({
+      errors: outcome.issues.map((message) => ({ field: "", message })),
+    });
+    return;
+  }
+
+  res.json(outcome.response);
 };
 
-/**
- * Cache key includes a hash of the request body so different draft states
- * get separate cache entries while identical states reuse results.
- */
-function bodyHash(req: Request): string {
-  return `ae:valuation:${JSON.stringify(req.body)}`;
-}
-
-router.post(
-  "/calculate",
-  cacheMiddleware(120, bodyHash),
-  valuationCalculateHandler
-);
+router.post("/calculate", valuationCalculateHandler);
 
 export default router;

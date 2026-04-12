@@ -586,7 +586,9 @@
 }</pre>
           </div>
           <div class="block-label">Response</div>
+          <p class="when" style="margin-bottom:8px">Response header <code>X-Request-Id</code> echoes your id or a generated UUID. OpenAPI: repo <code>openapi/openapi.yaml</code>.</p>
           <div class="code-block"><pre>{
+  <span class="t-key">"engine_contract_version"</span>: <span class="t-str">"1"</span>,  <span class="t-cmt">// API contract id — detect drift vs Draft</span>
   <span class="t-key">"inflation_factor"</span>:      <span class="t-num">1.12</span>,    <span class="t-cmt">// &gt;1.0 = inflated market</span>
   <span class="t-key">"total_budget_remaining"</span>: <span class="t-num">2184</span>,
   <span class="t-key">"pool_value_remaining"</span>:   <span class="t-num">1948</span>,
@@ -602,6 +604,7 @@
   }],
   <span class="t-key">"calculated_at"</span>: <span class="t-str">"2026-03-07T17:39:19Z"</span>
 }</pre>
+          <p class="when" style="margin-top:8px">If post-calculation sanity checks fail, the API returns <strong>422</strong> with the same <code>{ errors: [...] }</code> shape as Zod validation — <strong>no</strong> <code>valuations</code> payload. This route is <strong>not</strong> Redis-cached (fresh prices after catalog sync). Request body limit <strong>1 MB</strong>; rate limit <strong>300/min</strong> per API key.</p>
           </div>
         </div>
       </div>
@@ -615,7 +618,7 @@
           <span class="chevron">▶</span>
         </div>
         <div class="endpoint-body">
-          <p class="when">Use from the Draft app to merge engine baselines with MLB player bios. Same <code>x-api-key</code> as other Brain routes.</p>
+          <p class="when">Use from the Draft app to merge engine baselines with MLB player bios. Same <code>x-api-key</code> as other Brain routes. Cached 120s per body hash when Redis is available.</p>
           <div class="block-label">Request</div>
           <div class="code-block">
             <button class="copy-btn" onclick="copyCode(this)">Copy</button>
@@ -626,6 +629,7 @@
           </div>
           <div class="block-label">Response</div>
           <div class="code-block"><pre>{
+  <span class="t-key">"engine_contract_version"</span>: <span class="t-str">"1"</span>,
   <span class="t-key">"players"</span>: [{
     <span class="t-key">"player_id"</span>: <span class="t-str">"660271"</span>,
     <span class="t-key">"name"</span>:      <span class="t-str">"Shohei Ohtani"</span>,

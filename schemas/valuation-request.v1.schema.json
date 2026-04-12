@@ -59,8 +59,17 @@
       "items": { "type": "string", "minLength": 1 }
     },
     "pre_draft_rosters": {
-      "type": "object",
-      "additionalProperties": { "type": "array" }
+      "description": "Keepers / pre-draft rosters: either a map team_id → rows, or an array of { team_id, players } (Draft BFF finalize payload).",
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": { "type": "array" }
+        },
+        {
+          "type": "array",
+          "items": { "$ref": "#/$defs/teamBucket" }
+        }
+      ]
     }
   },
   "$defs": {
@@ -91,7 +100,7 @@
         "position": { "type": "string" },
         "team": { "type": "string" },
         "team_id": { "type": "string" },
-        "paid": { "type": "number" },
+        "paid": { "type": "number", "minimum": 0 },
         "positions": { "type": "array", "items": { "type": "string" } },
         "is_keeper": { "type": "boolean" },
         "roster_slot": { "type": "string" },

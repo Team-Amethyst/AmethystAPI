@@ -3,6 +3,7 @@
 exports[`calculateInflation with normalized fixtures > legacy-empty deterministic snapshot 1`] = `
 {
   "calculated_at": "1970-01-01T00:00:00.000Z",
+  "engine_contract_version": "1",
   "inflation_factor": 60,
   "players_remaining": 2,
   "pool_value_remaining": 52,
@@ -39,6 +40,7 @@ exports[`calculateInflation with normalized fixtures > legacy-empty deterministi
 exports[`calculateInflation with normalized fixtures > nested-after-pick applies player_ids filter 1`] = `
 {
   "calculated_at": "1970-01-01T00:00:00.000Z",
+  "engine_contract_version": "1",
   "inflation_factor": 255.4167,
   "players_remaining": 1,
   "pool_value_remaining": 12,

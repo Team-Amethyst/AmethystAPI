@@ -1,13 +1,16 @@
 import { Router, Request, Response, RequestHandler } from "express";
 import { z } from "zod";
 import Player from "../models/Player";
+import { ENGINE_CONTRACT_VERSION } from "../lib/engineContract";
 import { filterByScope } from "../lib/leagueScope";
 import { getPlayerId } from "../services/inflationEngine";
 import type {
   CatalogBatchValuesResponse,
   LeanPlayer,
 } from "../types/brain";
+import { getRequestId } from "../lib/requestContext";
 import { zodIssuesToFieldErrors } from "../lib/zodErrors";
+import { cacheMiddleware } from "../middleware/cache";
 
 const router: Router = Router();
 
@@ -20,8 +23,8 @@ const batchBodySchema = z.object({
 /**
  * POST /catalog/batch-values
  *
- * Returns baseline value / tier / adp for requested player ids from the engine catalog (Mongo).
- * Draft apps can merge these with MLB bios; eligibility threshold reserved for future use.
+ * Baseline `value` / `tier` / `adp` from Mongo for requested MLB `player_id` strings.
+ * Same id rules as `/valuation/calculate`. Cached 120s per request body (Redis when available).
  */
 const batchValues: RequestHandler = async (
   req: Request,
@@ -32,6 +35,10 @@ const batchValues: RequestHandler = async (
     res.status(400).json({ errors: zodIssuesToFieldErrors(parsed.error.issues) });
     return;
   }
+
+  console.info(
+    `[catalog/batch-values] request_id=${getRequestId(res)} count=${parsed.data.player_ids.length}`
+  );
 
   const { player_ids, league_scope: leagueScope } = parsed.data;
 
@@ -63,6 +70,7 @@ const batchValues: RequestHandler = async (
   const scoped = filterByScope(ordered, leagueScope ?? "Mixed");
 
   const body: CatalogBatchValuesResponse = {
+    engine_contract_version: ENGINE_CONTRACT_VERSION,
     players: scoped.map((p) => ({
       player_id: getPlayerId(p),
       name: p.name,
@@ -77,6 +85,10 @@ const batchValues: RequestHandler = async (
   res.json(body);
 };
 
-router.post("/batch-values", batchValues);
+function bodyHash(req: Request): string {
+  return `ae:catalog:batch:${JSON.stringify(req.body)}`;
+}
+
+router.post("/batch-values", cacheMiddleware(120, bodyHash), batchValues);
 
 export default router;

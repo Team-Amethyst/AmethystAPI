@@ -14,6 +14,8 @@ import catalogRoutes from "./routes/catalog";
 
 // Licensing middleware
 import apiKeyMiddleware from "./middleware/apiKey";
+import { requestIdMiddleware } from "./middleware/requestId";
+import { valuationRateLimiter } from "./middleware/valuationRateLimit";
 
 // Global error handler
 import { NotFoundError } from "./lib/appError";
@@ -40,7 +42,8 @@ app.use(
   }),
 );
 
-app.use(express.json());
+app.use(express.json({ limit: "1mb" }));
+app.use(requestIdMiddleware);
 
 // Serve developer portal from public/
 // __dirname resolves to src/ in dev (ts-node) and dist/ in prod — both point to ../public
@@ -62,7 +65,7 @@ app.use("/api/usage", usageRoutes);
 //
 // All routes below are gated by the API key middleware.
 // Usage is tracked per-key to support the 5% net-revenue royalty model.
-app.use("/valuation", apiKeyMiddleware, valuationRoutes);
+app.use("/valuation", apiKeyMiddleware, valuationRateLimiter, valuationRoutes);
 app.use("/catalog", apiKeyMiddleware, catalogRoutes);
 app.use("/analysis/scarcity", apiKeyMiddleware, scarcityRoutes);
 app.use("/simulation", apiKeyMiddleware, simulationRoutes);

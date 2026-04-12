@@ -1,3 +1,4 @@
+import { ENGINE_CONTRACT_VERSION } from "../lib/engineContract";
 import { filterByScope } from "../lib/leagueScope";
 import {
   CalculateInflationOptions,
@@ -78,6 +79,12 @@ function compareByAdpAsc(
 
 /**
  * Calculates auction inflation and returns adjusted player valuations.
+ *
+ * **Budget (contract):**
+ * - If `options.budgetByTeamId` is non-empty: `total_budget_remaining` = **sum of map values**
+ *   (per-team **remaining** dollars). **`paid` on `drafted_players` is ignored** for that request.
+ * - Otherwise: `total_budget_remaining` = `total_budget * num_teams` − **sum(`drafted_players[].paid`)**
+ *   (missing `paid` treated as 0). **`pre_draft_rosters`, `minors`, and `taxi` do not affect spend in v1.**
  *
  * Inflation Factor = Remaining League Budget / Remaining Player Pool Value
  *   > 1.0 → more money chasing remaining talent → prices inflate
@@ -169,6 +176,7 @@ export function calculateInflation(
     : new Date().toISOString();
 
   return {
+    engine_contract_version: ENGINE_CONTRACT_VERSION,
     inflation_factor: parseFloat(inflationFactor.toFixed(4)),
     total_budget_remaining: budgetRemaining,
     pool_value_remaining: parseFloat(poolValue.toFixed(2)),

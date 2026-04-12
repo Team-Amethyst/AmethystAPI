@@ -1,0 +1,256 @@
+openapi: 3.1.0
+info:
+  title: Amethyst Engine API
+  description: |
+    Server-to-server analytical API for Amethyst Draft. Licensed routes require `x-api-key`.
+
+    **AmethystDraft BFF — `finalizeEngineValuationPostPayload` (production):** flat JSON
+    (`schemas/valuation-request.v1.schema.json`): `roster_slots` as `[{ position, count }, …]`,
+    **auction-only** `drafted_players`, optional `pre_draft_rosters` as **either** a map
+    `team_id → rows` **or** `[{ team_id, players[] }, …]`, optional `player_ids`, and
+    **`schema_version` and/or `schemaVersion`** (camelCase wins when both are sent).
+
+    **Nested** `{ league, draft_state, … }` (`schemas/valuation-request-v1.json`) remains
+    supported for checkpoints/fixtures. Nested `league.roster_slots` may be an **array** or a
+    **map** of slot → count (Draft `apps/api/test-fixtures/.../pre_draft.json` style).
+
+    **Budget contract:** If `budget_by_team_id` is present and non-empty, remaining league
+    dollars = **sum of map values** and **`paid` on drafted rows is ignored**. If absent,
+    remaining = `total_budget * num_teams` − **sum(`drafted_players[].paid`)**. In v1,
+    `pre_draft_rosters`, `minors`, and `taxi` do **not** affect spend or drafted-id filtering
+    (only `drafted_players` / `draft_state` ids remove players from the pool).
+
+    **HTTP 400 — request validation:** Body is **only** `{ "errors": [ { "field", "message" } ] }`
+    (Zod parse failures, duplicate `player_id`, spend over cap, etc.). No `AppError` envelope.
+
+    **HTTP 422 — output validation:** Same `errors` array shape when inflation output failed
+    sanity checks (**no** `valuations` / price payload).
+
+    **Tracing:** Optional `X-Request-Id` from Draft; **echoed** on the response on success and
+    error paths that run the request-id middleware.
+
+    **Success:** Valuation responses include **`engine_contract_version`** (currently `"1"`).
+
+    **`POST /valuation/calculate`** is not Redis-cached. **`paid`** is non-negative; duplicate
+    `player_id` in drafted rows is rejected; without `budget_by_team_id`, total paid cannot exceed
+    `total_budget × num_teams`.
+  version: 1.0.0
+
+servers:
+  - url: https://{host}
+    variables:
+      host:
+        default: localhost:3001
+
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: x-api-key
+
+  schemas:
+    FieldError:
+      type: object
+      required: [field, message]
+      properties:
+        field:
+          type: string
+          description: JSON path style (empty string for root)
+        message:
+          type: string
+
+    ZodValidationErrorBody:
+      type: object
+      required: [errors]
+      properties:
+        errors:
+          type: array
+          items:
+            $ref: "#/components/schemas/FieldError"
+
+    ValuationResponse:
+      type: object
+      required:
+        - engine_contract_version
+        - inflation_factor
+        - total_budget_remaining
+        - pool_value_remaining
+        - players_remaining
+        - valuations
+        - calculated_at
+      properties:
+        engine_contract_version:
+          type: string
+          example: "1"
+        inflation_factor:
+          type: number
+        total_budget_remaining:
+          type: number
+        pool_value_remaining:
+          type: number
+        players_remaining:
+          type: integer
+        calculated_at:
+          type: string
+        valuations:
+          type: array
+          items:
+            $ref: "#/components/schemas/ValuedPlayer"
+
+    ValuedPlayer:
+      type: object
+      properties:
+        player_id:
+          type: string
+        name:
+          type: string
+        position:
+          type: string
+        team:
+          type: string
+        adp:
+          type: number
+        tier:
+          type: integer
+        baseline_value:
+          type: number
+        adjusted_value:
+          type: number
+        indicator:
+          type: string
+          enum: [Steal, Reach, Fair Value]
+        inflation_factor:
+          type: number
+
+    CatalogBatchValuesResponse:
+      type: object
+      required: [engine_contract_version, players]
+      properties:
+        engine_contract_version:
+          type: string
+          example: "1"
+        players:
+          type: array
+          items:
+            type: object
+            properties:
+              player_id:
+                type: string
+              name:
+                type: string
+              position:
+                type: string
+              team:
+                type: string
+              value:
+                type: number
+              tier:
+                type: integer
+              adp:
+                type: number
+
+paths:
+  /valuation/calculate:
+    post:
+      summary: Inflation-adjusted auction values
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - in: header
+          name: X-Request-Id
+          schema:
+            type: string
+          required: false
+      requestBody:
+        required: true
+        description: |
+          Flat body: see repository file `schemas/valuation-request.v1.schema.json` (source of truth).
+          Nested alternate: `schemas/valuation-request-v1.json` (`league` + `draft_state`).
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        "200":
+          description: OK
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ValuationResponse"
+        "400":
+          description: Request validation failed (Zod, economics rules); body is only `errors[]`
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ZodValidationErrorBody"
+        "422":
+          description: Valuation output failed sanity checks (no price payload)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ZodValidationErrorBody"
+        "429":
+          description: Valuation rate limit exceeded
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        example: RATE_LIMIT_EXCEEDED
+
+  /catalog/batch-values:
+    post:
+      summary: Baseline value / tier / adp for player ids
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - in: header
+          name: X-Request-Id
+          schema:
+            type: string
+          required: false
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [player_ids]
+              properties:
+                player_ids:
+                  type: array
+                  items:
+                    type: string
+                league_scope:
+                  type: string
+                  enum: [Mixed, AL, NL]
+                pos_eligibility_threshold:
+                  type: number
+      responses:
+        "200":
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CatalogBatchValuesResponse"
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ZodValidationErrorBody"
