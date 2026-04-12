@@ -20,6 +20,7 @@ Stateless analytical API for fantasy baseball. Receives draft state and league s
 
 | Artifact | Role |
 |---|---|
+| [ENGINE_AGENT_BRIEF.md](ENGINE_AGENT_BRIEF.md) | **Handoff for agents / new contributors** — Draft ↔ Engine HTTP contract, headers, flat valuation body, fixtures, checklist. |
 | [openapi/openapi.yaml](openapi/openapi.yaml) | **Human-facing API spec** — paths, headers, success/error shapes, budget rules, tracing. |
 | [schemas/valuation-request.v1.schema.json](schemas/valuation-request.v1.schema.json) | **Machine validation** for the flat `POST /valuation/calculate` body (keep in sync with Draft). |
 | [schemas/valuation-request-v1.json](schemas/valuation-request-v1.json) | Nested `{ league, draft_state }` alternate (fixtures / legacy). |
