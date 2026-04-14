@@ -4,23 +4,31 @@ exports[`POST /valuation/calculate — AmethystDraft BFF alignment > pre_draft.j
 {
   "calculated_at": "1970-01-01T00:00:00.000Z",
   "engine_contract_version": "1",
-  "inflation_factor": 0.1624,
+  "inflation_factor": 0.25,
   "players_remaining": 280,
-  "pool_value_remaining": 19215,
-  "total_budget_remaining": 3120,
+  "pool_value_remaining": 21685.3,
+  "total_budget_remaining": 3102,
+  "valuation_model_version": "v2-expert-manual-shape",
 }
 `;
 
 exports[`POST /valuation/calculate — AmethystDraft BFF alignment > pre_draft.json from Draft repo (if present) or local mirror: deterministic snapshot of aggregates 2`] = `
 {
-  "adjusted_value": 14.61,
+  "adjusted_value": 25.24,
   "adp": 1,
-  "baseline_value": 90,
+  "baseline_components": {
+    "projection_component": 1.96,
+    "scarcity_component": 0.1,
+    "scoring_format": "5x5",
+  },
+  "baseline_value": 100.96,
   "indicator": "Fair Value",
-  "inflation_factor": 0.1624,
+  "inflation_adjustment": -75.72,
+  "inflation_factor": 0.25,
   "name": "Player_1",
   "player_id": "1",
   "position": "OF",
+  "scarcity_adjustment": 10.1,
   "team": "NYY",
   "tier": 1,
 }

@@ -2,6 +2,7 @@ import type { LeanPlayer, NormalizedValuationInput, ValuationResponse } from "..
 import { logger } from "../lib/logger";
 import { validateValuationResponse } from "../lib/valuationQuality";
 import { calculateInflation } from "./inflationEngine";
+import { scoringAwareBaselinePlayers } from "./baselineValueEngine";
 
 /**
  * Valuation pipeline (course UML activity diagram — first pass mapping)
@@ -38,6 +39,56 @@ export type ValuationWorkflowResult =
   | { ok: true; response: ValuationResponse }
   | { ok: false; issues: string[] };
 
+type ExtraDraftContext = {
+  additionalSpent: number;
+  additionalDraftedIds: string[];
+};
+
+function extractDraftedIdsAndSpend(input: NormalizedValuationInput): ExtraDraftContext {
+  const ids = new Set<string>();
+  let spent = 0;
+
+  const collectUnknownRows = (rows: unknown[] | undefined) => {
+    for (const row of rows ?? []) {
+      if (typeof row !== "object" || row == null) continue;
+      const rec = row as Record<string, unknown>;
+      const pid = rec.player_id;
+      if (typeof pid === "string" && pid.length > 0) ids.add(pid);
+      const keeperCost = rec.keeper_cost;
+      const paid = rec.paid;
+      if (typeof keeperCost === "number" && Number.isFinite(keeperCost)) {
+        spent += keeperCost;
+      } else if (typeof paid === "number" && Number.isFinite(paid)) {
+        spent += paid;
+      }
+    }
+  };
+
+  const collectBuckets = (
+    buckets: NormalizedValuationInput["minors"] | NormalizedValuationInput["taxi"]
+  ) => {
+    if (!buckets) return;
+    if (Array.isArray(buckets)) {
+      for (const bucket of buckets) {
+        collectUnknownRows(bucket.players as unknown[]);
+      }
+      return;
+    }
+    for (const v of Object.values(buckets)) {
+      if (Array.isArray(v)) collectUnknownRows(v);
+    }
+  };
+
+  if (input.pre_draft_rosters) {
+    for (const rows of Object.values(input.pre_draft_rosters)) {
+      collectUnknownRows(Array.isArray(rows) ? rows : []);
+    }
+  }
+  collectBuckets(input.minors);
+  collectBuckets(input.taxi);
+  return { additionalSpent: spent, additionalDraftedIds: [...ids] };
+}
+
 /**
  * Runs inflation + steal/reach on the current pool. Scoring mode is resolved for logging
  * and future per-format baseline math; today both paths use the same `calculateInflation`.
@@ -49,29 +100,58 @@ export function executeValuationWorkflow(
   allPlayers: LeanPlayer[],
   input: NormalizedValuationInput
 ): ValuationWorkflowResult {
-  const response = calculateInflation(
+  const basePlayers = scoringAwareBaselinePlayers(
     allPlayers,
-    input.drafted_players,
-    input.total_budget,
-    input.num_teams,
-    input.roster_slots,
-    input.league_scope,
-    {
-      deterministic: input.deterministic,
-      seed: input.seed,
-      playerIdsFilter: input.player_ids,
-      budgetByTeamId: input.budget_by_team_id,
-    }
+    input.scoring_format,
+    input.scoring_categories,
+    input.roster_slots
   );
+  const extra = extractDraftedIdsAndSpend(input);
 
-  const quality = validateValuationResponse(response);
-  if (!quality.ok) {
-    logger.warn(
-      { issues: quality.issues, component: "valuationWorkflow" },
-      "valuation output validation failed (422)"
+  const retryPlan = [
+    { inflationCap: 3.0, inflationFloor: 0.25 },
+    { inflationCap: 3.0, inflationFloor: 0.35 },
+    { inflationCap: 2.5, inflationFloor: 0.5 },
+  ];
+  let lastIssues: string[] = [];
+
+  for (let i = 0; i < retryPlan.length; i++) {
+    const pass = retryPlan[i];
+    const response = calculateInflation(
+      basePlayers,
+      input.drafted_players,
+      input.total_budget,
+      input.num_teams,
+      input.roster_slots,
+      input.league_scope,
+      {
+        deterministic: input.deterministic,
+        seed: input.seed,
+        playerIdsFilter: input.player_ids,
+        budgetByTeamId: input.budget_by_team_id,
+        additionalSpent: extra.additionalSpent,
+        additionalDraftedIds: extra.additionalDraftedIds,
+        inflationCap: pass.inflationCap,
+        inflationFloor: pass.inflationFloor,
+      }
     );
-    return { ok: false, issues: quality.issues };
+
+    const quality = validateValuationResponse(response);
+    if (quality.ok) {
+      if (i > 0) {
+        logger.warn(
+          { pass: i + 1, component: "valuationWorkflow" },
+          "valuation recovered after bounded recompute"
+        );
+      }
+      return { ok: true, response };
+    }
+    lastIssues = quality.issues;
   }
 
-  return { ok: true, response };
+  logger.warn(
+    { issues: lastIssues, component: "valuationWorkflow" },
+    "valuation output validation failed (422)"
+  );
+  return { ok: false, issues: lastIssues };
 }

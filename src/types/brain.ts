@@ -146,6 +146,10 @@ export interface CalculateInflationOptions {
   seed?: number;
   playerIdsFilter?: string[];
   budgetByTeamId?: Record<string, number>;
+  additionalSpent?: number;
+  additionalDraftedIds?: string[];
+  inflationCap?: number;
+  inflationFloor?: number;
 }
 
 export type ValueIndicator = "Steal" | "Reach" | "Fair Value";
@@ -161,6 +165,13 @@ export interface ValuedPlayer {
   adjusted_value: number;
   indicator: ValueIndicator;
   inflation_factor: number;
+  baseline_components?: {
+    scoring_format: ScoringFormat | "default";
+    projection_component: number;
+    scarcity_component: number;
+  };
+  scarcity_adjustment?: number;
+  inflation_adjustment?: number;
 }
 
 export interface ValuationResponse {
@@ -173,6 +184,7 @@ export interface ValuationResponse {
   players_remaining: number;
   valuations: ValuedPlayer[];
   calculated_at: string;
+  valuation_model_version?: string;
 }
 
 // ─── Scarcity Analysis ────────────────────────────────────────────────────────

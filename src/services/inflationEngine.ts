@@ -104,6 +104,9 @@ export function calculateInflation(
   options?: CalculateInflationOptions
 ): ValuationResponse {
   const draftedIds = new Set(draftedPlayers.map((d) => d.player_id));
+  for (const pid of options?.additionalDraftedIds ?? []) {
+    draftedIds.add(pid);
+  }
 
   const scoped = filterByScope(allPlayers, leagueScope);
   let undrafted = scoped.filter((p) => !draftedIds.has(getPlayerId(p)));
@@ -128,12 +131,20 @@ export function calculateInflation(
       (sum, dp) => sum + (dp.paid ?? 0),
       0
     );
-    budgetRemaining = Math.max(0, totalLeagueBudget - budgetSpent);
+    budgetRemaining = Math.max(
+      0,
+      totalLeagueBudget - budgetSpent - (options?.additionalSpent ?? 0)
+    );
   }
 
   const poolValue = undrafted.reduce((sum, p) => sum + (p.value || 0), 0);
 
-  const inflationFactor = poolValue > 0 ? budgetRemaining / poolValue : 1;
+  const rawInflationFactor = poolValue > 0 ? budgetRemaining / poolValue : 1;
+  const cappedInflation = Math.min(
+    options?.inflationCap ?? Number.POSITIVE_INFINITY,
+    rawInflationFactor
+  );
+  const inflationFactor = Math.max(options?.inflationFloor ?? 0.25, cappedInflation);
 
   const byValue = [...undrafted].sort((a, b) =>
     compareByValueDesc(a, b, options)
@@ -148,6 +159,17 @@ export function calculateInflation(
     const pid = getPlayerId(p);
     const baselineValue = p.value || 0;
     const adjustedValue = parseFloat((baselineValue * inflationFactor).toFixed(2));
+    const meta = (
+      p.projection as
+        | {
+            __valuation_meta__?: {
+              scoring_format?: "5x5" | "6x6" | "points";
+              projection_component?: number;
+              scarcity_component?: number;
+            };
+          }
+        | undefined
+    )?.__valuation_meta__;
 
     let indicator: ValueIndicator = "Fair Value";
     if (n > 0) {
@@ -168,6 +190,15 @@ export function calculateInflation(
       adjusted_value: adjustedValue,
       indicator,
       inflation_factor: parseFloat(inflationFactor.toFixed(4)),
+      baseline_components: {
+        scoring_format: meta?.scoring_format ?? "default",
+        projection_component: meta?.projection_component ?? 0,
+        scarcity_component: meta?.scarcity_component ?? 0,
+      },
+      scarcity_adjustment: parseFloat(
+        ((meta?.scarcity_component ?? 0) * baselineValue).toFixed(2)
+      ),
+      inflation_adjustment: parseFloat((adjustedValue - baselineValue).toFixed(2)),
     };
   });
 
@@ -183,5 +214,6 @@ export function calculateInflation(
     players_remaining: undrafted.length,
     valuations,
     calculated_at: calculatedAt,
+    valuation_model_version: "v2-expert-manual-shape",
   };
 }

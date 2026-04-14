@@ -83,6 +83,7 @@ All Brain endpoints require an `x-api-key` header. See [Authentication](#authent
 
 ### `POST /valuation/calculate`
 Returns every undrafted player with an inflation-adjusted auction value and a **Steal / Reach / Fair Value** indicator.
+Baseline values are now scoring-aware (`5x5` / `6x6` / `points`) and include bounded scarcity/replacement adjustments before inflation.
 
 The **AmethystDraft** API forwards a single JSON object (no extra wrapper): either the merged body from `buildEngineValuationCalculateBodyFromFixture` or live league/roster state. Canonical JSON Schema for the flat fixture shape: [schemas/valuation-request.v1.schema.json](schemas/valuation-request.v1.schema.json) (align with Draft `apps/api/schemas/valuation-request.v1.schema.json` when present). Nested `{ league, draft_state }` is still accepted for older tests; see [schemas/valuation-request-v1.json](schemas/valuation-request-v1.json).
 
@@ -125,6 +126,7 @@ The **AmethystDraft** API forwards a single JSON object (no extra wrapper): eith
 | `player_ids` | Value only these undrafted ids (subset / perf) |
 
 **Validation errors** return `400` with `{ "errors": [{ "field": "drafted_players.0.position", "message": "..." }] }` (JSON path style, no stack traces). Version failures use `field: "schema_version"`.
+When quality checks fail, workflow performs bounded recompute passes (inflation cap/floor clamps) before fail-closed `422`.
 
 **Auth:** Draft calls this route with `x-api-key` (`AMETHYST_API_KEY`). The Draft-only `PLAYER_API_TEST_KEY` is not used here.
 
@@ -137,6 +139,10 @@ Single-player valuation convenience route. Accepts the same league and draft con
 
 If `player_id` is missing, returns `400` with `{ errors: [{ field: "player_id", message: "player_id is required" }] }`.
 If `player_id` is not in the current valuation pool, returns `404` with `{ errors: [{ field: "player_id", message: "Player not found in valuation pool" }] }`.
+`valuations[]` rows include optional explainability metadata:
+- `baseline_components` (`scoring_format`, `projection_component`, `scarcity_component`)
+- `scarcity_adjustment`
+- `inflation_adjustment`
 
 ### `POST /catalog/batch-values`
 First-class baseline read: same **`player_id`** rules as valuation (string MLB id / `mlbId`). Returns **`engine_contract_version`** plus `players[]`. Responses are **cached 120s** per request body (Redis when configured). Merge with MLB bios in Draft. `league_scope` filters the list. `pos_eligibility_threshold` is reserved for future eligibility rules.

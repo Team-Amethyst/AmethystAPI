@@ -1,0 +1,58 @@
+{
+  "name": "expert-manual-mini-league",
+  "input": {
+    "schemaVersion": "1.0.0",
+    "checkpoint": "after_keeper_round",
+    "roster_slots": [
+      { "position": "C", "count": 1 },
+      { "position": "OF", "count": 3 },
+      { "position": "SP", "count": 5 },
+      { "position": "RP", "count": 2 }
+    ],
+    "scoring_categories": [
+      { "name": "HR", "type": "batting" },
+      { "name": "RBI", "type": "batting" },
+      { "name": "R", "type": "batting" },
+      { "name": "SB", "type": "batting" },
+      { "name": "AVG", "type": "batting" },
+      { "name": "W", "type": "pitching" },
+      { "name": "K", "type": "pitching" },
+      { "name": "SV", "type": "pitching" },
+      { "name": "ERA", "type": "pitching" },
+      { "name": "WHIP", "type": "pitching" }
+    ],
+    "total_budget": 260,
+    "num_teams": 12,
+    "league_scope": "Mixed",
+    "scoring_format": "5x5",
+    "deterministic": true,
+    "seed": 11,
+    "drafted_players": [
+      {
+        "player_id": "1001",
+        "name": "Keeper Star",
+        "position": "OF",
+        "team": "NYY",
+        "team_id": "t1",
+        "paid": 30
+      }
+    ],
+    "pre_draft_rosters": {
+      "t2": [
+        {
+          "player_id": "2001",
+          "name": "Cheap Keeper",
+          "position": "SP",
+          "team": "LAD",
+          "team_id": "t2",
+          "keeper_cost": 12
+        }
+      ]
+    }
+  },
+  "expectations": {
+    "top_player_id": "3001",
+    "min_inflation_factor": 0.8,
+    "max_inflation_factor": 3.0
+  }
+}

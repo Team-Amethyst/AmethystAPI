@@ -589,6 +589,7 @@
           <p class="when" style="margin-bottom:8px">Response header <code>X-Request-Id</code> echoes your id or a generated UUID. OpenAPI: repo <code>openapi/openapi.yaml</code>.</p>
           <div class="code-block"><pre>{
   <span class="t-key">"engine_contract_version"</span>: <span class="t-str">"1"</span>,  <span class="t-cmt">// API contract id — detect drift vs Draft</span>
+  <span class="t-key">"valuation_model_version"</span>: <span class="t-str">"v2-expert-manual-shape"</span>,
   <span class="t-key">"inflation_factor"</span>:      <span class="t-num">1.12</span>,    <span class="t-cmt">// &gt;1.0 = inflated market</span>
   <span class="t-key">"total_budget_remaining"</span>: <span class="t-num">2184</span>,
   <span class="t-key">"pool_value_remaining"</span>:   <span class="t-num">1948</span>,
@@ -600,7 +601,14 @@
     <span class="t-key">"tier"</span>:           <span class="t-num">1</span>,
     <span class="t-key">"baseline_value"</span>: <span class="t-num">58</span>,
     <span class="t-key">"adjusted_value"</span>: <span class="t-num">65</span>,        <span class="t-cmt">// use this for price target</span>
-    <span class="t-key">"indicator"</span>:      <span class="t-str">"Steal"</span>     <span class="t-cmt">// "Steal" | "Reach" | "Fair Value"</span>
+    <span class="t-key">"indicator"</span>:      <span class="t-str">"Steal"</span>,    <span class="t-cmt">// "Steal" | "Reach" | "Fair Value"</span>
+    <span class="t-key">"baseline_components"</span>: {
+      <span class="t-key">"scoring_format"</span>: <span class="t-str">"5x5"</span>,
+      <span class="t-key">"projection_component"</span>: <span class="t-num">4.2</span>,
+      <span class="t-key">"scarcity_component"</span>: <span class="t-num">0.1</span>
+    },
+    <span class="t-key">"scarcity_adjustment"</span>: <span class="t-num">5.8</span>,
+    <span class="t-key">"inflation_adjustment"</span>: <span class="t-num">7</span>
   }],
   <span class="t-key">"calculated_at"</span>: <span class="t-str">"2026-03-07T17:39:19Z"</span>
 }</pre>

@@ -15,6 +15,7 @@ vi.mock("../src/services/inflationEngine", () => ({
 }));
 
 import { executeValuationWorkflow } from "../src/services/valuationWorkflow";
+import { calculateInflation } from "../src/services/inflationEngine";
 
 function minimalInput(): NormalizedValuationInput {
   return {
@@ -36,5 +37,6 @@ describe("executeValuationWorkflow validation merge", () => {
     if (res.ok) return;
     expect(res.issues.length).toBeGreaterThan(0);
     expect(res.issues.some((w) => w.includes("inflation_factor"))).toBe(true);
+    expect(vi.mocked(calculateInflation).mock.calls.length).toBe(3);
   });
 });

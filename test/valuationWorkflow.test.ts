@@ -86,6 +86,16 @@ describe("executeValuationWorkflow", () => {
     expect(res.response.engine_contract_version).toBe("1");
   });
 
+  it("adds explainability metadata on valuation rows", () => {
+    const res = executeValuationWorkflow(players, minimalInput());
+    expect(res.ok).toBe(true);
+    if (!res.ok) return;
+    expect(res.response.valuation_model_version).toBe(
+      "v2-expert-manual-shape"
+    );
+    expect(res.response.valuations[0].baseline_components).toBeDefined();
+  });
+
   it("when budget_by_team_id is set, ignores paid on drafted_players", () => {
     const highPaid = minimalInput({
       drafted_players: [
@@ -121,5 +131,44 @@ describe("executeValuationWorkflow", () => {
     );
     expect(a.response.inflation_factor).toBe(b.response.inflation_factor);
     expect(a.response.total_budget_remaining).toBe(400);
+  });
+
+  it("accounts for pre_draft/minors/taxi spend and drafted ids in v2 budget/pool", () => {
+    const withKeepers = executeValuationWorkflow(
+      players,
+      minimalInput({
+        pre_draft_rosters: {
+          t1: [
+            {
+              player_id: "1",
+              name: "Keeper",
+              position: "OF",
+              team: "NYY",
+              team_id: "t1",
+              keeper_cost: 20,
+            },
+          ],
+        },
+        minors: [
+          {
+            team_id: "t1",
+            players: [
+              {
+                player_id: "2",
+                name: "Minor",
+                position: "SP",
+                team: "BOS",
+                team_id: "t1",
+                paid: 5,
+              },
+            ],
+          },
+        ],
+      })
+    );
+    expect(withKeepers.ok).toBe(true);
+    if (!withKeepers.ok) return;
+    expect(withKeepers.response.total_budget_remaining).toBe(260 * 12 - 25);
+    expect(withKeepers.response.players_remaining).toBe(0);
   });
 });
