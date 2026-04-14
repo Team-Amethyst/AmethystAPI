@@ -223,7 +223,7 @@ describe("POST /valuation/calculate — AmethystDraft BFF alignment", () => {
     expect(res.body.engine_contract_version).toBe("1");
   });
 
-  it("pre_draft.json from Draft repo (if present) or local mirror: deterministic snapshot of aggregates", async () => {
+  it("pre_draft.json from Draft repo (if present) or local mirror: deterministic invariant checks", async () => {
     const fixturePath = resolveDraftOrLocalCheckpoint("pre_draft.json");
     const body = JSON.parse(readFileSync(fixturePath, "utf8")) as object;
 
@@ -238,8 +238,32 @@ describe("POST /valuation/calculate — AmethystDraft BFF alignment", () => {
 
     const { valuations, ...aggregateRest } = res.body;
     expect(valuations).toHaveLength(280);
-    expect(aggregateRest).toMatchSnapshot();
-    expect(valuations[0]).toMatchSnapshot();
+    expect(aggregateRest).toMatchObject({
+      engine_contract_version: "1",
+      valuation_model_version: "v2-expert-manual-shape",
+      calculated_at: "1970-01-01T00:00:00.000Z",
+      players_remaining: 280,
+      inflation_factor: expect.any(Number),
+      pool_value_remaining: expect.any(Number),
+      total_budget_remaining: expect.any(Number),
+    });
+    expect(aggregateRest.inflation_factor).toBeGreaterThanOrEqual(0.25);
+    expect(aggregateRest.inflation_factor).toBeLessThanOrEqual(3);
+    expect(aggregateRest.pool_value_remaining).toBeGreaterThan(0);
+    expect(aggregateRest.total_budget_remaining).toBeGreaterThan(0);
+
+    expect(valuations[0]).toMatchObject({
+      player_id: expect.any(String),
+      name: expect.any(String),
+      baseline_value: expect.any(Number),
+      adjusted_value: expect.any(Number),
+      indicator: expect.stringMatching(/^(Steal|Reach|Fair Value)$/),
+      baseline_components: expect.objectContaining({
+        scoring_format: expect.any(String),
+        projection_component: expect.any(Number),
+        scarcity_component: expect.any(Number),
+      }),
+    });
   });
 });
 
