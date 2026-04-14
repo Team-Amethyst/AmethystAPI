@@ -128,6 +128,16 @@ The **AmethystDraft** API forwards a single JSON object (no extra wrapper): eith
 
 **Auth:** Draft calls this route with `x-api-key` (`AMETHYST_API_KEY`). The Draft-only `PLAYER_API_TEST_KEY` is not used here.
 
+### `POST /valuation/player`
+Single-player valuation convenience route. Accepts the same league and draft context as `/valuation/calculate`, plus required `player_id`, and returns:
+
+- full valuation metadata (`inflation_factor`, `players_remaining`, etc.)
+- `valuations` as a single-item array
+- `player` as the single valued row
+
+If `player_id` is missing, returns `400` with `{ errors: [{ field: "player_id", message: "player_id is required" }] }`.
+If `player_id` is not in the current valuation pool, returns `404` with `{ errors: [{ field: "player_id", message: "Player not found in valuation pool" }] }`.
+
 ### `POST /catalog/batch-values`
 First-class baseline read: same **`player_id`** rules as valuation (string MLB id / `mlbId`). Returns **`engine_contract_version`** plus `players[]`. Responses are **cached 120s** per request body (Redis when configured). Merge with MLB bios in Draft. `league_scope` filters the list. `pos_eligibility_threshold` is reserved for future eligibility rules.
 

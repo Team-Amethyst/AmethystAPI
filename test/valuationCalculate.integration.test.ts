@@ -31,7 +31,10 @@ vi.mock("../src/models/Player", () => {
 });
 
 import { requestIdMiddleware } from "../src/middleware/requestId";
-import { valuationCalculateHandler } from "../src/routes/valuation";
+import {
+  valuationCalculateHandler,
+  valuationPlayerHandler,
+} from "../src/routes/valuation";
 
 const checkpointsDir = path.join(
   __dirname,
@@ -237,5 +240,65 @@ describe("POST /valuation/calculate — AmethystDraft BFF alignment", () => {
     expect(valuations).toHaveLength(280);
     expect(aggregateRest).toMatchSnapshot();
     expect(valuations[0]).toMatchSnapshot();
+  });
+});
+
+describe("POST /valuation/player", () => {
+  const app = express();
+  app.use(express.json());
+  app.use(requestIdMiddleware);
+  app.post("/valuation/player", valuationPlayerHandler);
+
+  const validFlatBase = {
+    roster_slots: [{ position: "OF", count: 3 }],
+    scoring_categories: [{ name: "HR", type: "batting" }],
+    total_budget: 260,
+    num_teams: 12,
+    league_scope: "Mixed" as const,
+    drafted_players: [] as object[],
+    deterministic: true,
+    seed: 7,
+  };
+
+  it("returns a single player valuation under `player`", async () => {
+    const res = await request(app)
+      .post("/valuation/player")
+      .send({
+        ...validFlatBase,
+        player_id: "1",
+      })
+      .expect(200);
+
+    expect(res.body.player).toBeDefined();
+    expect(res.body.player.player_id).toBe("1");
+    expect(res.body.valuations).toHaveLength(1);
+    expect(res.body.valuations[0].player_id).toBe("1");
+  });
+
+  it("400 when player_id is missing", async () => {
+    const res = await request(app)
+      .post("/valuation/player")
+      .send(validFlatBase)
+      .expect(400);
+
+    expect(res.body).toEqual({
+      errors: [{ field: "player_id", message: "player_id is required" }],
+    });
+  });
+
+  it("404 when player is outside current valuation pool", async () => {
+    const res = await request(app)
+      .post("/valuation/player")
+      .send({
+        ...validFlatBase,
+        player_id: "999999",
+      })
+      .expect(404);
+
+    expect(res.body).toEqual({
+      errors: [
+        { field: "player_id", message: "Player not found in valuation pool" },
+      ],
+    });
   });
 });

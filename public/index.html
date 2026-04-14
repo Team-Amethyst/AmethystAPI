@@ -609,6 +609,48 @@
         </div>
       </div>
 
+      <!-- /valuation/player -->
+      <div class="endpoint" id="ep-valuation-player">
+        <div class="endpoint-header" onclick="toggleEndpoint('ep-valuation-player')">
+          <span class="method-badge method-post">POST</span>
+          <span class="endpoint-path">/valuation/player</span>
+          <span class="endpoint-desc">Single-player valuation using full league context</span>
+          <span class="chevron">▶</span>
+        </div>
+        <div class="endpoint-body">
+          <p class="when">Use when the UI needs one player card only. Uses the same valuation pipeline and inflation math as <code>/valuation/calculate</code>, then returns one player under <code>player</code>.</p>
+          <div class="block-label">Request</div>
+          <div class="code-block">
+            <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+            <pre>{
+  <span class="t-key">"player_id"</span>: <span class="t-str">"660271"</span>,
+  <span class="t-key">"schema_version"</span>: <span class="t-str">"1.0.0"</span>,
+  <span class="t-key">"roster_slots"</span>: [{ <span class="t-key">"position"</span>: <span class="t-str">"OF"</span>, <span class="t-key">"count"</span>: <span class="t-num">3</span> }],
+  <span class="t-key">"scoring_categories"</span>: [{ <span class="t-key">"name"</span>: <span class="t-str">"HR"</span>, <span class="t-key">"type"</span>: <span class="t-str">"batting"</span> }],
+  <span class="t-key">"total_budget"</span>: <span class="t-num">260</span>,
+  <span class="t-key">"num_teams"</span>: <span class="t-num">12</span>,
+  <span class="t-key">"drafted_players"</span>: []
+}</pre>
+          </div>
+          <div class="block-label">Response</div>
+          <div class="code-block"><pre>{
+  <span class="t-key">"engine_contract_version"</span>: <span class="t-str">"1"</span>,
+  <span class="t-key">"inflation_factor"</span>: <span class="t-num">1.12</span>,
+  <span class="t-key">"players_remaining"</span>: <span class="t-num">496</span>,
+  <span class="t-key">"valuations"</span>: [{ <span class="t-cmt">/* single row */</span> }],
+  <span class="t-key">"player"</span>: {
+    <span class="t-key">"player_id"</span>: <span class="t-str">"660271"</span>,
+    <span class="t-key">"name"</span>: <span class="t-str">"Shohei Ohtani"</span>,
+    <span class="t-key">"baseline_value"</span>: <span class="t-num">58</span>,
+    <span class="t-key">"adjusted_value"</span>: <span class="t-num">65</span>,
+    <span class="t-key">"indicator"</span>: <span class="t-str">"Steal"</span>
+  }
+}</pre>
+          </div>
+          <p class="when" style="margin-top:8px">Errors: <code>400</code> when <code>player_id</code> is missing, <code>404</code> when the player is not in the current valuation pool (drafted, out-of-scope, or unknown id).</p>
+        </div>
+      </div>
+
       <!-- /catalog/batch-values -->
       <div class="endpoint" id="ep-catalog">
         <div class="endpoint-header" onclick="toggleEndpoint('ep-catalog')">
@@ -806,7 +848,8 @@ player_id: player._id          <span class="t-cmt">// MongoDB ObjectId — not r
         <table>
           <thead><tr><th>Endpoint</th><th>TTL</th><th>Key</th></tr></thead>
           <tbody>
-            <tr><td>/valuation/calculate</td><td>120s</td><td>Hash of request body</td></tr>
+            <tr><td>/valuation/calculate</td><td>No cache</td><td>Always recomputed</td></tr>
+            <tr><td>/valuation/player</td><td>No cache</td><td>Always recomputed</td></tr>
             <tr><td>/analysis/scarcity</td><td>120s</td><td>Hash of request body</td></tr>
             <tr><td>/simulation/mock-pick</td><td>No cache</td><td>Stateful per call</td></tr>
             <tr><td>/signals/news</td><td>900s</td><td>Date range + signal type</td></tr>
