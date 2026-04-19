@@ -49,5 +49,7 @@ function signalsKey(req: Request): string {
 
 // Cache for 15 minutes — matches the TTL set inside newsService
 router.get("/news", cacheMiddleware(900, signalsKey), getSignals);
+/** Product alias — same handler and cache key shape as `/news`. */
+router.get("/news-signals", cacheMiddleware(900, signalsKey), getSignals);
 
 export default router;

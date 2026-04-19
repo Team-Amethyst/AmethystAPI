@@ -94,6 +94,10 @@ describe("executeValuationWorkflow", () => {
       "v2-expert-manual-shape"
     );
     expect(res.response.valuations[0].baseline_components).toBeDefined();
+    expect(Array.isArray(res.response.market_notes)).toBe(true);
+    expect(res.response.market_notes!.length).toBeGreaterThan(0);
+    expect(Array.isArray(res.response.valuations[0].why)).toBe(true);
+    expect(res.response.valuations[0].why!.length).toBeGreaterThan(0);
   });
 
   it("when budget_by_team_id is set, ignores paid on drafted_players", () => {

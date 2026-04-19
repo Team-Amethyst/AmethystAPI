@@ -172,6 +172,8 @@ export interface ValuedPlayer {
   };
   scarcity_adjustment?: number;
   inflation_adjustment?: number;
+  /** Human-readable rationale (additive contract field). */
+  why?: string[];
 }
 
 export interface ValuationResponse {
@@ -185,6 +187,8 @@ export interface ValuationResponse {
   valuations: ValuedPlayer[];
   calculated_at: string;
   valuation_model_version?: string;
+  /** League-wide human notes (inflation, scarcity alerts, monopolies). */
+  market_notes?: string[];
 }
 
 // ─── Scarcity Analysis ────────────────────────────────────────────────────────

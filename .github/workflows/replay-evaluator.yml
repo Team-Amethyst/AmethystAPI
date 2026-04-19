@@ -1,0 +1,27 @@
+name: Replay evaluator (valuation checkpoints)
+
+on:
+  push:
+    paths:
+      - "scripts/replay-evaluator.ts"
+      - "test-fixtures/replay-evaluator/**"
+      - "src/services/valuationWorkflow.ts"
+      - "src/services/inflationEngine.ts"
+      - "src/lib/valuationRequest.ts"
+      - "src/lib/valuationExplainability.ts"
+  schedule:
+    # Nightly UTC — valuation replay smoke (no Mongo)
+    - cron: "15 7 * * *"
+
+jobs:
+  replay:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - run: pnpm install
+      - run: pnpm replay-eval

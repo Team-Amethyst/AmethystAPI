@@ -81,6 +81,13 @@ app.use("/analysis/scarcity", apiKeyMiddleware, scarcityRoutes);
 app.use("/simulation", apiKeyMiddleware, simulationRoutes);
 app.use("/signals", apiKeyMiddleware, signalsRoutes);
 
+/** Versioned mounts — same handlers/middleware as unprefixed routes (see ENGINE_AGENT_BRIEF). */
+app.use("/v1/valuation", apiKeyMiddleware, valuationRateLimiter(), valuationRoutes);
+app.use("/v1/catalog", apiKeyMiddleware, catalogRateLimiter(), catalogRoutes);
+app.use("/v1/analysis/scarcity", apiKeyMiddleware, scarcityRoutes);
+app.use("/v1/simulation", apiKeyMiddleware, simulationRoutes);
+app.use("/v1/signals", apiKeyMiddleware, signalsRoutes);
+
 // ── Global error handler ──────────────────────────────────────────────────────
 // 404 for unknown routes
 app.use((_req: Request, _res: Response, next: NextFunction) => {

@@ -1,0 +1,15 @@
+{
+  "schema_version": "1.0",
+  "documentation": "Replay manifest: each step loads a flat valuation request JSON and runs executeValuationWorkflow against an in-memory player pool (no Mongo). Extend steps with historical checkpoints as you capture them.",
+  "player_pool_size": 280,
+  "steps": [
+    {
+      "label": "pre_draft",
+      "request_path": "test-fixtures/player-api/checkpoints/pre_draft.json"
+    },
+    {
+      "label": "after_pick_10",
+      "request_path": "test-fixtures/player-api/checkpoints/after_pick_10.json"
+    }
+  ]
+}

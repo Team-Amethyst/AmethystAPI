@@ -65,6 +65,7 @@ describe("POST /valuation/calculate (Draft checkpoint bodies)", () => {
       pool_value_remaining: expect.any(Number),
       players_remaining: expect.any(Number),
       calculated_at: expect.any(String),
+      market_notes: expect.any(Array),
     });
     expect(Array.isArray(res.body.valuations)).toBe(true);
     if (res.body.valuations.length > 0) {

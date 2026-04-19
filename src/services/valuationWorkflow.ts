@@ -1,4 +1,9 @@
-import type { LeanPlayer, NormalizedValuationInput, ValuationResponse } from "../types/brain";
+import type {
+  LeanPlayer,
+  NormalizedValuationInput,
+  ValuationResponse,
+} from "../types/brain";
+import { attachValuationExplainability } from "../lib/valuationExplainability";
 import { logger } from "../lib/logger";
 import { validateValuationResponse } from "../lib/valuationQuality";
 import { calculateInflation } from "./inflationEngine";
@@ -144,7 +149,12 @@ export function executeValuationWorkflow(
           "valuation recovered after bounded recompute"
         );
       }
-      return { ok: true, response };
+      const explained = attachValuationExplainability(
+        response,
+        input,
+        basePlayers
+      );
+      return { ok: true, response: explained };
     }
     lastIssues = quality.issues;
   }

@@ -65,5 +65,7 @@ const mockPick: RequestHandler = async (
 };
 
 router.post("/mock-pick", mockPick);
+/** Product alias — same body and handler as `/mock-pick`. */
+router.post("/mock-draft", mockPick);
 
 export default router;

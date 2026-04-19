@@ -65,6 +65,9 @@ jobs:
       - name: Test
         run: pnpm test
 
+      - name: Replay evaluator (checkpoint smoke)
+        run: pnpm replay-eval
+
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:

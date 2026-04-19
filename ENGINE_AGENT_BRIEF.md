@@ -14,9 +14,41 @@
 | Method | Path (relative to Engine base URL) | Notes |
 |--------|-------------------------------------|--------|
 | `POST` | `/valuation/calculate` | JSON body: **flat** valuation context (see below). |
+| `POST` | `/valuation/player` | Same body as calculate plus **`player_id`**; returns one row under `player` plus full response envelope. |
 | `POST` | `/analysis/scarcity` | JSON body: scarcity context; optional `position` in body when Draft passes `?position=`. |
 | `POST` | `/simulation/mock-pick` | JSON body: `pick_order`, `roster_slots`, `league_scope`, `teams[]`, optional `available_player_ids`. |
+| `POST` | `/simulation/mock-draft` | **Alias** of `mock-pick` (same handler; clearer product naming). |
 | `GET`  | `/signals/news` | Query: optional `days`, `signal_type` (strings in query; Draft forwards as `params`). |
+| `GET`  | `/signals/news-signals` | **Alias** of `/signals/news` (shared cache key by query params). |
+
+## Draft ↔ Engine coupling audit (AmethystDraft repo)
+
+These Draft-side locations must stay aligned with the table above when paths, auth headers, or valuation body shapes change. This repo does not vendor AmethystDraft; treat this list as the integration checklist.
+
+| Draft path | Engine usage |
+|------------|----------------|
+| `apps/api/src/lib/amethyst.ts` | HTTP client (base URL, `x-api-key`, timeouts, which paths are called). |
+| `apps/api/src/lib/engineContext.ts` | Builds flat **`EngineValuationContext`** / valuation POST body for Engine. |
+| `apps/api/src/routes/engine.ts` (or equivalent) | BFF routes that forward to Engine. |
+| `apps/api/engine-contract/engineRepoHandoff.ts` | In-repo contract checklist (mirror of this brief). |
+| `apps/api/schemas/valuation-request.v1.schema.json` | Nested schema; Draft may flatten before Engine. |
+
+## Versioned URL aliases (`/v1/...`)
+
+The Engine also mounts **the same licensed routers** under a **`/v1` prefix** (same middleware and rate limits). New integrations may prefer these paths; **`/v1` and legacy paths are equivalent** until a deprecation is announced.
+
+| Legacy path | Versioned alias |
+|-------------|-----------------|
+| `POST /valuation/calculate` | `POST /v1/valuation/calculate` |
+| `POST /valuation/player` | `POST /v1/valuation/player` |
+| `POST /catalog/batch-values` | `POST /v1/catalog/batch-values` |
+| `POST /analysis/scarcity` | `POST /v1/analysis/scarcity` |
+| `POST /simulation/mock-pick` | `POST /v1/simulation/mock-pick` |
+| `POST /simulation/mock-draft` | `POST /v1/simulation/mock-draft` |
+| `GET /signals/news` | `GET /v1/signals/news` |
+| `GET /signals/news-signals` | `GET /v1/signals/news-signals` |
+
+**Deprecation policy:** Legacy unprefixed paths remain supported for existing Draft deployments. If a breaking change is ever required, ship **`/v1`** behavior first, update Draft’s `amethyst` client, then remove legacy routes in a coordinated release (and bump `ENGINE_CONTRACT_VERSION` / OpenAPI).
 
 ## `POST /valuation/calculate` — flat body (no wrapper)
 

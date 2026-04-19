@@ -110,6 +110,11 @@ components:
           type: integer
         calculated_at:
           type: string
+        market_notes:
+          type: array
+          description: Human-readable league context (inflation, scarcity, monopolies).
+          items:
+            type: string
         valuations:
           type: array
           items:
@@ -139,6 +144,11 @@ components:
           enum: [Steal, Reach, Fair Value]
         inflation_factor:
           type: number
+        why:
+          type: array
+          description: Short rationale strings for UI / trust.
+          items:
+            type: string
 
     CatalogBatchValuesResponse:
       type: object
