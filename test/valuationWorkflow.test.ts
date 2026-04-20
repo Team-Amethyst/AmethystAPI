@@ -204,4 +204,15 @@ describe("executeValuationWorkflow", () => {
     expect(withKeepers.response.total_budget_remaining).toBe(260 * 12 - 25);
     expect(withKeepers.response.players_remaining).toBe(0);
   });
+
+  it("prioritizes selected player position in market_notes for player-scoped responses", () => {
+    const res = executeValuationWorkflow(players, minimalInput(), { playerId: "2" });
+    expect(res.ok).toBe(true);
+    if (!res.ok) return;
+    expect(res.response.context_v2?.scope.player_id).toBe("2");
+    expect(res.response.context_v2?.scope.position).toBe("SP");
+    expect(
+      (res.response.market_notes ?? []).some((n) => n.startsWith("SP:"))
+    ).toBe(true);
+  });
 });

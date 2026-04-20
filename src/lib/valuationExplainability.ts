@@ -51,6 +51,19 @@ function positionTokens(pos: string): string[] {
     .filter(Boolean);
 }
 
+function findPositionAlert(
+  alerts: Array<{ position: string }>,
+  position: string | undefined
+): { position: string } | undefined {
+  if (!position) return undefined;
+  const tokens = positionTokens(position);
+  for (const tok of tokens) {
+    const match = alerts.find((a) => a.position.toUpperCase() === tok);
+    if (match) return match;
+  }
+  return undefined;
+}
+
 function rounded(n: number): number {
   return Number(n.toFixed(2));
 }
@@ -167,7 +180,16 @@ export function attachValuationExplainability(
   allPlayers: LeanPlayer[],
   scope: ContextScope = {}
 ): ValuationResponse {
-  const key = cacheKey(response, input, scope);
+  const selectedPositionFromRow =
+    scope.playerId != null
+      ? response.valuations.find((v) => v.player_id === scope.playerId)?.position
+      : undefined;
+  const effectiveScope: ContextScope = {
+    ...scope,
+    position: scope.position ?? selectedPositionFromRow,
+  };
+
+  const key = cacheKey(response, input, effectiveScope);
   let cached = contextCache.get(key);
 
   if (!cached) {
@@ -217,8 +239,8 @@ export function attachValuationExplainability(
       calculated_at: response.calculated_at,
       scope: {
         league_id: input.league_id ?? "unknown",
-        player_id: scope.playerId,
-        position: scope.position,
+        player_id: effectiveScope.playerId,
+        position: effectiveScope.position,
       },
       market_summary: {
         headline: formatHeadline(response.inflation_factor, top?.position ?? null),
@@ -243,9 +265,24 @@ export function attachValuationExplainability(
       },
     };
 
+    const selectedAlert = findPositionAlert(
+      context.position_alerts,
+      effectiveScope.position
+    ) as
+      | (typeof context.position_alerts extends Array<infer T> ? T : never)
+      | undefined;
+    const prioritizedAlerts = selectedAlert
+      ? [
+          selectedAlert,
+          ...context.position_alerts
+            .filter((a) => a.position !== selectedAlert.position)
+            .slice(0, 2),
+        ]
+      : context.position_alerts.slice(0, 3);
+
     const marketNotes = [
       context.market_summary.headline,
-      ...context.position_alerts.slice(0, 3).map((a) => `${a.position}: ${a.message}`),
+      ...prioritizedAlerts.map((a) => `${a.position}: ${a.message}`),
       ...scarcity.monopoly_warnings
         .slice(0, 2)
         .map((w) => stripAlertPrefix(w.message)),
@@ -295,12 +332,6 @@ export function attachValuationExplainability(
     })(),
   }));
 
-  const selectedPosition =
-    scope.position ??
-    (scope.playerId
-      ? valuations.find((v) => v.player_id === scope.playerId)?.position
-      : undefined);
-
   return {
     ...response,
     market_notes: cached.market_notes,
@@ -308,7 +339,7 @@ export function attachValuationExplainability(
       ...cached,
       scope: {
         ...cached.scope,
-        position: selectedPosition ?? cached.scope.position,
+        position: effectiveScope.position ?? cached.scope.position,
       },
     },
     valuations,
