@@ -98,6 +98,35 @@ describe("executeValuationWorkflow", () => {
     expect(res.response.market_notes!.length).toBeGreaterThan(0);
     expect(Array.isArray(res.response.valuations[0].why)).toBe(true);
     expect(res.response.valuations[0].why!.length).toBeGreaterThan(0);
+    expect(res.response.context_v2?.schema_version).toBe("2");
+    expect(res.response.context_v2?.market_summary.players_left).toBe(
+      res.response.players_remaining
+    );
+    const first = res.response.valuations[0];
+    expect(first.explain_v2).toBeDefined();
+    expect(first.explain_v2?.auction_target).toBe(first.adjusted_value);
+    expect(first.explain_v2?.list_value).toBe(first.baseline_value);
+    const adj = first.explain_v2!.adjustments;
+    const delta = Number((first.adjusted_value - first.baseline_value).toFixed(2));
+    const sum = Number((adj.scarcity + adj.inflation + adj.other).toFixed(2));
+    expect(Math.abs(delta - sum)).toBeLessThanOrEqual(0.02);
+    const impacts = first.explain_v2!.drivers.map((d) => Math.abs(d.impact));
+    expect(impacts).toEqual([...impacts].sort((a, b) => b - a));
+    const alerts = res.response.context_v2?.position_alerts ?? [];
+    const sevRank = { critical: 4, high: 3, medium: 2, low: 1 };
+    for (let i = 1; i < alerts.length; i++) {
+      const prev = alerts[i - 1];
+      const cur = alerts[i];
+      const prevRank = sevRank[prev.severity];
+      const curRank = sevRank[cur.severity];
+      expect(prevRank >= curRank).toBe(true);
+      if (prevRank === curRank) {
+        expect(prev.urgency_score >= cur.urgency_score).toBe(true);
+      }
+    }
+    for (const text of first.why ?? []) {
+      expect(text.trim().length).toBeGreaterThan(0);
+    }
   });
 
   it("when budget_by_team_id is set, ignores paid on drafted_players", () => {

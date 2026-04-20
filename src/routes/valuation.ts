@@ -19,7 +19,8 @@ const singlePlayerSchema = z.object({
 async function runValuation(
   req: Request,
   res: Response,
-  overridePlayerIds?: string[]
+  overridePlayerIds?: string[],
+  scope: { playerId?: string; position?: string } = {}
 ) {
   const parsed = parseValuationRequest(req.body);
   if (!parsed.success) {
@@ -51,7 +52,7 @@ async function runValuation(
     reqLog.warn({ msg }, "catalog field coerced")
   );
 
-  const outcome = executeValuationWorkflow(players, n);
+  const outcome = executeValuationWorkflow(players, n, scope);
   if (!outcome.ok) {
     res.status(422).json({
       errors: outcome.issues.map((message) => ({ field: "", message })),
@@ -95,7 +96,12 @@ export const valuationPlayerHandler: RequestHandler = async (
     return;
   }
 
-  const response = await runValuation(req, res, [one.data.player_id]);
+  const response = await runValuation(
+    req,
+    res,
+    [one.data.player_id],
+    { playerId: one.data.player_id }
+  );
   if (!response) return;
   const player = response.valuations[0];
   if (!player) {

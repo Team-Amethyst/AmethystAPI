@@ -1,6 +1,11 @@
 import { Router, Request, Response, RequestHandler } from "express";
 import { z } from "zod";
 import Player from "../models/Player";
+import { ENGINE_CONTRACT_VERSION } from "../lib/engineContract";
+import {
+  recommendedActionForSeverity,
+  severityFromUrgency,
+} from "../lib/explainabilityScoring";
 import { analyzeScarcity } from "../services/scarcityEngine";
 import { cacheMiddleware } from "../middleware/cache";
 import {
@@ -55,7 +60,36 @@ const scarcity: RequestHandler = async (
     input.position
   );
 
-  res.json(result);
+  const selected = input.position
+    ? result.positions.find(
+        (p) => p.position.toUpperCase() === input.position!.toUpperCase()
+      ) ?? result.positions[0]
+    : null;
+  const selectedSeverity = selected
+    ? severityFromUrgency(selected.scarcity_score)
+    : "low";
+  const selectedExplainer = selected
+    ? {
+        severity: selectedSeverity,
+        urgency_score: selected.scarcity_score,
+        message:
+          selected.alert ??
+          `${selected.position} supply is stable at this draft point.`,
+        recommended_action: recommendedActionForSeverity(
+          selectedSeverity,
+          selected.position
+        ),
+      }
+    : null;
+
+  res.json({
+    ...result,
+    engine_contract_version: ENGINE_CONTRACT_VERSION,
+    schema_version: "2" as const,
+    calculated_at: result.analyzed_at,
+    selected_position: input.position,
+    selected_position_explainer: selectedExplainer,
+  });
 };
 
 function bodyHash(req: Request): string {

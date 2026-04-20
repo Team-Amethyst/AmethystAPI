@@ -66,6 +66,21 @@ describe("POST /valuation/calculate (Draft checkpoint bodies)", () => {
       players_remaining: expect.any(Number),
       calculated_at: expect.any(String),
       market_notes: expect.any(Array),
+      context_v2: expect.objectContaining({
+        schema_version: "2",
+        calculated_at: expect.any(String),
+        scope: expect.objectContaining({
+          league_id: expect.any(String),
+        }),
+        market_summary: expect.objectContaining({
+          inflation_factor: expect.any(Number),
+          inflation_percent_vs_neutral: expect.any(Number),
+          budget_left: expect.any(Number),
+          players_left: expect.any(Number),
+          model_version: expect.any(String),
+        }),
+        position_alerts: expect.any(Array),
+      }),
     });
     expect(Array.isArray(res.body.valuations)).toBe(true);
     if (res.body.valuations.length > 0) {
@@ -76,6 +91,14 @@ describe("POST /valuation/calculate (Draft checkpoint bodies)", () => {
         baseline_value: expect.any(Number),
         adjusted_value: expect.any(Number),
         indicator: expect.stringMatching(/^(Steal|Reach|Fair Value)$/),
+        explain_v2: expect.objectContaining({
+          indicator: expect.stringMatching(/^(Steal|Reach|Fair Value)$/),
+          auction_target: expect.any(Number),
+          list_value: expect.any(Number),
+          adjustments: expect.any(Object),
+          drivers: expect.any(Array),
+          confidence: expect.any(Number),
+        }),
       });
     }
   });
@@ -272,6 +295,7 @@ describe("POST /valuation/player", () => {
   const app = express();
   app.use(express.json());
   app.use(requestIdMiddleware);
+  app.post("/valuation/calculate", valuationCalculateHandler);
   app.post("/valuation/player", valuationPlayerHandler);
 
   const validFlatBase = {
@@ -298,6 +322,37 @@ describe("POST /valuation/player", () => {
     expect(res.body.player.player_id).toBe("1");
     expect(res.body.valuations).toHaveLength(1);
     expect(res.body.valuations[0].player_id).toBe("1");
+    expect(res.body.context_v2.scope.player_id).toBe("1");
+    expect(res.body.player.explain_v2).toBeDefined();
+  });
+
+  it("keeps league-wide totals consistent between calculate and player for same draft state", async () => {
+    const body = {
+      ...validFlatBase,
+      player_id: "1",
+      schema_version: "1.0.0",
+    };
+    const [calc, single] = await Promise.all([
+      request(app)
+        .post("/valuation/calculate")
+        .send(body)
+        .expect(200),
+      request(app)
+        .post("/valuation/player")
+        .send(body)
+        .expect(200),
+    ]);
+
+    expect(single.body.total_budget_remaining).toBe(calc.body.total_budget_remaining);
+    expect(single.body.context_v2.market_summary.budget_left).toBe(
+      single.body.total_budget_remaining
+    );
+    expect(single.body.context_v2.market_summary.players_left).toBe(
+      single.body.players_remaining
+    );
+    expect(calc.body.context_v2.market_summary.players_left).toBe(
+      calc.body.players_remaining
+    );
   });
 
   it("400 when player_id is missing", async () => {

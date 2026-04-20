@@ -72,6 +72,7 @@ const leagueBlockSchema = z.object({
 const nestedValuationBodySchema = z.object({
   schemaVersion: z.string().optional(),
   schema_version: z.string().optional(),
+  league_id: z.string().optional(),
   checkpoint: z.string().optional(),
   league: leagueBlockSchema,
   draft_state: z.array(draftedPlayerInputSchema),
@@ -94,6 +95,7 @@ const flatValuationBodySchema = z.object({
   drafted_players: z.array(draftedPlayerInputSchema),
   schemaVersion: z.string().optional(),
   schema_version: z.string().optional(),
+  league_id: z.string().optional(),
   checkpoint: z.string().optional(),
   budget_by_team_id: budgetByTeamSchema.optional(),
   scoring_format: scoringFormatSchema.optional(),
@@ -152,6 +154,7 @@ function buildNormalizedFromNested(
   const sv = mergedSchemaVersion(rest, "1.0.0");
   return {
     schemaVersion: sv,
+    ...(rest.league_id ? { league_id: rest.league_id } : {}),
     checkpoint: rest.checkpoint,
     roster_slots: league.roster_slots,
     scoring_categories: league.scoring_categories,
@@ -214,6 +217,7 @@ function buildNormalizedFromFlat(
   const sv = mergedSchemaVersion(parsed, "0.0.0");
   return {
     schemaVersion: sv,
+    ...(parsed.league_id ? { league_id: parsed.league_id } : {}),
     checkpoint: parsed.checkpoint,
     roster_slots: parsed.roster_slots,
     scoring_categories: parsed.scoring_categories,

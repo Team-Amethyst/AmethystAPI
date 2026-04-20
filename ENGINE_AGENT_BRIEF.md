@@ -50,6 +50,19 @@ The Engine also mounts **the same licensed routers** under a **`/v1` prefix** (s
 
 **Deprecation policy:** Legacy unprefixed paths remain supported for existing Draft deployments. If a breaking change is ever required, ship **`/v1`** behavior first, update Draft’s `amethyst` client, then remove legacy routes in a coordinated release (and bump `ENGINE_CONTRACT_VERSION` / OpenAPI).
 
+## Frontend migration notes (explainability v2)
+
+- Existing valuation fields remain unchanged (`inflation_factor`, `players_remaining`, `valuations[]`, `why`, etc.).
+- Prefer `context_v2` for top-level UI cards:
+  - `market_summary` for headline + inflation + budget/player counts
+  - `position_alerts` for deterministic, severity-ranked urgency cards
+  - `confidence` + `assumptions` for trust/caveat display
+- Prefer row-level `explain_v2` over free-text parsing:
+  - `auction_target` / `list_value` for display values
+  - `adjustments` for reconciled math chips
+  - `drivers[]` for ordered impact reasons
+- `market_notes` is still returned for compatibility and is now generated from `context_v2` to keep both layers consistent.
+
 ## `POST /valuation/calculate` — flat body (no wrapper)
 
 Draft ends every valuation call with **`finalizeEngineValuationPostPayload()`** after building `EngineValuationContext` in `apps/api/src/lib/engineContext.ts`. Treat the POST body as a **single JSON object** with (at least) these concepts:

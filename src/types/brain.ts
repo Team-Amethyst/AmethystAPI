@@ -121,6 +121,7 @@ export interface ValuationLeagueBlock {
  */
 export interface NormalizedValuationInput {
   schemaVersion: string;
+  league_id?: string;
   checkpoint?: string;
   roster_slots: RosterSlot[];
   scoring_categories: ScoringCategory[];
@@ -174,6 +175,22 @@ export interface ValuedPlayer {
   inflation_adjustment?: number;
   /** Human-readable rationale (additive contract field). */
   why?: string[];
+  explain_v2?: {
+    indicator: ValueIndicator;
+    auction_target: number;
+    list_value: number;
+    adjustments: {
+      scarcity: number;
+      inflation: number;
+      other: number;
+    };
+    drivers: {
+      label: string;
+      impact: number;
+      reason: string;
+    }[];
+    confidence: number;
+  };
 }
 
 export interface ValuationResponse {
@@ -189,6 +206,40 @@ export interface ValuationResponse {
   valuation_model_version?: string;
   /** League-wide human notes (inflation, scarcity alerts, monopolies). */
   market_notes?: string[];
+  context_v2?: {
+    schema_version: "2";
+    calculated_at: string;
+    scope: {
+      league_id: string;
+      player_id?: string;
+      position?: string;
+    };
+    market_summary: {
+      headline: string;
+      inflation_factor: number;
+      inflation_percent_vs_neutral: number;
+      budget_left: number;
+      players_left: number;
+      model_version: string;
+    };
+    position_alerts: {
+      position: string;
+      severity: "low" | "medium" | "high" | "critical";
+      urgency_score: number;
+      message: string;
+      evidence: {
+        elite_remaining: number;
+        mid_tier_remaining: number;
+        total_remaining: number;
+      };
+      recommended_action: string;
+    }[];
+    assumptions: string[];
+    confidence: {
+      overall: number;
+      notes?: string;
+    };
+  };
 }
 
 // ─── Scarcity Analysis ────────────────────────────────────────────────────────
@@ -225,6 +276,16 @@ export interface MonopolyWarning {
 }
 
 export interface ScarcityResponse {
+  engine_contract_version?: string;
+  schema_version?: "2";
+  calculated_at?: string;
+  selected_position?: string;
+  selected_position_explainer?: {
+    severity: "low" | "medium" | "high" | "critical";
+    urgency_score: number;
+    message: string;
+    recommended_action: string;
+  } | null;
   positions: PositionScarcity[];
   monopoly_warnings: MonopolyWarning[];
   analyzed_at: string;

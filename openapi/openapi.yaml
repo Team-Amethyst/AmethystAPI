@@ -115,6 +115,66 @@ components:
           description: Human-readable league context (inflation, scarcity, monopolies).
           items:
             type: string
+        context_v2:
+          type: object
+          description: Structured valuation context for UI clarity and machine consumption.
+          properties:
+            schema_version:
+              type: string
+              enum: ["2"]
+            calculated_at:
+              type: string
+            scope:
+              type: object
+              properties:
+                league_id:
+                  type: string
+                player_id:
+                  type: string
+                position:
+                  type: string
+            market_summary:
+              type: object
+              properties:
+                headline:
+                  type: string
+                inflation_factor:
+                  type: number
+                inflation_percent_vs_neutral:
+                  type: number
+                budget_left:
+                  type: number
+                players_left:
+                  type: integer
+                model_version:
+                  type: string
+            position_alerts:
+              type: array
+              items:
+                type: object
+                properties:
+                  position:
+                    type: string
+                  severity:
+                    type: string
+                    enum: [low, medium, high, critical]
+                  urgency_score:
+                    type: number
+                  message:
+                    type: string
+                  recommended_action:
+                    type: string
+            assumptions:
+              type: array
+              items:
+                type: string
+            confidence:
+              type: object
+              properties:
+                overall:
+                  type: number
+                notes:
+                  type: string
         valuations:
           type: array
           items:
@@ -149,6 +209,39 @@ components:
           description: Short rationale strings for UI / trust.
           items:
             type: string
+        explain_v2:
+          type: object
+          description: Normalized per-player valuation explanation.
+          properties:
+            indicator:
+              type: string
+              enum: [Steal, Reach, Fair Value]
+            auction_target:
+              type: number
+            list_value:
+              type: number
+            adjustments:
+              type: object
+              properties:
+                scarcity:
+                  type: number
+                inflation:
+                  type: number
+                other:
+                  type: number
+            drivers:
+              type: array
+              items:
+                type: object
+                properties:
+                  label:
+                    type: string
+                  impact:
+                    type: number
+                  reason:
+                    type: string
+            confidence:
+              type: number
 
     CatalogBatchValuesResponse:
       type: object

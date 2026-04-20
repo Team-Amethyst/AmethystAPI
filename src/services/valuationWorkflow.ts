@@ -103,7 +103,8 @@ function extractDraftedIdsAndSpend(input: NormalizedValuationInput): ExtraDraftC
  */
 export function executeValuationWorkflow(
   allPlayers: LeanPlayer[],
-  input: NormalizedValuationInput
+  input: NormalizedValuationInput,
+  scope: { playerId?: string; position?: string } = {}
 ): ValuationWorkflowResult {
   const basePlayers = scoringAwareBaselinePlayers(
     allPlayers,
@@ -152,7 +153,8 @@ export function executeValuationWorkflow(
       const explained = attachValuationExplainability(
         response,
         input,
-        basePlayers
+        basePlayers,
+        scope
       );
       return { ok: true, response: explained };
     }

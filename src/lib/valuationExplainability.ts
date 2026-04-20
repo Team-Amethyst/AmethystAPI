@@ -1,4 +1,10 @@
+import crypto from "crypto";
 import { analyzeScarcity } from "../services/scarcityEngine";
+import {
+  confidenceFromSeverity,
+  recommendedActionForSeverity,
+  severityFromUrgency,
+} from "./explainabilityScoring";
 import type {
   LeanPlayer,
   NormalizedValuationInput,
@@ -6,19 +12,36 @@ import type {
   ValuedPlayer,
 } from "../types/brain";
 
+type ContextScope = {
+  playerId?: string;
+  position?: string;
+};
+
+type CachedContext = NonNullable<ValuationResponse["context_v2"]> & {
+  market_notes: string[];
+};
+
+const contextCache = new Map<string, CachedContext>();
+
 function stripAlertPrefix(s: string): string {
   return s.replace(/^⚠️\s*/, "").trim();
 }
 
-function formatInflationNote(f: number): string {
+function formatHeadline(f: number, topPosition: string | null): string {
   const pct = Math.round((f - 1) * 100);
-  if (pct > 1) {
-    return `Auction dollars are stretched vs remaining pool value (inflation ≈ +${pct}% vs a neutral 1.00 market).`;
+  if (pct >= 12) {
+    return topPosition
+      ? `Market is inflated (+${pct}% vs neutral) and ${topPosition} is the top scarcity pressure point.`
+      : `Market is inflated (+${pct}% vs neutral), so premium tiers are likely to clear above list value.`;
   }
-  if (pct < -1) {
-    return `More projected talent value remains than unspent dollars (deflation ≈ ${pct}% vs neutral).`;
+  if (pct <= -12) {
+    return topPosition
+      ? `Market is deflated (${pct}% vs neutral) but ${topPosition} still shows scarcity pressure.`
+      : `Market is deflated (${pct}% vs neutral), so disciplined value bidding should hold.`;
   }
-  return `Remaining dollars and pool value are roughly in balance (inflation factor ${f.toFixed(2)}).`;
+  return topPosition
+    ? `Market is near neutral and ${topPosition} is the key position to monitor.`
+    : "Market is near neutral and value is broadly distributed across positions.";
 }
 
 function positionTokens(pos: string): string[] {
@@ -26,6 +49,65 @@ function positionTokens(pos: string): string[] {
     .split(/[,/]/)
     .map((s) => s.trim().toUpperCase())
     .filter(Boolean);
+}
+
+function rounded(n: number): number {
+  return Number(n.toFixed(2));
+}
+
+function clamp01(n: number): number {
+  return Math.max(0, Math.min(1, n));
+}
+
+function cacheKey(
+  response: ValuationResponse,
+  input: NormalizedValuationInput,
+  scope: ContextScope
+): string {
+  const payload = JSON.stringify({
+    model: response.valuation_model_version ?? "unknown",
+    inflation: response.inflation_factor,
+    budget: response.total_budget_remaining,
+    players: response.players_remaining,
+    scope,
+    drafted: input.drafted_players.map((d) => [d.player_id, d.team_id, d.paid ?? null]),
+    budgets: input.budget_by_team_id ?? null,
+    leagueScope: input.league_scope,
+  });
+  return crypto.createHash("sha1").update(payload).digest("hex");
+}
+
+function buildDriverRows(row: ValuedPlayer, inflationFactor: number) {
+  const scarcityImpact = rounded(row.scarcity_adjustment ?? 0);
+  const inflationImpact = rounded(row.inflation_adjustment ?? 0);
+  const delta = rounded(row.adjusted_value - row.baseline_value);
+  const otherImpact = rounded(delta - scarcityImpact - inflationImpact);
+  const drivers = [
+    {
+      label: `Scarcity at ${row.position}`,
+      impact: scarcityImpact,
+      reason:
+        Math.abs(scarcityImpact) < 0.25
+          ? "No meaningful scarcity premium in current pool."
+          : `Scarcity/fit layer moved price by ${scarcityImpact >= 0 ? "+" : ""}$${Math.abs(
+              scarcityImpact
+            ).toFixed(1)}.`,
+    },
+    {
+      label: "League inflation",
+      impact: inflationImpact,
+      reason: `Inflation factor ${inflationFactor.toFixed(2)}x applied to baseline and scarcity-adjusted value.`,
+    },
+    {
+      label: "Other model effects",
+      impact: otherImpact,
+      reason:
+        Math.abs(otherImpact) < 0.25
+          ? "No additional model adjustments."
+          : "Small residual effects from rounding and model components.",
+    },
+  ].sort((a, b) => Math.abs(b.impact) - Math.abs(a.impact));
+  return { scarcityImpact, inflationImpact, otherImpact, drivers };
 }
 
 function buildPlayerWhy(
@@ -82,48 +164,153 @@ function buildPlayerWhy(
 export function attachValuationExplainability(
   response: ValuationResponse,
   input: NormalizedValuationInput,
-  allPlayers: LeanPlayer[]
+  allPlayers: LeanPlayer[],
+  scope: ContextScope = {}
 ): ValuationResponse {
-  const scarcity = analyzeScarcity(
-    allPlayers,
-    input.drafted_players,
-    input.num_teams,
-    input.scoring_categories,
-    input.league_scope
-  );
+  const key = cacheKey(response, input, scope);
+  let cached = contextCache.get(key);
 
-  const scarcityByPos = new Map(
-    scarcity.positions.map((p) => [
-      p.position.toUpperCase(),
-      { score: p.scarcity_score, alert: p.alert },
-    ])
-  );
+  if (!cached) {
+    const scarcity = analyzeScarcity(
+      allPlayers,
+      input.drafted_players,
+      input.num_teams,
+      input.scoring_categories,
+      input.league_scope
+    );
+    const sortedAlerts = scarcity.positions
+      .map((p) => {
+        const urgency = p.scarcity_score;
+        const severity = severityFromUrgency(urgency);
+        return {
+          position: p.position,
+          severity,
+          urgency_score: urgency,
+          message:
+            p.alert != null
+              ? stripAlertPrefix(p.alert)
+              : `${p.position} supply is stable at the moment.`,
+          evidence: {
+            elite_remaining: p.elite_remaining,
+            mid_tier_remaining: p.mid_tier_remaining,
+            total_remaining: p.total_remaining,
+          },
+          recommended_action: recommendedActionForSeverity(severity, p.position),
+        };
+      })
+      .sort((a, b) => {
+        const sevRank = { critical: 4, high: 3, medium: 2, low: 1 };
+        const bySeverity = sevRank[b.severity] - sevRank[a.severity];
+        if (bySeverity !== 0) return bySeverity;
+        const byUrgency = b.urgency_score - a.urgency_score;
+        if (byUrgency !== 0) return byUrgency;
+        return a.position.localeCompare(b.position);
+      });
 
-  const market_notes: string[] = [];
-  market_notes.push(formatInflationNote(response.inflation_factor));
+    const top = sortedAlerts[0] ?? null;
+    const pctNeutral = Math.round((response.inflation_factor - 1) * 100);
+    const confidenceOverall = top
+      ? confidenceFromSeverity(top.severity, scarcity.monopoly_warnings.length)
+      : 0.7;
+    const context: NonNullable<ValuationResponse["context_v2"]> = {
+      schema_version: "2",
+      calculated_at: response.calculated_at,
+      scope: {
+        league_id: input.league_id ?? "unknown",
+        player_id: scope.playerId,
+        position: scope.position,
+      },
+      market_summary: {
+        headline: formatHeadline(response.inflation_factor, top?.position ?? null),
+        inflation_factor: rounded(response.inflation_factor),
+        inflation_percent_vs_neutral: pctNeutral,
+        budget_left: rounded(response.total_budget_remaining),
+        players_left: response.players_remaining,
+        model_version: response.valuation_model_version ?? "unknown",
+      },
+      position_alerts: sortedAlerts,
+      assumptions: [
+        "Auction inflation is computed from remaining budget divided by remaining pool value.",
+        "Scarcity urgency uses remaining elite and mid-tier supply versus league demand.",
+        "Draft state is treated as stateless full-context input for every request.",
+      ],
+      confidence: {
+        overall: confidenceOverall,
+        notes:
+          scarcity.monopoly_warnings.length > 0
+            ? "Category concentration is present; team-level behavior can increase volatility."
+            : undefined,
+      },
+    };
 
-  const sortedAlerts = [...scarcity.positions]
-    .filter((p) => p.alert)
-    .sort((a, b) => b.scarcity_score - a.scarcity_score)
-    .slice(0, 3);
-  for (const p of sortedAlerts) {
-    if (p.alert) {
-      market_notes.push(`${p.position}: ${stripAlertPrefix(p.alert)}`);
+    const marketNotes = [
+      context.market_summary.headline,
+      ...context.position_alerts.slice(0, 3).map((a) => `${a.position}: ${a.message}`),
+      ...scarcity.monopoly_warnings
+        .slice(0, 2)
+        .map((w) => stripAlertPrefix(w.message)),
+    ];
+
+    cached = { ...context, market_notes: marketNotes };
+    contextCache.set(key, cached);
+    if (contextCache.size > 200) {
+      const oldest = contextCache.keys().next().value;
+      if (oldest) contextCache.delete(oldest);
     }
   }
 
-  for (const w of scarcity.monopoly_warnings.slice(0, 2)) {
-    market_notes.push(stripAlertPrefix(w.message));
-  }
+  const scarcityByPos = new Map(
+    cached.position_alerts.map((p) => [
+      p.position.toUpperCase(),
+      { score: p.urgency_score, alert: p.message },
+    ])
+  );
 
   const valuations = response.valuations.map((row) => ({
     ...row,
     why: buildPlayerWhy(row, response.inflation_factor, scarcityByPos),
+    explain_v2: (() => {
+      const { scarcityImpact, inflationImpact, otherImpact, drivers } = buildDriverRows(
+        row,
+        response.inflation_factor
+      );
+      const indicatorConfidence =
+        row.indicator === "Fair Value"
+          ? 0.7
+          : row.indicator === "Steal"
+            ? 0.78
+            : 0.74;
+      return {
+        indicator: row.indicator,
+        auction_target: row.adjusted_value,
+        list_value: row.baseline_value,
+        adjustments: {
+          scarcity: scarcityImpact,
+          inflation: inflationImpact,
+          other: otherImpact,
+        },
+        drivers,
+        confidence: clamp01(indicatorConfidence),
+      };
+    })(),
   }));
+
+  const selectedPosition =
+    scope.position ??
+    (scope.playerId
+      ? valuations.find((v) => v.player_id === scope.playerId)?.position
+      : undefined);
 
   return {
     ...response,
-    market_notes,
+    market_notes: cached.market_notes,
+    context_v2: {
+      ...cached,
+      scope: {
+        ...cached.scope,
+        position: selectedPosition ?? cached.scope.position,
+      },
+    },
     valuations,
   };
 }
