@@ -243,6 +243,94 @@ components:
             confidence:
               type: number
 
+    ScarcityResponse:
+      type: object
+      properties:
+        engine_contract_version:
+          type: string
+          example: "1"
+        schema_version:
+          type: string
+          enum: ["2"]
+        calculated_at:
+          type: string
+        analyzed_at:
+          type: string
+        selected_position:
+          type: string
+        selected_position_explainer:
+          type: object
+          properties:
+            severity:
+              type: string
+              enum: [low, medium, high, critical]
+            urgency_score:
+              type: number
+            message:
+              type: string
+            recommended_action:
+              type: string
+        positions:
+          type: array
+          items:
+            type: object
+            properties:
+              position:
+                type: string
+              elite_remaining:
+                type: integer
+              mid_tier_remaining:
+                type: integer
+              depth_remaining:
+                type: integer
+              total_remaining:
+                type: integer
+              scarcity_score:
+                type: number
+              alert:
+                type: string
+                nullable: true
+        tier_buckets:
+          type: array
+          description: Draft-time scarcity buckets by explicit tier labels (Tier 1..Tier 5).
+          items:
+            type: object
+            properties:
+              position:
+                type: string
+              buckets:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    tier:
+                      type: string
+                    remaining:
+                      type: integer
+                    urgency_score:
+                      type: number
+                    message:
+                      type: string
+                    recommended_action:
+                      type: string
+        monopoly_warnings:
+          type: array
+          items:
+            type: object
+            properties:
+              team_id:
+                type: string
+              category:
+                type: string
+              controlled_players:
+                type: array
+                items:
+                  type: string
+              share_percentage:
+                type: number
+              message:
+                type: string
+
     CatalogBatchValuesResponse:
       type: object
       required: [engine_contract_version, players]
@@ -271,6 +359,47 @@ components:
                 type: number
 
 paths:
+  /analysis/scarcity:
+    post:
+      summary: Positional scarcity and tier-bucket urgency
+      security:
+        - ApiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [drafted_players]
+              properties:
+                drafted_players:
+                  type: array
+                  items:
+                    type: object
+                    additionalProperties: true
+                scoring_categories:
+                  type: array
+                  items:
+                    type: object
+                    additionalProperties: true
+                position:
+                  type: string
+                num_teams:
+                  type: integer
+                league_scope:
+                  type: string
+                  enum: [Mixed, AL, NL]
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ScarcityResponse"
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ZodValidationErrorBody"
   /valuation/calculate:
     post:
       summary: Inflation-adjusted auction values

@@ -21,6 +21,13 @@ const MULTI_SLOT_POSITIONS: Record<string, number> = {
 
 /** Monopoly threshold: one team controls ≥ this share of a category */
 const MONOPOLY_THRESHOLD = 0.40;
+const TIER_TARGET_FACTORS: Record<number, number> = {
+  1: 0.25,
+  2: 0.5,
+  3: 0.5,
+  4: 0.75,
+  5: 1.0,
+};
 
 /**
  * Returns a 0–100 scarcity score for a given position.
@@ -38,6 +45,15 @@ function calcScarcityScore(
   const ratio = highValueRemaining / expectedDemand;
   // Clamp inversely: 0 demand-filled → 100; fully stocked → 0
   return Math.min(100, Math.max(0, Math.round((1 - ratio) * 100)));
+}
+
+function bucketUrgency(remaining: number, target: number): number {
+  if (target <= 0) return 0;
+  return Math.min(100, Math.max(0, Math.round((1 - remaining / target) * 100)));
+}
+
+function tierPlayersCount(atPos: LeanPlayer[], tier: number): number {
+  return atPos.filter((p) => (p.tier || 99) === tier).length;
 }
 
 /**
@@ -88,9 +104,9 @@ export function analyzeScarcity(
 
     let alert: string | null = null;
     if (elite === 0) {
-      alert = `⚠️ No elite ${pos} players remaining — act immediately.`;
+      alert = `⚠️ No Tier 1 ${pos} players remaining — act immediately.`;
     } else if (elite <= 2) {
-      alert = `⚠️ Only ${elite} elite ${pos} remaining — critical scarcity.`;
+      alert = `⚠️ Only ${elite} Tier 1 ${pos} remaining — critical scarcity.`;
     } else if (score >= 70) {
       alert = `${pos} is becoming scarce (score ${score}/100). Consider drafting soon.`;
     }
@@ -104,6 +120,40 @@ export function analyzeScarcity(
       scarcity_score: score,
       alert,
     };
+  });
+  const tier_buckets = allPositions.map((pos) => {
+    const atPos = undrafted.filter((p) =>
+      p.position.toUpperCase().includes(pos.toUpperCase())
+    );
+    const slotsPerTeam = SINGLE_SLOT_POSITIONS.has(pos)
+      ? 1
+      : (MULTI_SLOT_POSITIONS[pos] ?? 1);
+    const expectedDemand = numTeams * slotsPerTeam;
+
+    const buckets = [1, 2, 3, 4, 5].map((tier) => {
+      const remaining = tierPlayersCount(atPos, tier);
+      const target = Math.max(
+        1,
+        Math.round(expectedDemand * (TIER_TARGET_FACTORS[tier] ?? 0.5))
+      );
+      const urgency = bucketUrgency(remaining, target);
+      return {
+        tier: `Tier ${tier}`,
+        remaining,
+        urgency_score: urgency,
+        message:
+          remaining === 0
+            ? `Tier ${tier} ${pos} is exhausted.`
+            : `${remaining} Tier ${tier} ${pos} remain.`,
+        recommended_action:
+          urgency >= 80
+            ? `Act now if you need Tier ${tier} ${pos} quality.`
+            : urgency >= 60
+              ? `Prepare Tier ${tier} ${pos} as a near-term target.`
+              : `Tier ${tier} ${pos} supply is currently manageable.`,
+      };
+    });
+    return { position: pos, buckets };
   });
 
   // ── Monopoly detection ────────────────────────────────────────────────────
@@ -175,6 +225,7 @@ export function analyzeScarcity(
 
   return {
     positions,
+    tier_buckets,
     monopoly_warnings,
     analyzed_at: new Date().toISOString(),
   };

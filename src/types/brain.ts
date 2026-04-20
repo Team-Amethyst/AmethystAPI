@@ -280,6 +280,16 @@ export interface ScarcityResponse {
   schema_version?: "2";
   calculated_at?: string;
   selected_position?: string;
+  tier_buckets?: {
+    position: string;
+    buckets: {
+      tier: string;
+      remaining: number;
+      urgency_score: number;
+      message: string;
+      recommended_action: string;
+    }[];
+  }[];
   selected_position_explainer?: {
     severity: "low" | "medium" | "high" | "critical";
     urgency_score: number;

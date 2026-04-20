@@ -81,5 +81,25 @@ describe("POST /analysis/scarcity", () => {
     const ss = res.body.positions.find((p: { position: string }) => p.position === "SS");
     expect(ss).toBeDefined();
     expect(res.body.selected_position_explainer.urgency_score).toBe(ss.scarcity_score);
+    expect(Array.isArray(res.body.tier_buckets)).toBe(true);
+    const ssBuckets = res.body.tier_buckets.find(
+      (b: { position: string }) => b.position === "SS"
+    );
+    expect(ssBuckets).toBeDefined();
+    expect(ssBuckets.buckets).toHaveLength(5);
+    expect(ssBuckets.buckets.map((b: { tier: string }) => b.tier)).toEqual([
+      "Tier 1",
+      "Tier 2",
+      "Tier 3",
+      "Tier 4",
+      "Tier 5",
+    ]);
+    for (const b of ssBuckets.buckets) {
+      expect(typeof b.message).toBe("string");
+      expect(b.message.length).toBeGreaterThan(0);
+      expect(typeof b.recommended_action).toBe("string");
+      expect(b.urgency_score).toBeGreaterThanOrEqual(0);
+      expect(b.urgency_score).toBeLessThanOrEqual(100);
+    }
   });
 });
