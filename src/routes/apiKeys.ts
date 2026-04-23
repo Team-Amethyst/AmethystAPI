@@ -1,12 +1,10 @@
-import { Router, Request, Response, RequestHandler, NextFunction } from "express";
+import { Router, RequestHandler } from "express";
 import ApiKey from "../models/ApiKey";
 import {
-  ALLOWED_API_KEY_SCOPES,
   ALLOWED_API_KEY_TIERS,
   generateApiKeySecret,
   hashApiKey,
   normalizeScopes,
-  validateApiKeyFormat,
 } from "../lib/apiKey";
 import { ValidationError, NotFoundError } from "../lib/appError";
 
@@ -64,7 +62,7 @@ const createKey: RequestHandler = async (req, res, next) => {
   if (!owner) {
     return next(new ValidationError("Owner name is required.", 400, "KEY_OWNER_REQUIRED"));
   }
-  if (!ALLOWED_API_KEY_TIERS.includes(tier as any)) {
+  if (!ALLOWED_API_KEY_TIERS.includes(tier as unknown as typeof ALLOWED_API_KEY_TIERS[number])) {
     return next(new ValidationError("Tier must be one of free, standard, or premium.", 400, "KEY_TIER_INVALID"));
   }
   if (scopes.length === 0) {

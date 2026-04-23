@@ -2,7 +2,7 @@ import crypto from "crypto";
 import { ApiKeyTier } from "../models/ApiKey";
 
 export const API_KEY_PREFIX = "amethyst_live";
-export const API_KEY_SECRET_PATTERN = new RegExp(`^${API_KEY_PREFIX}_[A-Za-z0-9]{20}\.[A-Za-z0-9]{48}$`);
+export const API_KEY_SECRET_PATTERN = new RegExp(`^${API_KEY_PREFIX}_[A-Za-z0-9]{20}.[A-Za-z0-9]{48}$`);
 export const API_KEY_LEGACY_PATTERN = /^[A-Za-z0-9_-]{16,128}$/;
 export const ALLOWED_API_KEY_TIERS: ApiKeyTier[] = ["free", "standard", "premium"];
 export const ALLOWED_API_KEY_SCOPES = [
