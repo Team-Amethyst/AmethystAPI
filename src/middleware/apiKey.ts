@@ -3,6 +3,7 @@ import ApiKey from "../models/ApiKey";
 import { getCached, setCache } from "../lib/redis";
 import { UnauthorizedError, ForbiddenError } from "../lib/appError";
 import { logger } from "../lib/logger";
+import { hashApiKey, validateApiKeyFormat } from "../lib/apiKey";
 
 const CACHE_PREFIX = "ae:apikey:";
 const CACHE_TTL_SECONDS = 60;
@@ -33,8 +34,7 @@ const apiKeyMiddleware = async (
 
   const key = rawKey.trim();
 
-  // Reject keys that don't match the expected format — prevents injection
-  if (!/^[a-zA-Z0-9_-]{16,128}$/.test(key)) {
+  if (!validateApiKeyFormat(key)) {
     throw new UnauthorizedError("Invalid API key format.", 401, "API_KEY_INVALID_FORMAT");
   }
 
@@ -47,19 +47,37 @@ const apiKeyMiddleware = async (
     }>(cacheKey);
 
     if (!cached) {
-      const doc = await ApiKey.findOne({ key }).lean();
+      const hashedKey = hashApiKey(key);
+      let doc = await ApiKey.findOne({ keyHash: hashedKey }).lean();
+
+      if (!doc) {
+        doc = await ApiKey.findOne({ key: key }).lean();
+      }
+
       if (!doc) {
         throw new UnauthorizedError("API key not recognized.", 401, "API_KEY_NOT_FOUND");
       }
       if (!doc.isActive) {
         throw new ForbiddenError("API key has been deactivated.", 403, "API_KEY_DEACTIVATED");
       }
+      if (doc.expiresAt && doc.expiresAt <= new Date()) {
+        throw new ForbiddenError("API key has expired.", 403, "API_KEY_EXPIRED");
+      }
+
       cached = { owner: doc.owner, tier: doc.tier, isActive: doc.isActive };
       await setCache(cacheKey, cached, CACHE_TTL_SECONDS);
 
-      // Async usage increment — never awaited so it never blocks the response
+      if (!doc.keyHash && doc.key === key) {
+        ApiKey.findByIdAndUpdate(doc._id, {
+          $set: { keyHash: hashApiKey(key) },
+          $unset: { key: "" },
+        }).catch((err: Error) =>
+          logger.warn({ err: err.message }, "ApiKey migration warning")
+        );
+      }
+
       ApiKey.findOneAndUpdate(
-        { key },
+        { _id: doc._id },
         { $inc: { usageCount: 1 }, $set: { lastUsed: new Date() } }
       ).catch((err: Error) =>
         logger.warn({ err: err.message }, "ApiKey usage tracking error")

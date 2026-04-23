@@ -11,6 +11,7 @@ import simulationRoutes from "./routes/simulation";
 import signalsRoutes from "./routes/signals";
 import usageRoutes from "./routes/usage";
 import catalogRoutes from "./routes/catalog";
+import apiKeysRoutes from "./routes/apiKeys";
 
 // Licensing middleware
 import apiKeyMiddleware from "./middleware/apiKey";
@@ -69,6 +70,7 @@ app.get("/api/health/ready", async (_req, res) => {
   res.status(readinessHttpStatus(body)).json(body);
 });
 
+app.use("/api/keys", apiKeysRoutes);
 app.use("/api/usage", usageRoutes);
 
 // ── Amethyst Engine — licensed analytical endpoints (require x-api-key) ────────

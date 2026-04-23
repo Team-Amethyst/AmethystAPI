@@ -1,6 +1,7 @@
 import { Router, Request, Response, RequestHandler, NextFunction } from "express";
 import ApiKey from "../models/ApiKey";
 import { UnauthorizedError } from "../lib/appError";
+import { hashApiKey, validateApiKeyFormat } from "../lib/apiKey";
 
 const router: Router = Router();
 
@@ -23,15 +24,18 @@ const getUsage: RequestHandler = async (
 
   const key = rawKey.trim();
 
-  if (!/^[a-zA-Z0-9_-]{16,128}$/.test(key)) {
+  if (!validateApiKeyFormat(key)) {
     throw new UnauthorizedError("Invalid API key format.", 401, "API_KEY_INVALID_FORMAT");
   }
 
   let record;
   try {
-    record = await ApiKey.findOne({ key }).lean();
+    record = await ApiKey.findOne({ keyHash: hashApiKey(key) }).lean();
+    if (!record) {
+      record = await ApiKey.findOne({ key }).lean();
+    }
   } catch (err) {
-    next(err);
+    return next(err);
   }
 
   if (!record) {
@@ -40,11 +44,13 @@ const getUsage: RequestHandler = async (
 
   res.json({
     owner: record.owner,
-    email: record.email ?? null,
     tier: record.tier,
+    scopes: record.scopes || [],
+    keyPrefix: record.keyPrefix,
     usageCount: record.usageCount,
     lastUsed: record.lastUsed,
     createdAt: record.createdAt ?? null,
+    expiresAt: record.expiresAt || null,
     isActive: record.isActive,
   });
 };

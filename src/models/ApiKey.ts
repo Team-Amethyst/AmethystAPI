@@ -1,15 +1,17 @@
 import mongoose, { Document, Schema } from "mongoose";
+import { ApiKeyScope } from "../lib/apiKey";
 
 export type ApiKeyTier = "free" | "standard" | "premium";
 
 export interface IApiKey extends Document {
-  key: string;
-  /** Name or identifier of the licensee */
+  keyHash: string;
+  key?: string;
+  keyPrefix: string;
+  label: string;
   owner: string;
-  email?: string;
-  /** License tier — affects rate limits and feature access */
   tier: ApiKeyTier;
-  /** Cumulative request count used for royalty reporting (5% net revenue model) */
+  scopes: ApiKeyScope[];
+  expiresAt: Date | null;
   usageCount: number;
   lastUsed: Date | null;
   isActive: boolean;
@@ -19,26 +21,44 @@ export interface IApiKey extends Document {
 
 const apiKeySchema = new Schema<IApiKey>(
   {
-    key: {
+    keyHash: {
       type: String,
       required: true,
       unique: true,
       index: true,
+    },
+    key: {
+      type: String,
+      required: false,
+      select: false,
+    },
+    keyPrefix: {
+      type: String,
+      required: true,
+      index: true,
+    },
+    label: {
+      type: String,
+      required: true,
+      trim: true,
     },
     owner: {
       type: String,
       required: true,
       trim: true,
     },
-    email: {
-      type: String,
-      lowercase: true,
-      trim: true,
-    },
     tier: {
       type: String,
       enum: ["free", "standard", "premium"] as ApiKeyTier[],
       default: "free",
+    },
+    scopes: {
+      type: [String],
+      default: [],
+    },
+    expiresAt: {
+      type: Date,
+      default: null,
     },
     usageCount: {
       type: Number,

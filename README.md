@@ -16,6 +16,12 @@ Stateless analytical API for fantasy baseball. Receives draft state and league s
 
 ---
 
+## Environment variables
+
+- `MONGO_URI`: MongoDB connection string.
+- `REDIS_URL`: Redis connection string (optional, default `redis://localhost:6379`).
+- `API_KEY_PEPPER`: Server-side secret used to hash stored API keys. Must be set in production to protect key material.
+
 ## API contract (Draft / Engine alignment)
 
 | Artifact | Role |
