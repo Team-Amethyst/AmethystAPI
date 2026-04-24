@@ -45,5 +45,9 @@ COPY public ./public
 # Override at the service level via the PORT env var if needed.
 EXPOSE 8080
 
+# Developer portal: GET /api/keys/status + POST /api/keys/issue (see README).
+# App Runner console env overrides this if set (e.g. KEY_ISSUANCE_ENABLED=0 to disable).
+ENV KEY_ISSUANCE_ENABLED=1
+
 # Start application
 CMD ["node", "dist/index.js"]

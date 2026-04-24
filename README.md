@@ -283,7 +283,7 @@ Push to `main` — GitHub Actions builds, pushes to ECR, and triggers an App Run
 
 **MongoDB Atlas:** Network Access must allow `0.0.0.0/0` (App Runner has no static IP).
 
-**Key issuance:** Configure `KEY_ISSUANCE_ENABLED` (and optionally `KEY_ISSUANCE_SECRET`) in the App Runner service environment if you want the hosted developer portal to mint keys. Leave issuance off in production unless you accept the abuse risk or protect it with the shared token header.
+**Key issuance:** The production Docker image sets **`KEY_ISSUANCE_ENABLED=1`** by default so the hosted portal can mint keys after deploy. To disable, set **`KEY_ISSUANCE_ENABLED=0`** (or unset and rebuild without the Dockerfile line) in the App Runner service environment, which overrides the image. Optionally set **`KEY_ISSUANCE_SECRET`** and send **`X-Key-Issuance-Token`** on `POST /api/keys/issue` for operator-gated issuance. You can also record intent in GitHub with `gh variable set KEY_ISSUANCE_ENABLED --body 1` (does not change AWS by itself).
 
 ---
 
