@@ -223,6 +223,8 @@ curl -sS -X POST "http://localhost:3002/api/keys/issue" \
 
 Successful responses include **`apiKey`**, a single string of the form **`amethyst_live_<hex>.<hex>`** (use it as the `x-api-key` value). **`POST /api/keys`** is the full programmatic create (label, owner, tier, scopes, optional expiry); **`POST /api/keys/issue`** is the portal-oriented shortcut (all scopes, no expiry).
 
+For **CI / pre-deploy smoke tests** that call both **Engine** (`x-api-key`) and **Draft** (`x-player-api-key` / Bearer), use the same step-by-step tone as your runbooks: [docs/pre-deploy-testing-keys.md](docs/pre-deploy-testing-keys.md).
+
 ### Manual documents (MongoDB)
 
 New keys are stored **hashed** (`keyHash`, `keyPrefix`, `label`, `owner`, `tier`, `scopes`, …). Prefer the **`POST /api/keys`** or **`POST /api/keys/issue`** APIs so hashing matches the server’s **`API_KEY_PEPPER`** / **`APP_SECRET`**. The auth middleware still accepts legacy documents that store a plaintext **`key`** for migration. See **`src/models/ApiKey.ts`** and **`src/routes/apiKeys.ts`** for the canonical shape.
