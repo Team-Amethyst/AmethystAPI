@@ -212,6 +212,7 @@
     }
     main .sandbox-toolbar,
     main .sandbox-out,
+    main .sandbox-key-row,
     main #sandboxBody {
       text-align: left;
     }
@@ -260,7 +261,25 @@
       white-space: pre-wrap;
       word-break: break-word;
       color: var(--muted);
-      margin-top: 10px;
+      margin-top: 8px;
+    }
+    /* Sample draft: avoid stretched flex gap between key field and POST button */
+    #tab-sandbox .sandbox-key-row {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+    #tab-sandbox .sandbox-key-row .key-input-wrap {
+      flex: none;
+      width: 100%;
+      max-width: 100%;
+    }
+    #tab-sandbox .sandbox-response-heading {
+      margin-top: 20px;
+      margin-bottom: 0;
+      text-align: left;
     }
 
     /* ── Cards ── */
@@ -1778,8 +1797,8 @@ player_id: player._id          <span class="t-cmt">// MongoDB ObjectId — not r
         <textarea id="sandboxBody" class="portal-input" spellcheck="false" placeholder='Click “Load fixture” or paste JSON…'></textarea>
       </div>
 
-      <div class="key-form">
-        <div class="key-input-wrap" style="flex: 2">
+      <div class="sandbox-key-row">
+        <div class="key-input-wrap">
           <input
             class="key-input"
             id="sandboxApiKey"
@@ -1792,9 +1811,9 @@ player_id: player._id          <span class="t-cmt">// MongoDB ObjectId — not r
         <button type="button" class="load-btn" id="sandboxRunBtn" onclick="sandboxRunValuation()">POST /valuation/calculate</button>
       </div>
 
-      <div class="usage-error" id="sandboxError" style="margin-top:16px"></div>
+      <div class="usage-error" id="sandboxError" style="margin-top:12px"></div>
 
-      <h3 style="margin-top:28px">Response</h3>
+      <h3 class="sandbox-response-heading">Response</h3>
       <pre class="sandbox-out" id="sandboxOut">Load a fixture and run, or paste JSON first.</pre>
     </div>
   </div><!-- /tab-sandbox -->
