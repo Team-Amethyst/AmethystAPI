@@ -6,17 +6,47 @@ import { describe, expect, it, vi } from "vitest";
 import type { LeanPlayer } from "../src/types/brain";
 import { resolveDraftOrLocalCheckpoint } from "./fixturePaths";
 
+/** Large enough for 2026 draft fixtures (synthetic player_id strings from the converter). */
+const VALUATION_INTEGRATION_MOCK_POOL = 512;
+
+function countUniquePlayerIdsInRequestBody(body: Record<string, unknown>): number {
+  const ids = new Set<string>();
+  const collectRows = (rows: unknown) => {
+    if (!Array.isArray(rows)) return;
+    for (const row of rows) {
+      if (row != null && typeof row === "object" && "player_id" in row) {
+        const pid = (row as { player_id?: unknown }).player_id;
+        if (typeof pid === "string" && pid.length > 0) ids.add(pid);
+      }
+    }
+  };
+  collectRows(body.drafted_players);
+  const buckets = [body.pre_draft_rosters, body.minors, body.taxi] as const;
+  for (const b of buckets) {
+    if (!Array.isArray(b)) continue;
+    for (const bucket of b) {
+      if (bucket != null && typeof bucket === "object" && "players" in bucket) {
+        collectRows((bucket as { players?: unknown }).players);
+      }
+    }
+  }
+  return ids.size;
+}
+
 vi.mock("../src/models/Player", () => {
-  const mockPool: LeanPlayer[] = Array.from({ length: 280 }, (_, i) => ({
-    _id: `db_${i}`,
-    mlbId: i + 1,
-    name: `Player_${i + 1}`,
-    team: "NYY",
-    position: "OF",
-    adp: i + 1,
-    tier: (i % 5) + 1,
-    value: Math.max(1, 90 - (i % 45)),
-  }));
+  const mockPool: LeanPlayer[] = Array.from(
+    { length: 512 },
+    (_, i) => ({
+      _id: `db_${i}`,
+      mlbId: i + 1,
+      name: `Player_${i + 1}`,
+      team: "NYY",
+      position: "OF",
+      adp: i + 1,
+      tier: (i % 5) + 1,
+      value: Math.max(1, 90 - (i % 45)),
+    })
+  );
   return {
     default: {
       find: vi.fn(() => {
@@ -249,24 +279,27 @@ describe("POST /valuation/calculate — AmethystDraft BFF alignment", () => {
 
   it("pre_draft.json from Draft repo (if present) or local mirror: deterministic invariant checks", async () => {
     const fixturePath = resolveDraftOrLocalCheckpoint("pre_draft.json");
-    const body = JSON.parse(readFileSync(fixturePath, "utf8")) as object;
+    const body = JSON.parse(readFileSync(fixturePath, "utf8")) as Record<string, unknown>;
 
     const res = await request(app)
       .post("/valuation/calculate")
       .send(body)
       .expect(200);
 
+    const offBoard = countUniquePlayerIdsInRequestBody(body);
+    const expectedUndrafted = VALUATION_INTEGRATION_MOCK_POOL - offBoard;
+
     expect(res.body.engine_contract_version).toBe("1");
     expect(res.body.calculated_at).toBe("1970-01-01T00:00:00.000Z");
-    expect(res.body.players_remaining).toBe(280);
+    expect(res.body.players_remaining).toBe(expectedUndrafted);
 
     const { valuations, ...aggregateRest } = res.body;
-    expect(valuations).toHaveLength(280);
+    expect(valuations).toHaveLength(expectedUndrafted);
     expect(aggregateRest).toMatchObject({
       engine_contract_version: "1",
       valuation_model_version: "v2-expert-manual-shape",
       calculated_at: "1970-01-01T00:00:00.000Z",
-      players_remaining: 280,
+      players_remaining: expectedUndrafted,
       inflation_factor: expect.any(Number),
       pool_value_remaining: expect.any(Number),
       total_budget_remaining: expect.any(Number),

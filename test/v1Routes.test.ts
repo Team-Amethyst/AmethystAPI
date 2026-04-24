@@ -11,7 +11,7 @@ import {
 } from "../src/routes/valuation";
 
 vi.mock("../src/models/Player", () => {
-  const mockPool: LeanPlayer[] = Array.from({ length: 40 }, (_, i) => ({
+  const mockPool: LeanPlayer[] = Array.from({ length: 512 }, (_, i) => ({
     _id: `db_${i}`,
     mlbId: i + 1,
     name: `Player_${i + 1}`,
@@ -60,10 +60,10 @@ describe("/v1/valuation parity", () => {
   it("POST /v1/valuation/player returns player envelope", async () => {
     const res = await request(app)
       .post("/v1/valuation/player")
-      .send({ ...body, player_id: "1" })
+      .send({ ...body, player_id: "400" })
       .expect(200);
     expect(res.body.player).toBeDefined();
-    expect(res.body.player.player_id).toBe("1");
+    expect(res.body.player.player_id).toBe("400");
     expect(Array.isArray(res.body.market_notes)).toBe(true);
   });
 });

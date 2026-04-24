@@ -13,7 +13,8 @@
     "test:watch": "vitest",
     "check-types": "tsc --noEmit",
     "sync-players": "ts-node --project tsconfig.scripts.json scripts/sync-players.ts",
-    "replay-eval": "ts-node --project tsconfig.scripts.json scripts/replay-evaluator.ts"
+    "replay-eval": "ts-node --project tsconfig.scripts.json scripts/replay-evaluator.ts",
+    "convert-2026-draft": "ts-node --project tsconfig.scripts.json scripts/convert-2026-draft-xlsx.ts"
   },
   "keywords": [
     "api",
@@ -44,6 +45,7 @@
     "ts-node": "^10.9.2",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.18.2",
-    "vitest": "^4.1.4"
+    "vitest": "^4.1.4",
+    "xlsx": "^0.18.5"
   }
 }

@@ -210,6 +210,58 @@
     main .portal-card {
       text-align: left;
     }
+    main .sandbox-toolbar,
+    main .sandbox-out,
+    main #sandboxBody {
+      text-align: left;
+    }
+
+    .sandbox-toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: flex-end;
+      margin-bottom: 18px;
+    }
+    .sandbox-toolbar .field-label {
+      display: block;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 6px;
+    }
+    .sandbox-select {
+      min-width: 220px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text);
+      font-size: 13px;
+      padding: 10px 12px;
+      outline: none;
+    }
+    .sandbox-select:focus { border-color: var(--accent); }
+    #sandboxBody {
+      width: 100%;
+      min-height: 200px;
+      line-height: 1.45;
+    }
+    .sandbox-out {
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 14px 16px;
+      font-size: 11px;
+      font-family: "SF Mono", "Fira Code", "Fira Mono", monospace;
+      max-height: 480px;
+      overflow: auto;
+      white-space: pre-wrap;
+      word-break: break-word;
+      color: var(--muted);
+      margin-top: 10px;
+    }
 
     /* ── Cards ── */
     .card {
@@ -1024,6 +1076,7 @@
     <button class="tab-btn" data-tab="licensing">Licensing</button>
     <button class="tab-btn" data-tab="keys">Get a key</button>
     <button class="tab-btn" data-tab="usage">My Usage</button>
+    <button class="tab-btn" data-tab="sandbox">Sample draft</button>
   </div>
 </div>
 
@@ -1693,6 +1746,59 @@ player_id: player._id          <span class="t-cmt">// MongoDB ObjectId — not r
     </div><!-- /.portal-shell -->
   </div><!-- /tab-usage -->
 
+  <!-- ═══════════════════ SAMPLE DRAFT (Activity #9) ═══════════════════ -->
+  <div class="tab-content" id="tab-sandbox">
+    <div class="portal-shell">
+      <div class="section">
+        <h2>2026 sample draft</h2>
+        <p class="section-desc">
+          Checkpoint JSON from the instructor workbook pipeline (see repo <code style="font-size:12px">docs/draft-2026-xlsx-mapping.md</code>).
+          Load a fixture, then POST to <code style="color:var(--orange);background:rgba(251,146,60,0.1);padding:1px 6px;border-radius:3px;font-size:12px;">/valuation/calculate</code> with your API key.
+          On a live Mongo deployment, players must exist for the synthetic <code style="font-size:12px">player_id</code> values in the file (or replace them with real MLB ids from your catalog).
+        </p>
+      </div>
+
+      <div class="sandbox-toolbar">
+        <div>
+          <label class="field-label" for="sandboxCheckpoint">Checkpoint file</label>
+          <select class="sandbox-select" id="sandboxCheckpoint">
+            <option value="pre_draft.json">pre_draft.json</option>
+            <option value="after_pick_10.json">after_pick_10.json</option>
+            <option value="after_pick_50.json">after_pick_50.json</option>
+            <option value="after_pick_100.json">after_pick_100.json</option>
+            <option value="after_pick_130.json">after_pick_130.json</option>
+          </select>
+        </div>
+        <button type="button" class="btn-secondary" onclick="sandboxLoadFixture()">Load fixture</button>
+        <button type="button" class="btn-secondary" onclick="sandboxCopyKeyFromUsage()" title="Copy API key from My Usage tab field">Use key from My Usage</button>
+      </div>
+
+      <div class="portal-card" style="margin-bottom:18px">
+        <label class="portal-label" for="sandboxBody">Request body (editable JSON)</label>
+        <textarea id="sandboxBody" class="portal-input" spellcheck="false" placeholder='Click “Load fixture” or paste JSON…'></textarea>
+      </div>
+
+      <div class="key-form">
+        <div class="key-input-wrap" style="flex: 2">
+          <input
+            class="key-input"
+            id="sandboxApiKey"
+            type="password"
+            placeholder="x-api-key"
+            autocomplete="off"
+            spellcheck="false"
+          />
+        </div>
+        <button type="button" class="load-btn" id="sandboxRunBtn" onclick="sandboxRunValuation()">POST /valuation/calculate</button>
+      </div>
+
+      <div class="usage-error" id="sandboxError" style="margin-top:16px"></div>
+
+      <h3 style="margin-top:28px">Response</h3>
+      <pre class="sandbox-out" id="sandboxOut">Load a fixture and run, or paste JSON first.</pre>
+    </div>
+  </div><!-- /tab-sandbox -->
+
 </main>
 
 <script>
@@ -1705,6 +1811,7 @@ player_id: player._id          <span class="t-cmt">// MongoDB ObjectId — not r
       const tabId = 'tab-' + btn.dataset.tab;
       document.getElementById(tabId).classList.add('active');
       if (btn.dataset.tab === 'keys') keysEnsureStatus();
+      if (btn.dataset.tab === 'sandbox') sandboxEnsureLoaded();
     });
   });
 
@@ -1828,6 +1935,109 @@ player_id: player._id          <span class="t-cmt">// MongoDB ObjectId — not r
   // Allow Enter key in input
   document.getElementById('keyInput').addEventListener('keydown', e => {
     if (e.key === 'Enter') loadUsage();
+  });
+
+  // ── Sample draft sandbox (Activity #9 fixtures) ─────────────
+  let sandboxFixturePrimed = false;
+
+  function sandboxHideErr() {
+    const el = document.getElementById('sandboxError');
+    el.style.display = 'none';
+    el.textContent = '';
+  }
+
+  function sandboxShowErr(msg) {
+    const el = document.getElementById('sandboxError');
+    el.textContent = msg;
+    el.style.display = 'block';
+  }
+
+  async function sandboxEnsureLoaded() {
+    if (sandboxFixturePrimed) return;
+    sandboxFixturePrimed = true;
+    await sandboxLoadFixture();
+  }
+
+  async function sandboxLoadFixture() {
+    sandboxHideErr();
+    const name = document.getElementById('sandboxCheckpoint').value;
+    const out = document.getElementById('sandboxOut');
+    out.textContent = 'Loading ' + name + '…';
+    try {
+      const r = await fetch('/fixtures/checkpoints/' + encodeURIComponent(name));
+      if (!r.ok) {
+        out.textContent = '';
+        sandboxShowErr(
+          'Could not load fixture (HTTP ' + r.status + '). On this repo run: pnpm run convert-2026-draft /path/to/2026Draft.xlsx'
+        );
+        return;
+      }
+      const text = await r.text();
+      document.getElementById('sandboxBody').value = text;
+      out.textContent = 'Loaded ' + name + '. Edit JSON if needed, then POST.';
+    } catch {
+      out.textContent = '';
+      sandboxShowErr('Network error loading fixture.');
+    }
+  }
+
+  function sandboxCopyKeyFromUsage() {
+    const u = document.getElementById('keyInput');
+    const s = document.getElementById('sandboxApiKey');
+    if (u && u.value.trim()) s.value = u.value.trim();
+  }
+
+  async function sandboxRunValuation() {
+    sandboxHideErr();
+    const key = document.getElementById('sandboxApiKey').value.trim();
+    const raw = document.getElementById('sandboxBody').value.trim();
+    const out = document.getElementById('sandboxOut');
+    const btn = document.getElementById('sandboxRunBtn');
+
+    if (!key) {
+      sandboxShowErr('Paste an x-api-key (or click “Use key from My Usage”).');
+      return;
+    }
+    let body;
+    try {
+      body = JSON.parse(raw);
+    } catch {
+      sandboxShowErr('Invalid JSON in request body.');
+      return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = 'Posting…';
+    out.textContent = '';
+    try {
+      const r = await fetch('/valuation/calculate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': key,
+        },
+        body: JSON.stringify(body),
+      });
+      const text = await r.text();
+      let pretty = text;
+      try {
+        pretty = JSON.stringify(JSON.parse(text), null, 2);
+      } catch (_) { /* keep raw */ }
+      out.textContent = 'HTTP ' + r.status + '\n\n' + pretty;
+      if (!r.ok) {
+        sandboxShowErr('Request finished with HTTP ' + r.status + ' (see response below).');
+      }
+    } catch {
+      sandboxShowErr('Could not reach the server.');
+      out.textContent = '';
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'POST /valuation/calculate';
+    }
+  }
+
+  document.getElementById('sandboxCheckpoint').addEventListener('change', () => {
+    sandboxLoadFixture();
   });
 
   // ── API key issuance (Get a key tab) ───────────────────────────
