@@ -3,12 +3,12 @@ import mongoose from "mongoose";
 import { AppError, ConflictError, InternalServerError, ValidationError } from "../lib/appError";
 import { logRequestError } from "../lib/errorLogging";
 
-function mongoDuplicateKeyCode(err: unknown): boolean {
+function mongoErrorCode(err: unknown, code: number): boolean {
     return (
         typeof err === "object" &&
         err !== null &&
         "code" in err &&
-        (err as { code: unknown }).code === 11000
+        (err as { code: unknown }).code === code
     );
 }
 
@@ -31,12 +31,20 @@ const errorHandler: ErrorRequestHandler = (err, req, res, _next) => {
             "DOCUMENT_VALIDATION_FAILED",
             keys,
         );
-    } else if (mongoDuplicateKeyCode(err)) {
+    } else if (mongoErrorCode(err, 11000)) {
         appError = new ConflictError(
             "A record with this unique value already exists.",
             409,
             "DUPLICATE_KEY",
         );
+    } else if (mongoErrorCode(err, 121)) {
+        appError = new ValidationError(
+            "Document rejected by MongoDB validation on the apikeys collection. The server attempts to relax collection validation on startup (collMod); ensure the database user can run collMod or update the Atlas JSON Schema for hashed keys (keyHash, keyPrefix, label, scopes).",
+            400,
+            "DOCUMENT_VALIDATION_FAILED",
+        );
+    } else if (err instanceof mongoose.Error.CastError) {
+        appError = new ValidationError(err.message, 400, "CAST_ERROR");
     } else {
         // Unknown error: hide internals from clients, return safe 500 payload.
         appError = new InternalServerError();
