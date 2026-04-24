@@ -173,6 +173,40 @@
       max-width: 600px;
     }
 
+    /* Centered intros across tabs (match Get a key) */
+    main .section {
+      text-align: center;
+    }
+    main h2 {
+      text-align: center;
+    }
+    main h3 {
+      text-align: center;
+    }
+    main .section-desc {
+      max-width: 38rem;
+      margin-left: auto;
+      margin-right: auto;
+      text-align: center;
+    }
+    main .endpoint,
+    main .endpoint-header,
+    main .endpoint-body,
+    main .code-block,
+    main .auth-example,
+    main .card,
+    main .key-form,
+    main .stats-card,
+    main .usage-error,
+    main .usage-info,
+    main .keys-panel,
+    main .keys-loading,
+    main .axios-note,
+    main .license-contact,
+    main .portal-card {
+      text-align: left;
+    }
+
     /* ── Cards ── */
     .card {
       background: var(--surface);
@@ -685,13 +719,15 @@
       line-height: 1.5;
     }
 
-    /* ── Key issuance wizard ── */
-    .keys-shell {
+    /* ── Centered column: Get a key, My Usage ── */
+    .portal-shell {
       width: 100%;
       max-width: min(720px, 100%);
       margin-left: auto;
       margin-right: auto;
     }
+
+    /* ── Key issuance wizard ── */
     .keys-panel { display: none; }
     .keys-panel.visible { display: block; }
     .keys-loading {
@@ -1437,7 +1473,7 @@ player_id: player._id          <span class="t-cmt">// MongoDB ObjectId — not r
     <!-- Contact -->
     <div class="section">
       <h3>Get a License</h3>
-      <div style="background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--accent);border-radius:var(--radius);padding:20px 24px">
+      <div class="license-contact" style="background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--accent);border-radius:var(--radius);padding:20px 24px">
         <p style="font-size:14px;color:var(--text);margin-bottom:6px;font-weight:600">Interested in licensing the Amethyst Engine for your fantasy sports product?</p>
         <p style="font-size:13px;color:var(--muted);line-height:1.7">
           The API is sport-agnostic and architected for plug-and-play expansion into additional domains.
@@ -1455,7 +1491,7 @@ player_id: player._id          <span class="t-cmt">// MongoDB ObjectId — not r
 
   <!-- ═══════════════════ GET A KEY TAB ═══════════════════ -->
   <div class="tab-content" id="tab-keys">
-    <div class="keys-shell">
+    <div class="portal-shell">
 
     <div class="section">
       <h2>Issue an API key</h2>
@@ -1583,12 +1619,13 @@ player_id: player._id          <span class="t-cmt">// MongoDB ObjectId — not r
       </div>
     </div>
 
-    </div><!-- /.keys-shell -->
+    </div><!-- /.portal-shell -->
   </div><!-- /tab-keys -->
 
 
   <!-- ═══════════════════ USAGE TAB ═══════════════════ -->
   <div class="tab-content" id="tab-usage">
+    <div class="portal-shell">
 
     <div class="section">
       <h2>My Usage</h2>
@@ -1641,6 +1678,7 @@ player_id: player._id          <span class="t-cmt">// MongoDB ObjectId — not r
       </div>
     </div>
 
+    </div><!-- /.portal-shell -->
   </div><!-- /tab-usage -->
 
 </main>
