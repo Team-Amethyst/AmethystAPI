@@ -32,10 +32,18 @@ const errorHandler: ErrorRequestHandler = (err, req, res, _next) => {
             keys,
         );
     } else if (mongoErrorCode(err, 11000)) {
+        const dupHint =
+            typeof err === "object" &&
+            err !== null &&
+            "message" in err &&
+            typeof (err as { message: unknown }).message === "string"
+                ? String((err as { message: string }).message).match(/index:\s*(\S+)\s+dup key/i)?.[1]
+                : undefined;
         appError = new ConflictError(
             "A record with this unique value already exists.",
             409,
             "DUPLICATE_KEY",
+            dupHint ? { index: dupHint } : undefined,
         );
     } else if (mongoErrorCode(err, 121)) {
         appError = new ValidationError(
