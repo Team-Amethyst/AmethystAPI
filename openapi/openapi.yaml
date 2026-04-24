@@ -40,8 +40,8 @@ info:
     `RATE_LIMIT_CATALOG_MAX` + `RATE_LIMIT_CATALOG_WINDOW_MS`. Defaults ~300/min valuation,
     ~1200/min catalog; **off automatically under Vitest** unless `RATE_LIMIT_ENABLED=1`.
 
-    **Developer portal — key minting:** When `KEY_ISSUANCE_ENABLED=1`, `GET /api/keys/status` and
-    `POST /api/keys/issue` mint MongoDB `apikeys` documents; the plaintext key is returned once.
+    **Developer portal — key minting:** `GET /api/keys/status` and `POST /api/keys/issue` mint
+    MongoDB `apikeys` documents by default; set `KEY_ISSUANCE_ENABLED=0|false|off` to disable.
     Optional `KEY_ISSUANCE_SECRET` requires header `X-Key-Issuance-Token`.
   version: 1.0.0
 
@@ -432,8 +432,9 @@ paths:
     get:
       summary: Key issuance availability (developer portal)
       description: |
-        Returns whether `POST /api/keys/issue` is enabled (`KEY_ISSUANCE_ENABLED`) and whether
-        a shared `X-Key-Issuance-Token` is required (`KEY_ISSUANCE_SECRET`).
+        Returns whether `POST /api/keys/issue` is enabled. Issuance defaults to **on** unless
+        `KEY_ISSUANCE_ENABLED` is set to `0`, `false`, or `off`. Also reports whether
+        `X-Key-Issuance-Token` is required (`KEY_ISSUANCE_SECRET`).
       operationId: getKeyIssuanceStatus
       responses:
         "200":
@@ -448,7 +449,8 @@ paths:
       summary: Mint a new API key (plaintext once)
       description: |
         Creates an `apikeys` document. Response includes `apiKey` exactly once; the server does not
-        list or re-display it. Returns **503** when `KEY_ISSUANCE_ENABLED` is not set.
+        list or re-display it. Returns **503** when issuance is explicitly disabled
+        (`KEY_ISSUANCE_ENABLED=0|false|off`).
       operationId: issueApiKey
       parameters:
         - in: header

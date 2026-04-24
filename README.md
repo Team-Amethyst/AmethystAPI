@@ -208,9 +208,9 @@ Keys are stored in the `apikeys` MongoDB collection.
 
 ### One-off keys (developer portal)
 
-When **`KEY_ISSUANCE_ENABLED=1`** is set on the server, the bundled developer portal (**Get a key** tab) can mint a key through **`POST /api/keys/issue`**. The plaintext is returned **once** in the JSON body; there is no account recovery.
+The bundled developer portal (**Get a key** tab) can mint a key through **`POST /api/keys/issue`** unless issuance is explicitly turned off. The plaintext is returned **once** in the JSON body; there is no account recovery.
 
-- **`GET /api/keys/status`** — `{ "issuanceEnabled": boolean, "requiresToken": boolean }` for the UI.
+- **`GET /api/keys/status`** — `{ "issuanceEnabled": boolean, "requiresToken": boolean }` for the UI. Issuance defaults to **on**; set **`KEY_ISSUANCE_ENABLED=0`**, **`false`**, or **`off`** to disable.
 - **`POST /api/keys/issue`** — JSON body `{ "owner": string (required), "email"?: string, "tier"?: "free" | "standard" | "premium" }`. If **`KEY_ISSUANCE_SECRET`** is set in the environment, clients must send header **`X-Key-Issuance-Token`** with the same value.
 
 Example (local, issuance enabled, no secret):
@@ -268,7 +268,7 @@ curl -X POST http://localhost:3002/valuation/calculate \
 | `PORT` | `3002` | `8080` |
 | `CORS_ORIGIN` | `http://localhost:5173` | Production frontend URL |
 | `REDIS_URL` | `redis://localhost:6379` | Upstash URL (when ready) |
-| `KEY_ISSUANCE_ENABLED` | `1` to enable **Get a key** / `POST /api/keys/issue` | Set to `1` only if you want public minting; otherwise omit |
+| `KEY_ISSUANCE_ENABLED` | Omit or `1` / `on` (default **on**) | Set to **`0`**, **`false`**, or **`off`** to disable portal minting |
 | `KEY_ISSUANCE_SECRET` | Optional shared secret for `X-Key-Issuance-Token` | Same — use for operator-gated issuance |
 
 ---
@@ -283,7 +283,7 @@ Push to `main` — GitHub Actions builds, pushes to ECR, and triggers an App Run
 
 **MongoDB Atlas:** Network Access must allow `0.0.0.0/0` (App Runner has no static IP).
 
-**Key issuance:** The production Docker image sets **`KEY_ISSUANCE_ENABLED=1`** by default so the hosted portal can mint keys after deploy. To disable, set **`KEY_ISSUANCE_ENABLED=0`** (or unset and rebuild without the Dockerfile line) in the App Runner service environment, which overrides the image. Optionally set **`KEY_ISSUANCE_SECRET`** and send **`X-Key-Issuance-Token`** on `POST /api/keys/issue` for operator-gated issuance. You can also record intent in GitHub with `gh variable set KEY_ISSUANCE_ENABLED --body 1` (does not change AWS by itself).
+**Key issuance:** Minting defaults **on** in the app (unset `KEY_ISSUANCE_ENABLED` means enabled). The Docker image also sets **`ENV KEY_ISSUANCE_ENABLED=1`** for clarity. To disable on App Runner, set **`KEY_ISSUANCE_ENABLED=0`** in the service environment (overrides the image). Optionally set **`KEY_ISSUANCE_SECRET`** and send **`X-Key-Issuance-Token`** on `POST /api/keys/issue`. Record intent in GitHub with `gh variable set KEY_ISSUANCE_ENABLED --body 1` when the API allows (does not change AWS by itself).
 
 ---
 

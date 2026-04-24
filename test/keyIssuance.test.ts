@@ -30,7 +30,7 @@ describe("POST /api/keys/issue", () => {
   });
 
   it("returns 503 when issuance is disabled", async () => {
-    delete process.env.KEY_ISSUANCE_ENABLED;
+    process.env.KEY_ISSUANCE_ENABLED = "0";
     const res = await request(app)
       .post("/api/keys/issue")
       .send({ owner: "Test" })

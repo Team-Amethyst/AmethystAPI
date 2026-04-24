@@ -16,9 +16,20 @@ import {
 
 const router = Router();
 
+/** Issuance is on by default (portal + course deploys). Set KEY_ISSUANCE_ENABLED=0|false|off to disable. */
 function issuanceEnabled(): boolean {
-  const v = process.env.KEY_ISSUANCE_ENABLED?.trim().toLowerCase();
-  return v === "1" || v === "true" || v === "yes";
+  const raw = process.env.KEY_ISSUANCE_ENABLED;
+  if (raw === undefined || raw === null) {
+    return true;
+  }
+  const v = String(raw).trim().toLowerCase();
+  if (v === "") {
+    return true;
+  }
+  if (v === "0" || v === "false" || v === "no" || v === "off") {
+    return false;
+  }
+  return v === "1" || v === "true" || v === "yes" || v === "on";
 }
 
 function assertIssuanceToken(req: Request): void {
