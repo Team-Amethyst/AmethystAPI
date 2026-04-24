@@ -9,6 +9,8 @@ export interface IApiKey extends Document {
   keyPrefix: string;
   label: string;
   owner: string;
+  /** Optional; unique synthetic value may be assigned for legacy Mongo unique indexes on email */
+  email?: string;
   tier: ApiKeyTier;
   scopes: ApiKeyScope[];
   expiresAt: Date | null;
@@ -45,6 +47,12 @@ const apiKeySchema = new Schema<IApiKey>(
     owner: {
       type: String,
       required: true,
+      trim: true,
+    },
+    email: {
+      type: String,
+      required: false,
+      lowercase: true,
       trim: true,
     },
     tier: {

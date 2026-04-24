@@ -10,6 +10,7 @@ import {
 import {
   ALLOWED_API_KEY_SCOPES,
   ALLOWED_API_KEY_TIERS,
+  allocateUniqueKeyEmail,
   generateApiKeySecret,
   hashApiKey,
 } from "../lib/apiKey";
@@ -113,6 +114,7 @@ const postIssue: RequestHandler = async (
     }
 
     let label = owner;
+    let contactEmail: string | null = null;
     if (emailRaw !== undefined && emailRaw !== null && emailRaw !== "") {
       if (typeof emailRaw !== "string") {
         throw new ValidationError("email must be a string when provided.", 400, "VALIDATION_FAILED");
@@ -126,9 +128,11 @@ const postIssue: RequestHandler = async (
       }
       if (e.length > 0) {
         label = `${owner} (${e})`.slice(0, 200);
+        contactEmail = e.toLowerCase();
       }
     }
 
+    const email = allocateUniqueKeyEmail(contactEmail);
     const scopes = [...ALLOWED_API_KEY_SCOPES];
 
     const maxAttempts = 5;
@@ -142,6 +146,7 @@ const postIssue: RequestHandler = async (
           keyPrefix,
           label,
           owner,
+          email,
           tier,
           scopes,
           expiresAt: null,
@@ -152,6 +157,7 @@ const postIssue: RequestHandler = async (
           owner,
           tier,
           label,
+          email,
           keyPrefix,
           scopes,
           message:

@@ -2,6 +2,7 @@ import { Router, RequestHandler } from "express";
 import ApiKey from "../models/ApiKey";
 import {
   ALLOWED_API_KEY_TIERS,
+  allocateUniqueKeyEmail,
   generateApiKeySecret,
   hashApiKey,
   normalizeScopes,
@@ -15,6 +16,7 @@ interface CreateApiKeyBody {
   owner: string;
   tier: string;
   scopes: unknown;
+  email?: string;
   expiresAt?: string;
 }
 
@@ -77,6 +79,7 @@ const createKey: RequestHandler = async (req, res, next) => {
 
   const { secret, keyPrefix } = generateApiKeySecret();
   const keyHash = hashApiKey(secret);
+  const email = allocateUniqueKeyEmail(body.email);
 
   try {
     const created = await ApiKey.create({
@@ -84,6 +87,7 @@ const createKey: RequestHandler = async (req, res, next) => {
       keyPrefix,
       label,
       owner,
+      email,
       tier,
       scopes,
       expiresAt,

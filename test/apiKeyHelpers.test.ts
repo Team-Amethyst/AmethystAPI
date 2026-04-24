@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import {
+  allocateUniqueKeyEmail,
   generateApiKeySecret,
   hashApiKey,
   validateApiKeyFormat,
@@ -46,5 +47,14 @@ describe("API key helpers", () => {
       "simulation",
       "signals",
     ]);
+  });
+
+  it("allocateUniqueKeyEmail accepts valid email or returns unique synthetic", () => {
+    expect(allocateUniqueKeyEmail("  Foo@Bar.COM  ")).toBe("foo@bar.com");
+    const a = allocateUniqueKeyEmail(null);
+    const b = allocateUniqueKeyEmail(undefined);
+    expect(a).toMatch(/^issued\+[a-f0-9]{32}@amethyst-api\.local$/);
+    expect(b).toMatch(/^issued\+[a-f0-9]{32}@amethyst-api\.local$/);
+    expect(a).not.toBe(b);
   });
 });

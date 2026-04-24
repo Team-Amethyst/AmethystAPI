@@ -51,3 +51,16 @@ export function normalizeScopes(scopes: unknown): ApiKeyScope[] {
     .map((scope) => scope.trim())
     .filter((scope): scope is ApiKeyScope => ALLOWED_API_KEY_SCOPES.includes(scope as ApiKeyScope));
 }
+
+/**
+ * Legacy Atlas clusters sometimes define a unique index on `email`. Hashed keys omit email unless
+ * set, which can make every insert collide on `null`. Use a unique synthetic address when none is
+ * supplied, or a normalized address when the caller provides one.
+ */
+export function allocateUniqueKeyEmail(provided?: string | null): string {
+  const p = typeof provided === "string" ? provided.trim() : "";
+  if (p.length > 0 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(p)) {
+    return p.toLowerCase();
+  }
+  return `issued+${crypto.randomBytes(16).toString("hex")}@amethyst-api.local`;
+}

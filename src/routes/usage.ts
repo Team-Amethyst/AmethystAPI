@@ -44,6 +44,7 @@ const getUsage: RequestHandler = async (
 
   res.json({
     owner: record.owner,
+    email: record.email ?? null,
     tier: record.tier,
     scopes: record.scopes || [],
     keyPrefix: record.keyPrefix,

@@ -68,6 +68,7 @@ describe("POST /api/keys/issue", () => {
     expect(res.body.owner).toBe("Acme Draft");
     expect(res.body.tier).toBe("free");
     expect(res.body.label).toBe("Acme Draft (a@b.co)");
+    expect(res.body.email).toBe("a@b.co");
     expect(createMock).toHaveBeenCalledTimes(1);
     const arg = createMock.mock.calls[0][0] as Record<string, unknown>;
     expect(arg.owner).toBe("Acme Draft");
