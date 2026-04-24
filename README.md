@@ -227,7 +227,7 @@ Successful responses include **`apiKey`**, a single string of the form **`amethy
 
 New keys are stored **hashed** (`keyHash`, `keyPrefix`, `label`, `owner`, `tier`, `scopes`, …). Prefer the **`POST /api/keys`** or **`POST /api/keys/issue`** APIs so hashing matches the server’s **`API_KEY_PEPPER`** / **`APP_SECRET`**. The auth middleware still accepts legacy documents that store a plaintext **`key`** for migration. See **`src/models/ApiKey.ts`** and **`src/routes/apiKeys.ts`** for the canonical shape.
 
-On startup the server attempts **`collMod` → `validationLevel: "off"`** on the **`apikeys`** collection (see **`src/lib/apiKeyCollection.ts`**). If Atlas had a strict JSON Schema validator on that collection, this allows hashed inserts without manual console steps (requires a Mongo user with **`collMod`** permission; otherwise the command is skipped and logged).
+On startup the server runs best-effort compatibility hooks on **`apikeys`** (see **`src/lib/apiKeyCollection.ts`**): **`collMod`** to turn document validation off, and **drop** of a legacy **unique index on `key` alone** (hashed keys omit `key`; a unique `key_1` index makes every insert collide on `null`). These require Mongo privileges; failures are logged and skipped. New keys also receive a **unique synthetic `email`** when none is supplied, for clusters that keep a unique index on `email`.
 
 Usage is tracked per key (`usageCount`) for royalty reporting.
 
