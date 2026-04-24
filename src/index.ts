@@ -30,6 +30,7 @@ import errorHandler from "./middleware/errorHandler";
 import { getRedisClient } from "./lib/redis";
 import { logger } from "./lib/logger";
 import { getReadiness, readinessHttpStatus } from "./lib/readiness";
+import { relaxApiKeysCollectionValidation } from "./lib/apiKeyCollection";
 
 dotenv.config();
 
@@ -106,8 +107,9 @@ const PORT = process.env.PORT || 3001;
 
 mongoose
   .connect(process.env.MONGO_URI as string)
-  .then(() => {
+  .then(async () => {
     logger.info("MongoDB connected");
+    await relaxApiKeysCollectionValidation();
     // Eagerly connect to Redis — errors are non-fatal
     getRedisClient().connect().catch(() => {});
     app.listen(PORT, () =>

@@ -37,6 +37,11 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     if: github.event_name == 'push'
+    services:
+      mongo:
+        image: mongo:7
+        ports:
+          - 27017:27017
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -63,6 +68,8 @@ jobs:
         run: pnpm lint
 
       - name: Test
+        env:
+          KEY_ISSUANCE_INTEGRATION_MONGO_URI: mongodb://127.0.0.1:27017/key_issue_ci
         run: pnpm test
 
       - name: Replay evaluator (checkpoint smoke)
