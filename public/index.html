@@ -686,6 +686,27 @@
     }
 
     /* ── Key issuance wizard ── */
+    .keys-shell {
+      width: 100%;
+      max-width: min(720px, 100%);
+      margin-left: auto;
+      margin-right: auto;
+    }
+    #tab-keys .section {
+      text-align: center;
+    }
+    #tab-keys .section h2 {
+      text-align: center;
+    }
+    #tab-keys .section-desc {
+      max-width: 38rem;
+      margin-left: auto;
+      margin-right: auto;
+      text-align: center;
+    }
+    .keys-shell .keys-loading {
+      text-align: center;
+    }
     .keys-panel { display: none; }
     .keys-panel.visible { display: block; }
     .keys-loading {
@@ -726,6 +747,11 @@
       border-radius: var(--radius);
       padding: 22px 24px;
       max-width: 520px;
+    }
+    #tab-keys .portal-card {
+      max-width: none;
+      width: 100%;
+      box-sizing: border-box;
     }
     .portal-field { margin-bottom: 18px; }
     .portal-field:last-child { margin-bottom: 0; }
@@ -1444,6 +1470,7 @@ player_id: player._id          <span class="t-cmt">// MongoDB ObjectId — not r
 
   <!-- ═══════════════════ GET A KEY TAB ═══════════════════ -->
   <div class="tab-content" id="tab-keys">
+    <div class="keys-shell">
 
     <div class="section">
       <h2>Issue an API key</h2>
@@ -1570,6 +1597,8 @@ player_id: player._id          <span class="t-cmt">// MongoDB ObjectId — not r
         </div>
       </div>
     </div>
+
+    </div><!-- /.keys-shell -->
   </div><!-- /tab-keys -->
 
 
