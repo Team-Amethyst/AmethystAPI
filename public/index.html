@@ -23,8 +23,8 @@
       --red:        #f87171;
       --code-bg:    #0d0d1a;
       --radius:     8px;
-      /* Header / tabs / main share one rail; grow with viewport up to a cap */
-      --content-max: min(1600px, calc(100vw - 64px));
+      /* One column for header, tabs, and all tab bodies (incl. long API keys) */
+      --content-max: 1120px;
     }
 
     html { scroll-behavior: smooth; }
@@ -279,19 +279,6 @@
     #tab-sandbox .sandbox-response-heading {
       margin-top: 20px;
       margin-bottom: 0;
-      text-align: left;
-    }
-    /* Full-width intro so copy lines up with the JSON card (not a narrow centered column) */
-    #tab-sandbox .section {
-      text-align: left;
-    }
-    #tab-sandbox .section h2 {
-      text-align: left;
-    }
-    #tab-sandbox .section-desc {
-      max-width: none;
-      margin-left: 0;
-      margin-right: 0;
       text-align: left;
     }
 
@@ -860,7 +847,8 @@
       padding: 22px 24px;
       max-width: 520px;
     }
-    #tab-keys .portal-card {
+    #tab-keys .portal-card,
+    #tab-sandbox .portal-card {
       max-width: none;
       width: 100%;
       box-sizing: border-box;
