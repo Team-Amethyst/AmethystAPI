@@ -210,44 +210,99 @@
     main .portal-card {
       text-align: left;
     }
-    main .sandbox-toolbar,
     main .sandbox-out,
     main .sandbox-key-row,
-    main #sandboxBody {
+    main .sandbox-context-shell,
+    main .sandbox-case-tabs {
       text-align: left;
     }
 
-    .sandbox-toolbar {
+    .sandbox-case-tabs {
       display: flex;
       flex-wrap: wrap;
-      gap: 12px;
-      align-items: flex-end;
-      margin-bottom: 18px;
+      gap: 8px;
+      margin-bottom: 14px;
     }
-    .sandbox-toolbar .field-label {
-      display: block;
-      font-size: 11px;
-      font-weight: 600;
-      color: var(--muted);
-      text-transform: uppercase;
-      letter-spacing: 0.06em;
-      margin-bottom: 6px;
-    }
-    .sandbox-select {
-      min-width: 220px;
+    .sandbox-case-tab {
       background: var(--surface);
       border: 1px solid var(--border);
-      border-radius: var(--radius);
-      color: var(--text);
-      font-size: 13px;
-      padding: 10px 12px;
-      outline: none;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 600;
+      padding: 8px 14px;
+      border-radius: 999px;
+      cursor: pointer;
+      transition: color 0.15s, border-color 0.15s, background 0.15s;
     }
-    .sandbox-select:focus { border-color: var(--accent); }
-    #sandboxBody {
-      width: 100%;
-      min-height: 200px;
-      line-height: 1.45;
+    .sandbox-case-tab:hover {
+      color: var(--text);
+      border-color: var(--muted);
+    }
+    .sandbox-case-tab.active {
+      color: var(--text);
+      border-color: var(--accent);
+      background: rgba(139, 92, 246, 0.12);
+      box-shadow: inset 0 0 0 1px rgba(139, 92, 246, 0.25);
+    }
+    .sandbox-context-shell {
+      position: relative;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--code-bg);
+      margin-bottom: 18px;
+    }
+    .sandbox-context-shell:hover .sandbox-json-copy {
+      opacity: 1;
+    }
+    .sandbox-json-copy {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      z-index: 2;
+      width: 34px;
+      height: 34px;
+      padding: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: rgba(19, 19, 31, 0.92);
+      color: var(--muted);
+      cursor: pointer;
+      opacity: 0.55;
+      transition: opacity 0.15s, color 0.15s, background 0.15s, border-color 0.15s;
+    }
+    .sandbox-json-copy:hover {
+      color: var(--text);
+      background: var(--surface-2);
+      border-color: var(--muted);
+    }
+    .sandbox-json-copy svg {
+      width: 16px;
+      height: 16px;
+      display: block;
+    }
+    .sandbox-context-pre {
+      margin: 0;
+      padding: 44px 16px 16px 16px;
+      max-height: 420px;
+      overflow: auto;
+      font-family: "SF Mono", "Fira Code", "Fira Mono", monospace;
+      font-size: 11px;
+      line-height: 1.55;
+      color: #c9d1d9;
+      white-space: pre;
+      word-break: normal;
+    }
+    .sandbox-context-hint {
+      font-size: 12px;
+      color: var(--muted);
+      margin-bottom: 12px;
+      line-height: 1.55;
+    }
+    .sandbox-player-field {
+      margin-bottom: 18px;
     }
     .sandbox-out {
       background: var(--code-bg);
@@ -1766,36 +1821,46 @@ player_id: player._id          <span class="t-cmt">// MongoDB ObjectId — not r
     </div><!-- /.portal-shell -->
   </div><!-- /tab-usage -->
 
-  <!-- ═══════════════════ SAMPLE DRAFT (Activity #9) ═══════════════════ -->
+  <!-- ═══════════════════ SAMPLE DRAFT — single-player valuation ═══════════════════ -->
   <div class="tab-content" id="tab-sandbox">
     <div class="portal-shell">
       <div class="section">
-        <h2>2026 sample draft</h2>
+        <h2>Sample draft — single player</h2>
         <p class="section-desc">
-          Checkpoint JSON from the instructor workbook pipeline (see repo <code style="font-size:12px">docs/draft-2026-xlsx-mapping.md</code>).
-          Load a fixture, then POST to <code style="color:var(--orange);background:rgba(251,146,60,0.1);padding:1px 6px;border-radius:3px;font-size:12px;">/valuation/calculate</code> with your API key.
-          On a live Mongo deployment, players must exist for the synthetic <code style="font-size:12px">player_id</code> values in the file (or replace them with real MLB ids from your catalog).
+          Five presupplied <strong>league / draft context</strong> JSON files (Activity #9 style) live under <code style="font-size:12px">/fixtures/checkpoints/</code>.
+          Pick a checkpoint to preview the context, copy it for your own tools, then enter one <code style="font-size:12px">player_id</code> (MLB id string, or a synthetic id from the fixture) to call
+          <code style="color:var(--orange);background:rgba(251,146,60,0.1);padding:1px 6px;border-radius:3px;font-size:12px;">POST /valuation/player</code> — same body as <code style="font-size:12px">/valuation/calculate</code> plus <code style="font-size:12px">player_id</code>. See <code style="font-size:12px">docs/draft-2026-xlsx-mapping.md</code> for how fixtures were built.
         </p>
       </div>
 
-      <div class="sandbox-toolbar">
-        <div>
-          <label class="field-label" for="sandboxCheckpoint">Checkpoint file</label>
-          <select class="sandbox-select" id="sandboxCheckpoint">
-            <option value="pre_draft.json">pre_draft.json</option>
-            <option value="after_pick_10.json">after_pick_10.json</option>
-            <option value="after_pick_50.json">after_pick_50.json</option>
-            <option value="after_pick_100.json">after_pick_100.json</option>
-            <option value="after_pick_130.json">after_pick_130.json</option>
-          </select>
-        </div>
-        <button type="button" class="btn-secondary" onclick="sandboxLoadFixture()">Load fixture</button>
-        <button type="button" class="btn-secondary" onclick="sandboxCopyKeyFromUsage()" title="Copy API key from My Usage tab field">Use key from My Usage</button>
+      <p class="sandbox-context-hint" id="sandboxContextMeta">Loading fixtures…</p>
+
+      <div class="sandbox-case-tabs" role="tablist" aria-label="Checkpoint fixture">
+        <button type="button" class="sandbox-case-tab active" role="tab" aria-selected="true" data-sandbox-file="pre_draft.json">Pre-draft</button>
+        <button type="button" class="sandbox-case-tab" role="tab" aria-selected="false" data-sandbox-file="after_pick_10.json">After 10 picks</button>
+        <button type="button" class="sandbox-case-tab" role="tab" aria-selected="false" data-sandbox-file="after_pick_50.json">After 50 picks</button>
+        <button type="button" class="sandbox-case-tab" role="tab" aria-selected="false" data-sandbox-file="after_pick_100.json">After 100 picks</button>
+        <button type="button" class="sandbox-case-tab" role="tab" aria-selected="false" data-sandbox-file="after_pick_130.json">After 130 picks</button>
       </div>
 
-      <div class="portal-card" style="margin-bottom:18px">
-        <label class="portal-label" for="sandboxBody">Request body (editable JSON)</label>
-        <textarea id="sandboxBody" class="portal-input" spellcheck="false" placeholder='Click “Load fixture” or paste JSON…'></textarea>
+      <div class="portal-card" style="margin-bottom:14px">
+        <span class="portal-label">League context (read-only)</span>
+        <p class="portal-hint" style="margin-top:4px;margin-bottom:10px">Hover the panel and use the clipboard control to copy this checkpoint JSON exactly as stored.</p>
+        <div class="sandbox-context-shell">
+          <button type="button" class="sandbox-json-copy" id="sandboxCopyContextBtn" onclick="sandboxCopyActiveFixture()" title="Copy league context JSON" aria-label="Copy league context JSON">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+            </svg>
+          </button>
+          <pre class="sandbox-context-pre" id="sandboxContextPre"></pre>
+        </div>
+      </div>
+
+      <div class="portal-card sandbox-player-field">
+        <label class="portal-label" for="sandboxPlayerId">player_id to value</label>
+        <input class="portal-input" id="sandboxPlayerId" type="text" maxlength="32" placeholder="e.g. 660271 or synthetic id from fixture roster" autocomplete="off" spellcheck="false" />
+        <p class="portal-hint">Must still be in the undrafted pool for that checkpoint (not on a roster as keeper-only off-board rules apply).</p>
       </div>
 
       <div class="sandbox-key-row">
@@ -1809,13 +1874,16 @@ player_id: player._id          <span class="t-cmt">// MongoDB ObjectId — not r
             spellcheck="false"
           />
         </div>
-        <button type="button" class="load-btn" id="sandboxRunBtn" onclick="sandboxRunValuation()">POST /valuation/calculate</button>
+        <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center">
+          <button type="button" class="btn-secondary" onclick="sandboxCopyKeyFromUsage()">Use key from My Usage</button>
+          <button type="button" class="load-btn" id="sandboxRunBtn" onclick="sandboxRunPlayerValuation()">POST /valuation/player</button>
+        </div>
       </div>
 
       <div class="usage-error" id="sandboxError" style="margin-top:12px"></div>
 
       <h3 class="sandbox-response-heading">Response</h3>
-      <pre class="sandbox-out" id="sandboxOut">Load a fixture and run, or paste JSON first.</pre>
+      <pre class="sandbox-out" id="sandboxOut">Choose a checkpoint, enter player_id and x-api-key, then run.</pre>
     </div>
   </div><!-- /tab-sandbox -->
 
@@ -1957,8 +2025,18 @@ player_id: player._id          <span class="t-cmt">// MongoDB ObjectId — not r
     if (e.key === 'Enter') loadUsage();
   });
 
-  // ── Sample draft sandbox (Activity #9 fixtures) ─────────────
+  // ── Sample draft — single-player valuation (fixtures) ─────────
+  const SANDBOX_FIXTURE_FILES = [
+    'pre_draft.json',
+    'after_pick_10.json',
+    'after_pick_50.json',
+    'after_pick_100.json',
+    'after_pick_130.json',
+  ];
   let sandboxFixturePrimed = false;
+  /** @type {Record<string, string>} */
+  const sandboxFixtureRaw = {};
+  let sandboxActiveFile = 'pre_draft.json';
 
   function sandboxHideErr() {
     const el = document.getElementById('sandboxError');
@@ -1972,33 +2050,100 @@ player_id: player._id          <span class="t-cmt">// MongoDB ObjectId — not r
     el.style.display = 'block';
   }
 
+  function sandboxPrettyJson(raw) {
+    try {
+      return JSON.stringify(JSON.parse(raw), null, 2);
+    } catch {
+      return raw;
+    }
+  }
+
+  function sandboxUpdateMeta() {
+    const raw = sandboxFixtureRaw[sandboxActiveFile];
+    const meta = document.getElementById('sandboxContextMeta');
+    if (!raw) {
+      meta.textContent = 'Fixture missing or failed to load for ' + sandboxActiveFile + '.';
+      return;
+    }
+    let checkpoint = '';
+    try {
+      checkpoint = JSON.parse(raw).checkpoint || '';
+    } catch (_) { /* ignore */ }
+    meta.textContent =
+      'Showing ' +
+      sandboxActiveFile +
+      (checkpoint ? ' (checkpoint: ' + checkpoint + ')' : '') +
+      '.';
+  }
+
+  function sandboxRenderContextPre() {
+    const raw = sandboxFixtureRaw[sandboxActiveFile];
+    const pre = document.getElementById('sandboxContextPre');
+    if (!raw) {
+      pre.textContent = '(Could not load ' + sandboxActiveFile + ' — run pnpm run convert-2026-draft.)';
+    } else {
+      pre.textContent = sandboxPrettyJson(raw);
+    }
+    sandboxUpdateMeta();
+  }
+
+  function sandboxSetActiveFile(file) {
+    sandboxActiveFile = file;
+    document.querySelectorAll('.sandbox-case-tab').forEach(btn => {
+      const on = btn.dataset.sandboxFile === file;
+      btn.classList.toggle('active', on);
+      btn.setAttribute('aria-selected', on ? 'true' : 'false');
+    });
+    sandboxRenderContextPre();
+  }
+
+  document.querySelector('.sandbox-case-tabs')?.addEventListener('click', ev => {
+    const btn = ev.target.closest('.sandbox-case-tab');
+    if (!btn || !btn.dataset.sandboxFile) return;
+    sandboxSetActiveFile(btn.dataset.sandboxFile);
+  });
+
   async function sandboxEnsureLoaded() {
     if (sandboxFixturePrimed) return;
     sandboxFixturePrimed = true;
-    await sandboxLoadFixture();
+    const pre = document.getElementById('sandboxContextPre');
+    const out = document.getElementById('sandboxOut');
+    pre.textContent = 'Loading checkpoint files…';
+    out.textContent = 'Loading…';
+    let failed = false;
+    for (const name of SANDBOX_FIXTURE_FILES) {
+      try {
+        const r = await fetch('/fixtures/checkpoints/' + encodeURIComponent(name));
+        if (!r.ok) {
+          failed = true;
+          sandboxFixtureRaw[name] = '';
+          continue;
+        }
+        sandboxFixtureRaw[name] = await r.text();
+      } catch {
+        failed = true;
+        sandboxFixtureRaw[name] = '';
+      }
+    }
+    if (failed) {
+      sandboxShowErr(
+        'One or more fixtures failed to load. On this repo run: pnpm run convert-2026-draft /path/to/2026Draft.xlsx'
+      );
+    }
+    sandboxSetActiveFile('pre_draft.json');
+    out.textContent = 'Choose a checkpoint, enter player_id and x-api-key, then run.';
   }
 
-  async function sandboxLoadFixture() {
-    sandboxHideErr();
-    const name = document.getElementById('sandboxCheckpoint').value;
-    const out = document.getElementById('sandboxOut');
-    out.textContent = 'Loading ' + name + '…';
-    try {
-      const r = await fetch('/fixtures/checkpoints/' + encodeURIComponent(name));
-      if (!r.ok) {
-        out.textContent = '';
-        sandboxShowErr(
-          'Could not load fixture (HTTP ' + r.status + '). On this repo run: pnpm run convert-2026-draft /path/to/2026Draft.xlsx'
-        );
-        return;
-      }
-      const text = await r.text();
-      document.getElementById('sandboxBody').value = text;
-      out.textContent = 'Loaded ' + name + '. Edit JSON if needed, then POST.';
-    } catch {
-      out.textContent = '';
-      sandboxShowErr('Network error loading fixture.');
-    }
+  function sandboxCopyActiveFixture() {
+    const raw = sandboxFixtureRaw[sandboxActiveFile];
+    if (!raw) return;
+    const btn = document.getElementById('sandboxCopyContextBtn');
+    navigator.clipboard.writeText(raw).then(() => {
+      btn.title = 'Copied!';
+      setTimeout(() => {
+        btn.title = 'Copy league context JSON';
+      }, 2000);
+    });
   }
 
   function sandboxCopyKeyFromUsage() {
@@ -2007,30 +2152,41 @@ player_id: player._id          <span class="t-cmt">// MongoDB ObjectId — not r
     if (u && u.value.trim()) s.value = u.value.trim();
   }
 
-  async function sandboxRunValuation() {
+  async function sandboxRunPlayerValuation() {
     sandboxHideErr();
     const key = document.getElementById('sandboxApiKey').value.trim();
-    const raw = document.getElementById('sandboxBody').value.trim();
+    const pid = document.getElementById('sandboxPlayerId').value.trim();
     const out = document.getElementById('sandboxOut');
     const btn = document.getElementById('sandboxRunBtn');
+    const raw = sandboxFixtureRaw[sandboxActiveFile];
 
     if (!key) {
       sandboxShowErr('Paste an x-api-key (or click “Use key from My Usage”).');
       return;
     }
-    let body;
-    try {
-      body = JSON.parse(raw);
-    } catch {
-      sandboxShowErr('Invalid JSON in request body.');
+    if (!pid) {
+      sandboxShowErr('Enter a player_id to value.');
       return;
     }
+    if (!raw) {
+      sandboxShowErr('Fixture not loaded. Reload this tab or run the convert script to publish files under /public/fixtures/checkpoints/.');
+      return;
+    }
+    let base;
+    try {
+      base = JSON.parse(raw);
+    } catch {
+      sandboxShowErr('Stored fixture is not valid JSON.');
+      return;
+    }
+
+    const body = { ...base, player_id: pid };
 
     btn.disabled = true;
     btn.textContent = 'Posting…';
     out.textContent = '';
     try {
-      const r = await fetch('/valuation/calculate', {
+      const r = await fetch('/valuation/player', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -2052,12 +2208,12 @@ player_id: player._id          <span class="t-cmt">// MongoDB ObjectId — not r
       out.textContent = '';
     } finally {
       btn.disabled = false;
-      btn.textContent = 'POST /valuation/calculate';
+      btn.textContent = 'POST /valuation/player';
     }
   }
 
-  document.getElementById('sandboxCheckpoint').addEventListener('change', () => {
-    sandboxLoadFixture();
+  document.getElementById('sandboxPlayerId')?.addEventListener('keydown', e => {
+    if (e.key === 'Enter') sandboxRunPlayerValuation();
   });
 
   // ── API key issuance (Get a key tab) ───────────────────────────
