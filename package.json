@@ -14,7 +14,8 @@
     "check-types": "tsc --noEmit",
     "sync-players": "ts-node --project tsconfig.scripts.json scripts/sync-players.ts",
     "replay-eval": "ts-node --project tsconfig.scripts.json scripts/replay-evaluator.ts",
-    "convert-2026-draft": "ts-node --project tsconfig.scripts.json scripts/convert-2026-draft-xlsx.ts"
+    "convert-2026-draft": "ts-node --project tsconfig.scripts.json scripts/convert-2026-draft-xlsx.ts",
+    "audit:valuation-response": "ts-node --project tsconfig.scripts.json scripts/valuation-response-audit.ts"
   },
   "keywords": [
     "api",
