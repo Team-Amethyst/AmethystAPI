@@ -23,6 +23,8 @@
       --red:        #f87171;
       --code-bg:    #0d0d1a;
       --radius:     8px;
+      /* One column for header, tabs, and all tab bodies (incl. long API keys) */
+      --content-max: 1120px;
     }
 
     html { scroll-behavior: smooth; }
@@ -51,8 +53,9 @@
     }
     .header-inner {
       width: 100%;
-      max-width: none;
-      margin: 0;
+      max-width: var(--content-max);
+      margin-left: auto;
+      margin-right: auto;
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -109,8 +112,9 @@
     }
     .tabs-inner {
       width: 100%;
-      max-width: none;
-      margin: 0;
+      max-width: var(--content-max);
+      margin-left: auto;
+      margin-right: auto;
       display: flex;
       gap: 0;
     }
@@ -143,7 +147,7 @@
 
     /* ── Main layout ── */
     main {
-      max-width: 960px;
+      max-width: var(--content-max);
       margin: 0 auto;
       padding: 40px 32px 80px;
     }
@@ -385,9 +389,11 @@
     .key-input-wrap {
       position: relative;
       flex: 1;
+      min-width: 0;
     }
     .key-input {
       width: 100%;
+      max-width: 100%;
       background: var(--surface);
       border: 1px solid var(--border);
       border-radius: var(--radius);
@@ -397,6 +403,7 @@
       padding: 10px 40px 10px 14px;
       outline: none;
       transition: border-color 0.15s;
+      overflow-x: auto;
     }
     .key-input:focus { border-color: var(--accent); }
     .key-input::placeholder { color: var(--muted); }
@@ -719,10 +726,10 @@
       line-height: 1.5;
     }
 
-    /* ── Centered column: Get a key, My Usage ── */
+    /* Same width as main — keeps Get a key / My Usage aligned with API Reference */
     .portal-shell {
       width: 100%;
-      max-width: min(720px, 100%);
+      max-width: 100%;
       margin-left: auto;
       margin-right: auto;
     }
@@ -855,15 +862,20 @@
       padding: 14px 16px;
       position: relative;
       margin-top: 12px;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
     }
     .key-reveal-wrap pre {
       font-family: "SF Mono", "Fira Code", monospace;
       font-size: 12px;
-      word-break: break-all;
+      white-space: pre;
+      word-break: normal;
+      overflow-wrap: normal;
       color: var(--green);
       line-height: 1.6;
       margin: 0;
       padding-right: 72px;
+      min-width: min-content;
     }
     .key-reveal-wrap .copy-btn { top: 10px; right: 10px; }
     .danger-banner {
