@@ -10,6 +10,7 @@ import scarcityRoutes from "./routes/scarcity";
 import simulationRoutes from "./routes/simulation";
 import signalsRoutes from "./routes/signals";
 import usageRoutes from "./routes/usage";
+import keyIssuanceRoutes from "./routes/keyIssuance";
 import catalogRoutes from "./routes/catalog";
 import apiKeysRoutes from "./routes/apiKeys";
 
@@ -71,6 +72,7 @@ app.get("/api/health/ready", async (_req, res) => {
 });
 
 app.use("/api/keys", apiKeysRoutes);
+app.use("/api/keys", keyIssuanceRoutes);
 app.use("/api/usage", usageRoutes);
 
 // ── Amethyst Engine — licensed analytical endpoints (require x-api-key) ────────

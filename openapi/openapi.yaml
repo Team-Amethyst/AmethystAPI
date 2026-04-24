@@ -39,6 +39,10 @@ info:
     (`0`/`off` to disable), `RATE_LIMIT_VALUATION_MAX` + `RATE_LIMIT_VALUATION_WINDOW_MS`,
     `RATE_LIMIT_CATALOG_MAX` + `RATE_LIMIT_CATALOG_WINDOW_MS`. Defaults ~300/min valuation,
     ~1200/min catalog; **off automatically under Vitest** unless `RATE_LIMIT_ENABLED=1`.
+
+    **Developer portal — key minting:** When `KEY_ISSUANCE_ENABLED=1`, `GET /api/keys/status` and
+    `POST /api/keys/issue` mint MongoDB `apikeys` documents; the plaintext key is returned once.
+    Optional `KEY_ISSUANCE_SECRET` requires header `X-Key-Issuance-Token`.
   version: 1.0.0
 
 servers:
@@ -358,7 +362,133 @@ components:
               adp:
                 type: number
 
+    AppErrorEnvelope:
+      type: object
+      required: [message, error]
+      properties:
+        message:
+          type: string
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+            details:
+              type: object
+              additionalProperties: true
+
+    KeyIssuanceStatusResponse:
+      type: object
+      required: [issuanceEnabled, requiresToken]
+      properties:
+        issuanceEnabled:
+          type: boolean
+        requiresToken:
+          type: boolean
+
+    KeyIssueRequest:
+      type: object
+      required: [owner]
+      properties:
+        owner:
+          type: string
+          minLength: 1
+          maxLength: 200
+          description: Short label stored on the key (shown in usage stats).
+        email:
+          type: string
+          format: email
+        tier:
+          type: string
+          enum: [free, standard, premium]
+          default: free
+
+    KeyIssueResponse:
+      type: object
+      required: [apiKey, owner, tier, message]
+      properties:
+        apiKey:
+          type: string
+          description: |
+            Plaintext secret; returned only in this response. Format `amethyst_live_<20 hex>.<48 hex>`
+            (same as `POST /api/keys` response field `secret`).
+          example: amethyst_live_a1b2c3d4e5f678901234.a1b2c3d4e5f678901234567890123456789012345678901234
+        owner:
+          type: string
+        email:
+          type: string
+          nullable: true
+        tier:
+          type: string
+          enum: [free, standard, premium]
+        message:
+          type: string
+
 paths:
+  /api/keys/status:
+    get:
+      summary: Key issuance availability (developer portal)
+      description: |
+        Returns whether `POST /api/keys/issue` is enabled (`KEY_ISSUANCE_ENABLED`) and whether
+        a shared `X-Key-Issuance-Token` is required (`KEY_ISSUANCE_SECRET`).
+      operationId: getKeyIssuanceStatus
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/KeyIssuanceStatusResponse"
+
+  /api/keys/issue:
+    post:
+      summary: Mint a new API key (plaintext once)
+      description: |
+        Creates an `apikeys` document. Response includes `apiKey` exactly once; the server does not
+        list or re-display it. Returns **503** when `KEY_ISSUANCE_ENABLED` is not set.
+      operationId: issueApiKey
+      parameters:
+        - in: header
+          name: X-Key-Issuance-Token
+          schema:
+            type: string
+          required: false
+          description: Required when server env `KEY_ISSUANCE_SECRET` is set (must match).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/KeyIssueRequest"
+      responses:
+        "201":
+          description: Key created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/KeyIssueResponse"
+        "400":
+          description: Validation failed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppErrorEnvelope"
+        "401":
+          description: Missing or invalid issuance token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppErrorEnvelope"
+        "503":
+          description: Key issuance disabled
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppErrorEnvelope"
+
   /analysis/scarcity:
     post:
       summary: Positional scarcity and tier-bucket urgency

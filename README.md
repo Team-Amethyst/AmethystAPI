@@ -204,27 +204,28 @@ Every request to the analytical endpoints requires:
 x-api-key: <your-key>
 ```
 
-Keys are stored in the `apikeys` MongoDB collection. To create one, run in Atlas mongosh:
+Keys are stored in the `apikeys` MongoDB collection.
 
-```js
-use amethystapi
-db.apikeys.insertOne({
-  key: "your-generated-key",   // 16–128 alphanumeric chars
-  owner: "team-name",
-  email: "team@example.com",
-  tier: "premium",             // free | standard | premium
-  usageCount: 0,
-  lastUsed: null,
-  isActive: true,
-  createdAt: new Date(),
-  updatedAt: new Date()
-})
-```
+### One-off keys (developer portal)
 
-Generate a key:
+When **`KEY_ISSUANCE_ENABLED=1`** is set on the server, the bundled developer portal (**Get a key** tab) can mint a key through **`POST /api/keys/issue`**. The plaintext is returned **once** in the JSON body; there is no account recovery.
+
+- **`GET /api/keys/status`** — `{ "issuanceEnabled": boolean, "requiresToken": boolean }` for the UI.
+- **`POST /api/keys/issue`** — JSON body `{ "owner": string (required), "email"?: string, "tier"?: "free" | "standard" | "premium" }`. If **`KEY_ISSUANCE_SECRET`** is set in the environment, clients must send header **`X-Key-Issuance-Token`** with the same value.
+
+Example (local, issuance enabled, no secret):
+
 ```bash
-node -e "console.log(require('crypto').randomBytes(24).toString('hex'))"
+curl -sS -X POST "http://localhost:3002/api/keys/issue" \
+  -H "Content-Type: application/json" \
+  -d '{"owner":"local-dev","tier":"free"}' | jq .
 ```
+
+Successful responses include **`apiKey`**, a single string of the form **`amethyst_live_<hex>.<hex>`** (use it as the `x-api-key` value). **`POST /api/keys`** is the full programmatic create (label, owner, tier, scopes, optional expiry); **`POST /api/keys/issue`** is the portal-oriented shortcut (all scopes, no expiry).
+
+### Manual documents (MongoDB)
+
+New keys are stored **hashed** (`keyHash`, `keyPrefix`, `label`, `owner`, `tier`, `scopes`, …). Prefer the **`POST /api/keys`** or **`POST /api/keys/issue`** APIs so hashing matches the server’s **`API_KEY_PEPPER`** / **`APP_SECRET`**. The auth middleware still accepts legacy documents that store a plaintext **`key`** for migration. See **`src/models/ApiKey.ts`** and **`src/routes/apiKeys.ts`** for the canonical shape.
 
 Usage is tracked per key (`usageCount`) for royalty reporting.
 
@@ -267,6 +268,8 @@ curl -X POST http://localhost:3002/valuation/calculate \
 | `PORT` | `3002` | `8080` |
 | `CORS_ORIGIN` | `http://localhost:5173` | Production frontend URL |
 | `REDIS_URL` | `redis://localhost:6379` | Upstash URL (when ready) |
+| `KEY_ISSUANCE_ENABLED` | `1` to enable **Get a key** / `POST /api/keys/issue` | Set to `1` only if you want public minting; otherwise omit |
+| `KEY_ISSUANCE_SECRET` | Optional shared secret for `X-Key-Issuance-Token` | Same — use for operator-gated issuance |
 
 ---
 
@@ -279,6 +282,8 @@ Push to `main` — GitHub Actions builds, pushes to ECR, and triggers an App Run
 **App Runner health check:** `GET /api/health` on port `8080`
 
 **MongoDB Atlas:** Network Access must allow `0.0.0.0/0` (App Runner has no static IP).
+
+**Key issuance:** Configure `KEY_ISSUANCE_ENABLED` (and optionally `KEY_ISSUANCE_SECRET`) in the App Runner service environment if you want the hosted developer portal to mint keys. Leave issuance off in production unless you accept the abuse risk or protect it with the shared token header.
 
 ---
 

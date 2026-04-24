@@ -81,6 +81,17 @@ export class NotFoundError extends AppError {
     }
  }
 
+// 503 service temporarily unavailable (maintenance, feature disabled, overload).
+export class ServiceUnavailableError extends AppError {
+    constructor(
+        message = "Service unavailable",
+        code = "SERVICE_UNAVAILABLE",
+        details?: unknown,
+    ) {
+        super(message, 503, code, details);
+    }
+}
+
  // 502 upstream dependency failure.
  export class UpstreamError extends AppError {
     constructor(

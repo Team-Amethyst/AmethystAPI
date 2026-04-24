@@ -9,6 +9,8 @@
 - **Correlation:** Draft sends **`X-Request-Id`** when a request id is in context. Engine should **echo the same `X-Request-Id` on responses** so the Draft BFF can forward it to browsers/graders (`forwardEngineCorrelationHeaders`).
 - **Timeout:** Draft defaults to **15s** per Engine call; override with **`AMETHYST_ENGINE_TIMEOUT_MS`** on the Draft side. **`POST /valuation/calculate` is not retried** on the Draft side.
 
+**Developer portal (human operators, not Draft):** The Engine serves `public/index.html`. When **`KEY_ISSUANCE_ENABLED=1`**, **`GET /api/keys/status`** and **`POST /api/keys/issue`** mint MongoDB keys (plaintext returned once). Optional **`KEY_ISSUANCE_SECRET`** + header **`X-Key-Issuance-Token`**. Draft continues to use only **`x-api-key`** on Brain routes.
+
 ## Endpoints Draft calls today
 
 | Method | Path (relative to Engine base URL) | Notes |

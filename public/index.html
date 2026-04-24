@@ -662,6 +662,187 @@
       }
     }
 
+    .usage-info {
+      display: none;
+      background: rgba(96,165,250,0.08);
+      border: 1px solid rgba(96,165,250,0.25);
+      color: var(--blue);
+      border-radius: var(--radius);
+      padding: 12px 16px;
+      font-size: 13px;
+      margin-bottom: 16px;
+      line-height: 1.5;
+    }
+
+    /* ── Key issuance wizard ── */
+    .keys-panel { display: none; }
+    .keys-panel.visible { display: block; }
+    .keys-loading {
+      color: var(--muted);
+      font-size: 13px;
+      padding: 24px 0;
+    }
+    .step-track {
+      display: flex;
+      gap: 0;
+      margin-bottom: 28px;
+      border-radius: var(--radius);
+      overflow: hidden;
+      border: 1px solid var(--border);
+    }
+    .step-pill {
+      flex: 1;
+      text-align: center;
+      padding: 10px 8px;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--muted);
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+    }
+    .step-pill:last-child { border-right: none; }
+    .step-pill.active {
+      color: var(--text);
+      background: var(--surface-2);
+      box-shadow: inset 0 -2px 0 var(--accent);
+    }
+    .step-pill.done { color: var(--green); }
+    .portal-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 22px 24px;
+      max-width: 520px;
+    }
+    .portal-field { margin-bottom: 18px; }
+    .portal-field:last-child { margin-bottom: 0; }
+    .portal-label {
+      display: block;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 8px;
+    }
+    .portal-input, .portal-select {
+      width: 100%;
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text);
+      font-size: 14px;
+      padding: 10px 14px;
+      outline: none;
+      font-family: inherit;
+    }
+    .portal-input:focus, .portal-select:focus { border-color: var(--accent); }
+    .portal-hint { font-size: 12px; color: var(--muted); margin-top: 6px; line-height: 1.5; }
+    .tier-pick {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+    }
+    @media (max-width: 600px) { .tier-pick { grid-template-columns: 1fr; } }
+    .tier-option {
+      position: relative;
+    }
+    .tier-option input {
+      position: absolute;
+      opacity: 0;
+      pointer-events: none;
+    }
+    .tier-option label {
+      display: block;
+      padding: 14px 12px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      cursor: pointer;
+      text-align: center;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--muted);
+      transition: border-color 0.15s, background 0.15s;
+    }
+    .tier-option input:checked + label {
+      border-color: var(--accent);
+      background: rgba(139,92,246,0.12);
+      color: var(--text);
+    }
+    .tier-option .tier-name { display: block; margin-bottom: 4px; font-size: 13px; }
+    .tier-option .tier-note { font-size: 11px; font-weight: 500; color: var(--muted); }
+    .wizard-actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 22px;
+      flex-wrap: wrap;
+    }
+    .btn-secondary {
+      background: transparent;
+      color: var(--muted);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      font-size: 13px;
+      font-weight: 600;
+      padding: 10px 18px;
+      cursor: pointer;
+    }
+    .btn-secondary:hover { color: var(--text); border-color: var(--muted); }
+    .key-reveal-wrap {
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 14px 16px;
+      position: relative;
+      margin-top: 12px;
+    }
+    .key-reveal-wrap pre {
+      font-family: "SF Mono", "Fira Code", monospace;
+      font-size: 12px;
+      word-break: break-all;
+      color: var(--green);
+      line-height: 1.6;
+      margin: 0;
+      padding-right: 72px;
+    }
+    .key-reveal-wrap .copy-btn { top: 10px; right: 10px; }
+    .danger-banner {
+      background: rgba(251,146,60,0.1);
+      border: 1px solid rgba(251,146,60,0.35);
+      border-radius: var(--radius);
+      padding: 14px 16px;
+      font-size: 13px;
+      color: var(--orange);
+      line-height: 1.55;
+      margin-bottom: 18px;
+    }
+    .danger-banner strong { color: #fdba74; }
+    .billing-mock {
+      border: 1px dashed var(--border);
+      border-radius: 8px;
+      padding: 16px;
+      background: rgba(0,0,0,0.2);
+    }
+    .billing-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+    @media (max-width: 500px) { .billing-row { grid-template-columns: 1fr; } }
+    .chk-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      margin-top: 16px;
+      font-size: 13px;
+      color: var(--text);
+      line-height: 1.45;
+    }
+    .chk-row input { margin-top: 3px; accent-color: var(--accent); }
+
     .stats-card {
       display: none;
       background: var(--surface);
@@ -770,8 +951,8 @@
   <div class="tabs-inner">
     <button class="tab-btn active" data-tab="reference">API Reference</button>
     <button class="tab-btn" data-tab="licensing">Licensing</button>
+    <button class="tab-btn" data-tab="keys">Get a key</button>
     <button class="tab-btn" data-tab="usage">My Usage</button>
-    <button class="tab-btn" data-tab="keys">API Keys</button>
   </div>
 </div>
 
@@ -1249,12 +1430,144 @@ player_id: player._id          <span class="t-cmt">// MongoDB ObjectId — not r
   </div><!-- /tab-licensing -->
 
 
+  <!-- ═══════════════════ GET A KEY TAB ═══════════════════ -->
+  <div class="tab-content" id="tab-keys">
+
+    <div class="section">
+      <h2>Issue an API key</h2>
+      <p class="section-desc">
+        Generate a new <code style="color:var(--orange);background:rgba(251,146,60,0.1);padding:1px 6px;border-radius:3px;font-size:12px;">x-api-key</code> for this environment.
+        There are no user accounts: copy the key when it appears and store it in your secrets manager or <code style="font-size:12px">.env</code>.
+        The server never shows this value again.
+      </p>
+    </div>
+
+    <div class="keys-loading" id="keysLoading">Checking availability…</div>
+
+    <div class="usage-error" id="keysErrorBanner"></div>
+    <div class="usage-info" id="keysInfoBanner"></div>
+
+    <div class="keys-panel" id="keysDisabledPanel">
+      <div class="portal-card">
+        <p style="font-size:14px;color:var(--text);margin-bottom:8px;font-weight:600">Key issuance is turned off</p>
+        <p class="portal-hint" style="margin:0">
+          The operator must set <code style="font-size:11px;color:var(--orange)">KEY_ISSUANCE_ENABLED=1</code> in the server environment, then reload this page.
+          Keys can still be created manually in MongoDB if needed.
+        </p>
+      </div>
+    </div>
+
+    <div class="keys-panel" id="keysWizardPanel">
+      <div class="step-track" id="keysStepTrack">
+        <div class="step-pill active" data-step-indicator="1">1 · Details</div>
+        <div class="step-pill" data-step-indicator="2">2 · Billing</div>
+        <div class="step-pill" data-step-indicator="3">3 · Key</div>
+      </div>
+
+      <div class="portal-card" id="keysIssuanceTokenWrap" style="display:none;margin-bottom:16px">
+        <label class="portal-label" for="keysIssuanceToken">Issuance token</label>
+        <input class="portal-input" id="keysIssuanceToken" type="password" autocomplete="off" spellcheck="false" placeholder="Required by your operator" />
+        <p class="portal-hint">Your deployment may require <code style="font-size:11px">X-Key-Issuance-Token</code>. It is sent only when you click generate and is not stored in the browser.</p>
+      </div>
+
+      <div class="portal-card" id="keysStep1">
+        <div class="portal-field">
+          <label class="portal-label" for="keysOwner">License label <span style="color:var(--red)">*</span></label>
+          <input class="portal-input" id="keysOwner" maxlength="200" placeholder="e.g. Draftroom staging, CS 6310 project" autocomplete="organization" />
+          <p class="portal-hint">Shown in usage stats. Not a login — any short name your team recognizes.</p>
+        </div>
+        <div class="portal-field">
+          <label class="portal-label" for="keysEmail">Contact email (optional)</label>
+          <input class="portal-input" id="keysEmail" type="email" maxlength="254" placeholder="you@school.edu" autocomplete="email" />
+        </div>
+        <div class="portal-field">
+          <span class="portal-label">Tier</span>
+          <div class="tier-pick">
+            <div class="tier-option">
+              <input type="radio" name="keysTier" id="tierFree" value="free" checked />
+              <label for="tierFree"><span class="tier-name">Free</span><span class="tier-note">Evaluation</span></label>
+            </div>
+            <div class="tier-option">
+              <input type="radio" name="keysTier" id="tierStd" value="standard" />
+              <label for="tierStd"><span class="tier-name">Standard</span><span class="tier-note">Course demo</span></label>
+            </div>
+            <div class="tier-option">
+              <input type="radio" name="keysTier" id="tierPrem" value="premium" />
+              <label for="tierPrem"><span class="tier-name">Premium</span><span class="tier-note">Higher limits</span></label>
+            </div>
+          </div>
+        </div>
+        <div class="wizard-actions">
+          <button type="button" class="load-btn" onclick="keysGoStep(2)">Continue</button>
+        </div>
+      </div>
+
+      <div class="portal-card" id="keysStep2" style="display:none">
+        <p style="font-size:13px;color:var(--muted);margin-bottom:16px;line-height:1.6">
+          In production, activating a paid tier would collect payment through a PCI-compliant provider.
+          This step is a placeholder for your course submission — no card data is sent or stored.
+        </p>
+        <div class="billing-mock">
+          <div class="billing-row">
+            <div>
+              <span class="portal-label">Card (simulated)</span>
+              <input class="portal-input" value="4242 4242 4242 4242" readonly tabindex="-1" aria-readonly="true" />
+            </div>
+            <div>
+              <span class="portal-label">CVC / Expiry</span>
+              <input class="portal-input" value="Demo only — not validated" readonly tabindex="-1" aria-readonly="true" />
+            </div>
+          </div>
+          <div class="billing-row">
+            <div>
+              <span class="portal-label">Plan</span>
+              <input class="portal-input" id="keysBillingPlanPreview" readonly tabindex="-1" />
+            </div>
+          </div>
+        </div>
+        <div class="chk-row">
+          <input type="checkbox" id="keysBillingAck" />
+          <label for="keysBillingAck">I understand billing is not processed here; I am only simulating checkout for this assignment.</label>
+        </div>
+        <div class="wizard-actions">
+          <button type="button" class="btn-secondary" onclick="keysGoStep(1)">Back</button>
+          <button type="button" class="load-btn" id="keysStep2Next" onclick="keysGoStep(3)" disabled>Continue to key</button>
+        </div>
+      </div>
+
+      <div class="portal-card" id="keysStep3" style="display:none">
+        <div class="danger-banner">
+          <strong>One-time display.</strong> After you leave this screen, this portal cannot recover your key. Copy it to a password manager or environment variable first.
+        </div>
+        <div class="wizard-actions" id="keysGenerateRow">
+          <button type="button" class="btn-secondary" onclick="keysGoStep(2)">Back</button>
+          <button type="button" class="load-btn" id="keysGenerateBtn" onclick="keysIssue()">Generate API key</button>
+        </div>
+        <div id="keysRevealBlock" style="display:none">
+          <span class="portal-label">Your new API key</span>
+          <div class="key-reveal-wrap">
+            <button type="button" class="copy-btn" id="keysCopyBtn" onclick="keysCopyKey()">Copy</button>
+            <pre id="keysRevealPre"></pre>
+          </div>
+          <div class="chk-row" style="margin-top:18px">
+            <input type="checkbox" id="keysCopiedAck" />
+            <label for="keysCopiedAck">I have copied my key and stored it somewhere safe.</label>
+          </div>
+          <div class="wizard-actions">
+            <button type="button" class="load-btn" id="keysDoneBtn" onclick="keysFinish()" disabled style="opacity:0.5">Done — clear from this page</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div><!-- /tab-keys -->
+
+
   <!-- ═══════════════════ USAGE TAB ═══════════════════ -->
   <div class="tab-content" id="tab-usage">
 
     <div class="section">
       <h2>My Usage</h2>
-      <p class="section-desc">Enter your API key to view request counts, tier, and account status.</p>
+      <p class="section-desc">Paste an API key you already have to view request counts, tier, and status. Keys are not listed here for security.</p>
     </div>
 
     <div class="key-form">
@@ -1305,105 +1618,6 @@ player_id: player._id          <span class="t-cmt">// MongoDB ObjectId — not r
 
   </div><!-- /tab-usage -->
 
-  <!-- ═══════════════════ API KEYS TAB ═══════════════════ -->
-  <div class="tab-content" id="tab-keys">
-    <div class="section">
-      <div class="keys-toolbar">
-        <div>
-          <h2>API Keys</h2>
-          <p class="section-desc">Create and manage the keys used to access the Amethyst Engine API.</p>
-        </div>
-        <button class="load-btn" onclick="openCreateKeyModal()">Create API Key</button>
-      </div>
-    </div>
-
-    <div class="card" style="padding: 0; display: flex; flex-direction: column;">
-      <div class="keys-table-wrapper">
-        <table class="keys-table">
-          <thead>
-            <tr>
-              <th>Label</th>
-              <th>Key</th>
-              <th>Tier</th>
-              <th>Scopes</th>
-              <th>Created</th>
-              <th>Expires</th>
-              <th>Used</th>
-              <th>Status</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody id="keysBody"></tbody>
-        </table>
-      </div>
-      <div id="keysEmpty" style="display:none;padding:24px;color:var(--muted);">No API keys yet. Create one to start using the engine.</div>
-      <div class="table-note" id="keysNote">Your secret values are only visible at creation time. After closing the success modal, they will not be shown again.</div>
-    </div>
-
-    <div class="modal-overlay" id="keyModal" onclick="if (event.target === this) closeCreateKeyModal()">
-      <div class="modal" role="dialog" aria-modal="true" aria-labelledby="keyModalTitle">
-        <div class="modal-header">
-          <h3 id="keyModalTitle">Create API Key</h3>
-          <button class="modal-close" onclick="closeCreateKeyModal()" aria-label="Close">×</button>
-        </div>
-        <div class="modal-body">
-          <div class="usage-error" id="createKeyError"></div>
-
-          <form id="createKeyForm" onsubmit="submitCreateKey(event)">
-            <div class="field-row">
-              <label for="keyLabel">Label</label>
-              <input class="field-input" id="keyLabel" name="label" type="text" placeholder="Team name or app identifier" autocomplete="off" required />
-            </div>
-            <div class="field-row">
-              <label for="keyOwner">Owner / Account</label>
-              <input class="field-input" id="keyOwner" name="owner" type="text" placeholder="Owner name or account name" autocomplete="off" required />
-            </div>
-            <div class="field-row">
-              <label for="keyTier">Tier</label>
-              <select class="field-select" id="keyTier" name="tier">
-                <option value="free">free</option>
-                <option value="standard" selected>standard</option>
-                <option value="premium">premium</option>
-              </select>
-            </div>
-            <div class="field-row">
-              <label>Scopes</label>
-              <div class="checkbox-grid">
-                <label class="checkbox-option"><input type="checkbox" name="scopes" value="valuation" checked /> Valuation</label>
-                <label class="checkbox-option"><input type="checkbox" name="scopes" value="catalog" /> Catalog</label>
-                <label class="checkbox-option"><input type="checkbox" name="scopes" value="scarcity" /> Scarcity</label>
-                <label class="checkbox-option"><input type="checkbox" name="scopes" value="simulation" /> Simulation</label>
-                <label class="checkbox-option"><input type="checkbox" name="scopes" value="signals" /> Signals</label>
-              </div>
-              <p class="secondary-text">Select the permissions that will be attached to this key.</p>
-            </div>
-            <div class="field-row">
-              <label for="keyExpiresAt">Expiration date <span class="secondary-text">optional</span></label>
-              <input class="field-date" id="keyExpiresAt" name="expiresAt" type="date" />
-            </div>
-            <div class="info-row">
-              <span class="info-chip">Will be usable with <code>x-api-key</code></span>
-              <span class="info-chip">Secret is shown once</span>
-            </div>
-            <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:14px;">
-              <button class="load-btn" type="submit">Generate key</button>
-              <button class="danger-btn" type="button" onclick="closeCreateKeyModal()">Cancel</button>
-            </div>
-          </form>
-
-          <div id="createdKeySection" style="display:none;">
-            <p class="secondary-text">Copy this value now. It will not be shown again.</p>
-            <div class="secret-card" id="createdKeyValue"></div>
-            <button class="copy-btn" id="copyCreatedKeyBtn" onclick="copyCreatedKeySecret(this)">Copy secret</button>
-            <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:18px;">
-              <button class="load-btn" onclick="closeCreateKeyModal()">Done</button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-
 </main>
 
 <script>
@@ -1415,172 +1629,9 @@ player_id: player._id          <span class="t-cmt">// MongoDB ObjectId — not r
       btn.classList.add('active');
       const tabId = 'tab-' + btn.dataset.tab;
       document.getElementById(tabId).classList.add('active');
-      if (btn.dataset.tab === 'keys') {
-        loadKeyList();
-      }
+      if (btn.dataset.tab === 'keys') keysEnsureStatus();
     });
   });
-
-  // ── API key management ───────────────────────────────────────
-  let currentCreatedSecret = null;
-
-  function openCreateKeyModal() {
-    resetCreateKeyForm();
-    document.getElementById('keyModal').classList.add('open');
-  }
-
-  function closeCreateKeyModal() {
-    currentCreatedSecret = null;
-    document.getElementById('createKeyError').style.display = 'none';
-    document.getElementById('createdKeySection').style.display = 'none';
-    document.getElementById('createKeyForm').style.display = 'block';
-    document.getElementById('keyModal').classList.remove('open');
-  }
-
-  function resetCreateKeyForm() {
-    document.getElementById('createKeyForm').reset();
-    document.getElementById('createKeyError').textContent = '';
-    document.getElementById('createKeyError').style.display = 'none';
-    document.getElementById('createdKeySection').style.display = 'none';
-    document.getElementById('createKeyForm').style.display = 'block';
-  }
-
-  async function submitCreateKey(event) {
-    event.preventDefault();
-    const errorEl = document.getElementById('createKeyError');
-    errorEl.style.display = 'none';
-    errorEl.textContent = '';
-
-    const label = document.getElementById('keyLabel').value.trim();
-    const owner = document.getElementById('keyOwner').value.trim();
-    const tier = document.getElementById('keyTier').value;
-    const expiresAt = document.getElementById('keyExpiresAt').value;
-    const scopes = Array.from(document.querySelectorAll('input[name="scopes"]:checked')).map(el => el.value);
-
-    if (!label || !owner || scopes.length === 0) {
-      errorEl.textContent = 'Label, owner, and at least one scope are required.';
-      errorEl.style.display = 'block';
-      return;
-    }
-
-    const body = { label, owner, tier, scopes, expiresAt: expiresAt || undefined };
-    const submitBtn = event.target.querySelector('button[type="submit"]');
-    submitBtn.disabled = true;
-    submitBtn.textContent = 'Creating…';
-
-    try {
-      const response = await fetch('/api/keys', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      });
-      const data = await response.json();
-
-      if (!response.ok) {
-        errorEl.textContent = data.error?.message || data.message || 'Could not create API key.';
-        errorEl.style.display = 'block';
-        return;
-      }
-
-      currentCreatedSecret = data.secret;
-      document.getElementById('createdKeyValue').textContent = data.secret;
-      document.getElementById('createKeyForm').style.display = 'none';
-      document.getElementById('createdKeySection').style.display = 'block';
-      loadKeyList();
-    } catch (e) {
-      errorEl.textContent = 'Unable to reach the server. Try again.';
-      errorEl.style.display = 'block';
-    } finally {
-      submitBtn.disabled = false;
-      submitBtn.textContent = 'Generate key';
-    }
-  }
-
-  async function copyCreatedKeySecret(button) {
-    if (!currentCreatedSecret) {
-      return;
-    }
-    try {
-      await navigator.clipboard.writeText(currentCreatedSecret);
-      button.textContent = 'Copied!';
-      button.classList.add('copied');
-      setTimeout(() => {
-        button.textContent = 'Copy secret';
-        button.classList.remove('copied');
-      }, 2000);
-    } catch {
-      button.textContent = 'Copy failed';
-    }
-  }
-
-  async function loadKeyList() {
-    const body = document.getElementById('keysBody');
-    const empty = document.getElementById('keysEmpty');
-    const note = document.getElementById('keysNote');
-    body.innerHTML = '';
-    empty.style.display = 'none';
-    note.style.display = 'none';
-
-    try {
-      const response = await fetch('/api/keys');
-      const data = await response.json();
-      if (!response.ok) {
-        empty.textContent = data.error?.message || 'Unable to load keys.';
-        empty.style.display = 'block';
-        return;
-      }
-
-      if (!Array.isArray(data) || data.length === 0) {
-        empty.style.display = 'block';
-        note.style.display = 'block';
-        return;
-      }
-
-      data.forEach(item => {
-        const row = document.createElement('tr');
-        row.innerHTML = `
-          <td class="keys-table-label">${item.label}</td>
-          <td class="keys-table-prefix" title="${item.keyPrefix}">${item.keyPrefix}</td>
-          <td><span class="tier-badge tier-${item.tier}">${item.tier}</span></td>
-          <td class="keys-table-scopes" title="${item.scopes.join(', ')}">${item.scopes.join(', ')}</td>
-          <td>${formatDate(item.createdAt)}</td>
-          <td>${item.expiresAt ? formatDate(item.expiresAt) : 'Never'}</td>
-          <td>${item.lastUsed ? timeAgo(new Date(item.lastUsed)) : 'Never'}</td>
-          <td><span class="status-pill ${item.isActive ? 'status-active' : 'status-inactive'}">${item.isActive ? 'Active' : 'Inactive'}</span></td>
-          <td><button class="danger-btn" onclick="revokeApiKey('${item.id}')" ${item.isActive ? '' : 'disabled'}>${item.isActive ? 'Revoke' : 'Revoked'}</button></td>
-        `;
-        body.appendChild(row);
-      });
-      note.style.display = 'block';
-
-    } catch {
-      empty.textContent = 'Unable to load keys. Refresh the page and try again.';
-      empty.style.display = 'block';
-    }
-  }
-
-  async function revokeApiKey(id) {
-    if (!confirm('Revoke this API key? This cannot be undone.')) {
-      return;
-    }
-    try {
-      const response = await fetch(`/api/keys/${id}/revoke`, { method: 'POST' });
-      if (!response.ok) {
-        const data = await response.json();
-        alert(data.error?.message || 'Revoke failed');
-        return;
-      }
-      await loadKeyList();
-    } catch {
-      alert('Unable to revoke key. Try again.');
-    }
-  }
-
-  function formatDate(value) {
-    if (!value) return 'N/A';
-    const date = new Date(value);
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-  }
 
   // ── Endpoint expand/collapse ──────────────────────────────────
   function toggleEndpoint(id) {
@@ -1622,6 +1673,17 @@ player_id: player._id          <span class="t-cmt">// MongoDB ObjectId — not r
     input.type = input.type === 'password' ? 'text' : 'password';
   }
 
+  /** Parses Express `errorHandler` JSON and other simple `{ error: string }` shapes. */
+  function portalApiMessage(data) {
+    if (!data || typeof data !== 'object') return 'Request failed';
+    if (typeof data.message === 'string') return data.message;
+    if (data.error && typeof data.error === 'object' && typeof data.error.message === 'string') {
+      return data.error.message;
+    }
+    if (typeof data.error === 'string') return data.error;
+    return 'Request failed';
+  }
+
   // ── Load usage stats ─────────────────────────────────────────
   async function loadUsage() {
     const key = document.getElementById('keyInput').value.trim();
@@ -1648,7 +1710,7 @@ player_id: player._id          <span class="t-cmt">// MongoDB ObjectId — not r
       const data = await r.json();
 
       if (!r.ok) {
-        errEl.textContent = data.error || 'Invalid API key.';
+        errEl.textContent = portalApiMessage(data);
         errEl.style.display = 'block';
         return;
       }
@@ -1692,6 +1754,195 @@ player_id: player._id          <span class="t-cmt">// MongoDB ObjectId — not r
   document.getElementById('keyInput').addEventListener('keydown', e => {
     if (e.key === 'Enter') loadUsage();
   });
+
+  // ── API key issuance (Get a key tab) ───────────────────────────
+  let keysStatusLoaded = false;
+  let keysRequiresToken = false;
+  let keysIssuedValue = '';
+
+  function keysHide(el) { el.style.display = 'none'; }
+  function keysShow(el) { el.style.display = 'block'; }
+
+  async function keysEnsureStatus() {
+    if (keysStatusLoaded) return;
+    const loading = document.getElementById('keysLoading');
+    const errBanner = document.getElementById('keysErrorBanner');
+    const infoBanner = document.getElementById('keysInfoBanner');
+    const disabledPanel = document.getElementById('keysDisabledPanel');
+    const wizardPanel = document.getElementById('keysWizardPanel');
+
+    keysShow(loading);
+    keysHide(errBanner);
+    keysHide(infoBanner);
+    disabledPanel.classList.remove('visible');
+    wizardPanel.classList.remove('visible');
+
+    try {
+      const r = await fetch('/api/keys/status');
+      const data = await r.json();
+      keysHide(loading);
+      keysStatusLoaded = true;
+
+      if (!data.issuanceEnabled) {
+        disabledPanel.classList.add('visible');
+        return;
+      }
+
+      wizardPanel.classList.add('visible');
+      keysRequiresToken = Boolean(data.requiresToken);
+      const tokenWrap = document.getElementById('keysIssuanceTokenWrap');
+      if (keysRequiresToken) {
+        keysShow(tokenWrap);
+      } else {
+        keysHide(tokenWrap);
+      }
+    } catch {
+      keysHide(loading);
+      keysShow(errBanner);
+      errBanner.textContent = 'Could not reach the server to check key issuance.';
+    }
+  }
+
+  function keysSetStepIndicator(step) {
+    document.querySelectorAll('[data-step-indicator]').forEach(pill => {
+      const n = +pill.dataset.stepIndicator;
+      pill.classList.remove('active', 'done');
+      if (n < step) pill.classList.add('done');
+      if (n === step) pill.classList.add('active');
+    });
+  }
+
+  function keysGoStep(step) {
+    const errBanner = document.getElementById('keysErrorBanner');
+    keysHide(errBanner);
+
+    if (step === 2) {
+      const owner = document.getElementById('keysOwner').value.trim();
+      if (!owner) {
+        keysShow(errBanner);
+        errBanner.textContent = 'Enter a license label before continuing.';
+        return;
+      }
+      const tier = document.querySelector('input[name="keysTier"]:checked')?.value || 'free';
+      document.getElementById('keysBillingPlanPreview').value =
+        tier.charAt(0).toUpperCase() + tier.slice(1) + ' tier — demo checkout';
+      document.getElementById('keysBillingAck').checked = false;
+      document.getElementById('keysStep2Next').disabled = true;
+    }
+
+    if (step === 3) {
+      if (!document.getElementById('keysBillingAck').checked) {
+        keysShow(errBanner);
+        errBanner.textContent = 'Confirm the billing simulation checkbox to continue.';
+        return;
+      }
+    }
+
+    keysHide(document.getElementById('keysStep1'));
+    keysHide(document.getElementById('keysStep2'));
+    keysHide(document.getElementById('keysStep3'));
+
+    if (step === 1) keysShow(document.getElementById('keysStep1'));
+    if (step === 2) keysShow(document.getElementById('keysStep2'));
+    if (step === 3) keysShow(document.getElementById('keysStep3'));
+
+    keysSetStepIndicator(step);
+  }
+
+  document.getElementById('keysBillingAck').addEventListener('change', e => {
+    document.getElementById('keysStep2Next').disabled = !e.target.checked;
+  });
+
+  document.getElementById('keysCopiedAck').addEventListener('change', e => {
+    const done = document.getElementById('keysDoneBtn');
+    done.disabled = !e.target.checked;
+    done.style.opacity = e.target.checked ? '1' : '0.5';
+  });
+
+  async function keysIssue() {
+    const errBanner = document.getElementById('keysErrorBanner');
+    keysHide(errBanner);
+
+    const tokenInput = document.getElementById('keysIssuanceToken');
+    if (keysRequiresToken && !tokenInput.value.trim()) {
+      keysShow(errBanner);
+      errBanner.textContent = 'Enter the issuance token provided by your operator.';
+      return;
+    }
+
+    const owner = document.getElementById('keysOwner').value.trim();
+    const email = document.getElementById('keysEmail').value.trim();
+    const tier = document.querySelector('input[name="keysTier"]:checked')?.value || 'free';
+    const btn = document.getElementById('keysGenerateBtn');
+    btn.disabled = true;
+    btn.textContent = 'Creating…';
+
+    const headers = { 'Content-Type': 'application/json' };
+    if (keysRequiresToken) headers['X-Key-Issuance-Token'] = tokenInput.value.trim();
+
+    try {
+      const r = await fetch('/api/keys/issue', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          owner,
+          tier,
+          ...(email ? { email } : {}),
+        }),
+      });
+      const data = await r.json();
+
+      if (!r.ok) {
+        keysShow(errBanner);
+        errBanner.textContent = portalApiMessage(data);
+        return;
+      }
+
+      keysIssuedValue = data.apiKey || '';
+      document.getElementById('keysRevealPre').textContent = keysIssuedValue;
+      keysHide(document.getElementById('keysGenerateRow'));
+      keysShow(document.getElementById('keysRevealBlock'));
+      document.getElementById('keysCopiedAck').checked = false;
+      document.getElementById('keysDoneBtn').disabled = true;
+      document.getElementById('keysDoneBtn').style.opacity = '0.5';
+      keysSetStepIndicator(3);
+    } catch {
+      keysShow(errBanner);
+      errBanner.textContent = 'Network error while creating the key.';
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Generate API key';
+    }
+  }
+
+  function keysCopyKey() {
+    const btn = document.getElementById('keysCopyBtn');
+    if (!keysIssuedValue) return;
+    navigator.clipboard.writeText(keysIssuedValue).then(() => {
+      btn.textContent = 'Copied!';
+      btn.classList.add('copied');
+      setTimeout(() => {
+        btn.textContent = 'Copy';
+        btn.classList.remove('copied');
+      }, 2000);
+    });
+  }
+
+  function keysFinish() {
+    keysIssuedValue = '';
+    document.getElementById('keysRevealPre').textContent = '';
+    keysHide(document.getElementById('keysRevealBlock'));
+    keysShow(document.getElementById('keysGenerateRow'));
+    document.getElementById('keysOwner').value = '';
+    document.getElementById('keysEmail').value = '';
+    document.getElementById('keysIssuanceToken').value = '';
+    document.querySelector('#tierFree').checked = true;
+    keysGoStep(1);
+    const info = document.getElementById('keysInfoBanner');
+    keysShow(info);
+    info.textContent = 'Wizard reset. You can issue another key when needed.';
+    setTimeout(() => keysHide(info), 5000);
+  }
 
   // ── Relative time helper ──────────────────────────────────────
   function timeAgo(date) {
