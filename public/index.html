@@ -1335,6 +1335,7 @@
   <span class="t-key">"deterministic"</span>:      <span class="t-key">false</span>,       <span class="t-cmt">// optional — stable timestamps for tests</span>
   <span class="t-key">"seed"</span>:                 <span class="t-num">42</span>,            <span class="t-cmt">// optional — with deterministic, stable tie-breaks</span>
   <span class="t-key">"player_ids"</span>:          [<span class="t-str">"660271"</span>],   <span class="t-cmt">// optional — limit valuations[]; inflation uses full pool</span>
+  <span class="t-key">"user_team_id"</span>:        <span class="t-str">"team_1"</span>,       <span class="t-cmt">// optional — defaults to team_1 for team_adjusted_value</span>
   <span class="t-key">"budget_by_team_id"</span>:  { <span class="t-str">"team_1"</span>: <span class="t-num">200</span> }, <span class="t-cmt">// optional — per-team $ remaining</span>
   <span class="t-key">"minors"</span>:              [],              <span class="t-cmt">// optional — [{ team_id, players[] }]</span>
   <span class="t-key">"taxi"</span>:                []               <span class="t-cmt">// optional</span>
@@ -1346,16 +1347,22 @@
   <span class="t-key">"engine_contract_version"</span>: <span class="t-str">"1"</span>,  <span class="t-cmt">// API contract id — detect drift vs Draft</span>
   <span class="t-key">"valuation_model_version"</span>: <span class="t-str">"amethyst-api@1.0.0"</span>,  <span class="t-cmt">// or git SHA in production image</span>
   <span class="t-key">"inflation_factor"</span>:      <span class="t-num">1.12</span>,    <span class="t-cmt">// &gt;1.0 = inflated market</span>
+  <span class="t-key">"inflation_model"</span>:       <span class="t-str">"replacement_slots_v2"</span>,
   <span class="t-key">"total_budget_remaining"</span>: <span class="t-num">2184</span>,
   <span class="t-key">"pool_value_remaining"</span>:   <span class="t-num">1948</span>,
   <span class="t-key">"players_remaining"</span>:      <span class="t-num">496</span>,
+  <span class="t-key">"recommended_bid_note"</span>: <span class="t-str">"recommended_bid blends model marginal value with baseline strength for auction guidance"</span>,
+  <span class="t-key">"team_adjusted_value_note"</span>: <span class="t-str">"team_adjusted_value reflects team-specific need and budget relative to the league"</span>,
+  <span class="t-key">"user_team_id_used"</span>: <span class="t-str">"team_1"</span>,
   <span class="t-key">"valuations"</span>: [{
     <span class="t-key">"player_id"</span>:      <span class="t-str">"660271"</span>,
     <span class="t-key">"name"</span>:           <span class="t-str">"Shohei Ohtani"</span>,
     <span class="t-key">"position"</span>:       <span class="t-str">"DH"</span>,
     <span class="t-key">"tier"</span>:           <span class="t-num">1</span>,
     <span class="t-key">"baseline_value"</span>: <span class="t-num">58</span>,
-    <span class="t-key">"adjusted_value"</span>: <span class="t-num">65</span>,        <span class="t-cmt">// use this for price target</span>
+    <span class="t-key">"adjusted_value"</span>: <span class="t-num">65</span>,        <span class="t-cmt">// market marginal value</span>
+    <span class="t-key">"recommended_bid"</span>: <span class="t-num">71.1</span>,      <span class="t-cmt">// presentation blend: adjusted + baseline strength</span>
+    <span class="t-key">"team_adjusted_value"</span>: <span class="t-num">74.66</span>, <span class="t-cmt">// user-team signal (need + budget multipliers)</span>
     <span class="t-key">"indicator"</span>:      <span class="t-str">"Steal"</span>,    <span class="t-cmt">// "Steal" | "Reach" | "Fair Value"</span>
     <span class="t-key">"baseline_components"</span>: {
       <span class="t-key">"scoring_format"</span>: <span class="t-str">"5x5"</span>,
@@ -1392,6 +1399,7 @@
   <span class="t-key">"scoring_categories"</span>: [{ <span class="t-key">"name"</span>: <span class="t-str">"HR"</span>, <span class="t-key">"type"</span>: <span class="t-str">"batting"</span> }],
   <span class="t-key">"total_budget"</span>: <span class="t-num">260</span>,
   <span class="t-key">"num_teams"</span>: <span class="t-num">12</span>,
+  <span class="t-key">"user_team_id"</span>: <span class="t-str">"team_1"</span>,
   <span class="t-key">"drafted_players"</span>: []
 }</pre>
           </div>
@@ -1406,6 +1414,8 @@
     <span class="t-key">"name"</span>: <span class="t-str">"Shohei Ohtani"</span>,
     <span class="t-key">"baseline_value"</span>: <span class="t-num">58</span>,
     <span class="t-key">"adjusted_value"</span>: <span class="t-num">65</span>,
+    <span class="t-key">"recommended_bid"</span>: <span class="t-num">71.1</span>,
+    <span class="t-key">"team_adjusted_value"</span>: <span class="t-num">74.66</span>,
     <span class="t-key">"indicator"</span>: <span class="t-str">"Steal"</span>
   }
 }</pre>
