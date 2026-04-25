@@ -1,0 +1,171 @@
+{
+  "version": 1,
+  "description": "Replay-only patches to LeanPlayer.value before executeValuationWorkflow. Does not change DB or valuation formulas.",
+  "audit": [
+    {
+      "player_id": "547180",
+      "name": "Bryce Harper",
+      "position": "1B",
+      "mongo_value_before": 28,
+      "paid": 36,
+      "prev_adj": 13.21,
+      "value_le_5_paid_ge_15": false,
+      "suggested_range": [24, 32],
+      "likely_issue": "stale_projection"
+    },
+    {
+      "player_id": "673357",
+      "name": "Luis Robert",
+      "position": "OF",
+      "mongo_value_before": 11,
+      "paid": 27,
+      "prev_adj": 6.27,
+      "value_le_5_paid_ge_15": false,
+      "suggested_range": [14, 22],
+      "likely_issue": "stale_projection"
+    },
+    {
+      "player_id": "608324",
+      "name": "Alex Bregman",
+      "position": "3B",
+      "mongo_value_before": 11,
+      "paid": 26,
+      "prev_adj": 5.39,
+      "value_le_5_paid_ge_15": false,
+      "suggested_range": [14, 20],
+      "likely_issue": "stale_projection"
+    },
+    {
+      "player_id": "645277",
+      "name": "Ozzie Albies",
+      "position": "2B",
+      "mongo_value_before": 9,
+      "paid": 25,
+      "prev_adj": 4.49,
+      "value_le_5_paid_ge_15": false,
+      "suggested_range": [12, 18],
+      "likely_issue": "stale_projection"
+    },
+    {
+      "player_id": "682622",
+      "name": "Noelvi Marte",
+      "position": "OF",
+      "mongo_value_before": 3,
+      "paid": 22,
+      "prev_adj": 2,
+      "value_le_5_paid_ge_15": true,
+      "suggested_range": [10, 16],
+      "likely_issue": "stale_projection"
+    },
+    {
+      "player_id": "621566",
+      "name": "Matt Olson",
+      "position": "1B",
+      "mongo_value_before": 38,
+      "paid": 35,
+      "prev_adj": 16.18,
+      "value_le_5_paid_ge_15": false,
+      "suggested_range": [32, 40],
+      "likely_issue": "stale_projection"
+    },
+    {
+      "player_id": "606466",
+      "name": "Ketel Marte",
+      "position": "OF",
+      "mongo_value_before": 35,
+      "paid": 38,
+      "prev_adj": 19.31,
+      "value_le_5_paid_ge_15": false,
+      "suggested_range": [30, 38],
+      "likely_issue": "role_misclassification",
+      "note": "Fixture lists OF; Mongo 2B — slot/replacement in replay follows fixture position."
+    },
+    {
+      "player_id": "805300",
+      "name": "Jakob Marsee",
+      "position": "OF",
+      "mongo_value_before": 1,
+      "paid": 20,
+      "prev_adj": 1.33,
+      "value_le_5_paid_ge_15": true,
+      "suggested_range": [8, 14],
+      "likely_issue": "stale_projection"
+    },
+    {
+      "player_id": "646240",
+      "name": "Rafael Devers",
+      "position": "1B",
+      "mongo_value_before": 35,
+      "paid": 33,
+      "prev_adj": 14.98,
+      "value_le_5_paid_ge_15": false,
+      "suggested_range": [30, 38],
+      "likely_issue": "role_misclassification",
+      "note": "Mongo DH vs fixture 1B — baseline path uses roster slot from fixture in replay."
+    },
+    {
+      "player_id": "656305",
+      "name": "Matt Chapman",
+      "position": "3B",
+      "mongo_value_before": 4,
+      "paid": 20,
+      "prev_adj": 2.6,
+      "value_le_5_paid_ge_15": true,
+      "suggested_range": [12, 18],
+      "likely_issue": "stale_projection"
+    },
+    {
+      "player_id": "543760",
+      "name": "Marcus Semien",
+      "position": "2B",
+      "mongo_value_before": 1,
+      "paid": 18,
+      "prev_adj": 1,
+      "value_le_5_paid_ge_15": true,
+      "suggested_range": [14, 22],
+      "likely_issue": "missing_stats",
+      "note": "$1 catalog for an everyday MI is almost certainly sync/projection failure."
+    },
+    {
+      "player_id": "605141",
+      "name": "Mookie Betts",
+      "position": "SS",
+      "mongo_value_before": 25,
+      "paid": 28,
+      "prev_adj": 11.46,
+      "value_le_5_paid_ge_15": false,
+      "suggested_range": [22, 30],
+      "likely_issue": "role_misclassification",
+      "note": "SS vs multi-pos eligibility in source data."
+    },
+    {
+      "player_id": "661388",
+      "name": "William Contreras",
+      "position": "C",
+      "mongo_value_before": 19,
+      "paid": 25,
+      "prev_adj": 8.85,
+      "value_le_5_paid_ge_15": false,
+      "suggested_range": [16, 24],
+      "likely_issue": "stale_projection"
+    },
+    {
+      "player_id": "683734",
+      "name": "Andrew Vaughn",
+      "position": "1B",
+      "mongo_value_before": 1,
+      "paid": 17,
+      "prev_adj": 1.28,
+      "value_le_5_paid_ge_15": true,
+      "suggested_range": [8, 14],
+      "likely_issue": "stale_projection"
+    }
+  ],
+  "overrides": {
+    "543760": { "value": 16 },
+    "805300": { "value": 10 },
+    "683734": { "value": 10 },
+    "682622": { "value": 12 },
+    "656305": { "value": 14 }
+  }
+}

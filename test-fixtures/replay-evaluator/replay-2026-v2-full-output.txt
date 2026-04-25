@@ -1,0 +1,716 @@
+
+> amethyst-api@1.0.0 replay-2026-v2 /Users/ssperrottet/dev/AmethystAPI
+> ts-node --project tsconfig.scripts.json scripts/replay-2026-v2-validation.ts
+
+Mongo catalog merged for replay: 699 players.
+
+Catalog merge warnings (264), first 15:
+  no Mongo row for fixture id 684007 (Shota Imanaga); stub baseline 0
+  no Mongo row for fixture id 694297 (Brandon Pfaadt); stub baseline 0
+  no Mongo row for fixture id 9000001 (J. Misorowski); stub baseline 0
+  no Mongo row for fixture id 112824 (Tim Crews); stub baseline 0
+  no Mongo row for fixture id 117913 (Albie Lopez); stub baseline 0
+  no Mongo row for fixture id 700241 (Michael McGreevy); stub baseline 0
+  no Mongo row for fixture id 592791 (Jameson Taillon); stub baseline 0
+  no Mongo row for fixture id 122268 (Bill Singer); stub baseline 0
+  no Mongo row for fixture id 9000002 (S. Horowitz); stub baseline 0
+  no Mongo row for fixture id 9000003 (Joseph Ortiz); stub baseline 0
+  no Mongo row for fixture id 150161 (Izzy Alcantara); stub baseline 0
+  no Mongo row for fixture id 9000004 (M. Yastremski); stub baseline 0
+  no Mongo row for fixture id 666200 (Jesús Luzardo); stub baseline 0
+  no Mongo row for fixture id 112660 (Walker Cooper); stub baseline 0
+  no Mongo row for fixture id 676917 (Cade Cavalli); stub baseline 0
+
+--- Replay fixture → catalog join (all roster identities in checkpoints) ---
+fixture_identity_keys: 266
+join_status_counts: {"matched_by_id":148,"stub_missing_in_catalog":98,"synthetic_fixture_id":18,"matched_by_name":2}
+========================================================================
+CHECKPOINT: pre_draft
+request: test-fixtures/player-api/checkpoints/pre_draft.json
+inflation_model=replacement_slots_v2 factor=0.298 raw=0.298046 bounded=none
+budget_rem=1802 pool_val=5623.3 players_rem=561
+remaining_slots=126 min_bid=1 surplus_cash=1676 total_surplus_mass=5623.3 draftable_pool_size=126 fallback_reason=null
+
+New picks since prior step: 0 (pre_draft or unchanged roster)
+
+replacement_values_by_slot_or_position (this checkpoint):
+ {
+  "C": 2.96,
+  "1B": 35.96,
+  "2B": 14.96,
+  "3B": 12.96,
+  "SS": 16.96,
+  "OF": 1.96,
+  "CI": 1.96,
+  "MI": 2.96,
+  "UTIL": 39.96,
+  "P": 1.96
+}
+
+Top 20 available players by adjusted_value (this checkpoint; [CATALOG_STUB] = zero-baseline stub row):
+  592450 Aaron Judge RF baseline=113.96 adj=34.38 replay=matched_by_id
+  669373 Tarik Skubal P baseline=103.21 adj=31.18 replay=matched_by_id
+  676979 Garrett Crochet P baseline=90.71 adj=27.45 replay=matched_by_id
+  608070 José Ramírez 3B baseline=83.96 adj=25.44 replay=matched_by_id
+  686613 Hunter Brown P baseline=81.96 adj=24.84 replay=matched_by_id
+  677951 Bobby Witt Jr. SS baseline=80.96 adj=24.25 replay=matched_by_id
+  543135 Nathan Eovaldi P baseline=79.46 adj=24.10 replay=matched_by_id
+  693433 Bryan Woo P baseline=76.96 adj=23.35 replay=matched_by_id
+  547973 Aroldis Chapman P baseline=73.21 adj=22.24 replay=matched_by_id
+  608331 Max Fried P baseline=73.21 adj=22.24 replay=matched_by_id
+  69ac5be91f05b394067e8cb1 Ronald Acuna Jr. OF baseline=71.56 adj=21.74 replay=matched_by_id
+  663728 Cal Raleigh C baseline=71.96 adj=21.57 replay=matched_by_id
+  594798 Jacob deGrom P baseline=70.71 adj=21.49 replay=matched_by_id
+  607074 Carlos Rodón P baseline=70.71 adj=21.49 replay=matched_by_id
+  665487 Fernando Tatis Jr. OF baseline=70.36 adj=21.39 replay=matched_by_id
+  677594 Julio Rodríguez CF baseline=67.96 adj=20.67 replay=matched_by_id
+  554430 Zack Wheeler SP baseline=66.96 adj=20.37 replay=matched_by_id
+  621242 Edwin Díaz SP baseline=65.71 adj=20.00 replay=matched_by_id
+  647304 Josh Naylor 1B baseline=64.96 adj=19.78 replay=matched_by_id
+  662253 Andrés Muñoz P baseline=64.46 adj=19.63 replay=matched_by_id
+
+--- Top-20 contamination (catalog / data) ---
+stubs_in_top_20_adjusted: 0
+pct_top_20_contaminated_by_stubs: 0.0%
+
+--- Team-adjusted diagnostics (presentation layer) ---
+avg(team_adjusted - adjusted): 2.0192
+distribution: boost=561 flat=0 discount=0
+positional_need_multiplier distribution: {"1.00":77,"1.10":218,"1.25":266}
+budget_pressure_multiplier distribution: {"1.15":561}
+combined multiplier distribution: {"1.00x1.15":77,"1.10x1.15":218,"1.25x1.15":266}
+
+Top 10 largest team_adjusted_value boosts:
+  592450 Aaron Judge RF adj=34.38 team_adj=49.42 delta=15.04 mult=1.25x1.15
+  608070 José Ramírez 3B adj=25.44 team_adj=36.57 delta=11.13 mult=1.25x1.15
+  677951 Bobby Witt Jr. SS adj=24.25 team_adj=34.86 delta=10.61 mult=1.25x1.15
+  69ac5be91f05b394067e8cb1 Ronald Acuna Jr. OF adj=21.74 team_adj=31.25 delta=9.51 mult=1.00x1.15
+  663728 Cal Raleigh C adj=21.57 team_adj=31.01 delta=9.44 mult=1.25x1.15
+  665487 Fernando Tatis Jr. OF adj=21.39 team_adj=30.75 delta=9.36 mult=1.25x1.15
+  677594 Julio Rodríguez CF adj=20.67 team_adj=29.71 delta=9.04 mult=1.25x1.15
+  647304 Josh Naylor 1B adj=19.78 team_adj=28.43 delta=8.65 mult=1.25x1.15
+  69ac5be91f05b394067e8cb2 Juan Soto OF adj=19.60 team_adj=28.17 delta=8.57 mult=1.00x1.15
+  69ac5be91f05b394067e8cb3 Mookie Betts OF adj=18.88 team_adj=27.14 delta=8.26 mult=1.00x1.15
+
+Top 10 largest team_adjusted_value discounts:
+  605280 Clay Holmes UTIL adj=1.00 team_adj=1.15 delta=0.15 mult=1.00x1.15
+  681911 Alex Vesia UTIL adj=1.00 team_adj=1.15 delta=0.15 mult=1.00x1.15
+  676617 Riley O'Brien UTIL adj=1.00 team_adj=1.15 delta=0.15 mult=1.00x1.15
+  663968 Jake Mangum UTIL adj=1.00 team_adj=1.15 delta=0.15 mult=1.00x1.15
+  669203 Corbin Burnes UTIL adj=1.00 team_adj=1.15 delta=0.15 mult=1.00x1.15
+  677952 Braxton Ashcraft UTIL adj=1.00 team_adj=1.15 delta=0.15 mult=1.00x1.15
+  666971 Lourdes Gurriel Jr. UTIL adj=1.00 team_adj=1.15 delta=0.15 mult=1.00x1.15
+  592206 Nick Castellanos UTIL adj=1.00 team_adj=1.15 delta=0.15 mult=1.00x1.15
+  657757 Gavin Sheets UTIL adj=1.00 team_adj=1.15 delta=0.15 mult=1.00x1.15
+  542303 Marcell Ozuna UTIL adj=1.00 team_adj=1.15 delta=0.15 mult=1.00x1.15
+
+========================================================================
+CHECKPOINT: after_pick_10
+request: test-fixtures/player-api/checkpoints/after_pick_10.json
+inflation_model=replacement_slots_v2 factor=0.265 raw=0.264972 bounded=none
+budget_rem=1519 pool_val=5294.9 players_rem=551
+remaining_slots=116 min_bid=1 surplus_cash=1403 total_surplus_mass=5294.899999999999 draftable_pool_size=116 fallback_reason=null
+
+New picks (prior-step adjusted_value vs paid; market columns = prior checkpoint v2 state):
+pick	player_id	player	pos	team_id	paid	prev_adj	delta(paid-prev_adj)	prev_recommended_bid	delta(paid-prev_recommended)	replay_catalog_status	match_method	repl_slot/value	inflation_factor	surplus_cash	total_surplus_mass	fallback_reason
+1	661388	William Contreras	C	team_d	25.00	6.36	18.64	11.47	13.53	matched_by_id	mongo_exact	C=2.96	0.2980	1676.00	5623.30	
+2	695734	Daylen Lile	OF	team_e	12.00	3.86	8.14	6.55	5.45	matched_by_id	mongo_exact	OF=1.96	0.2980	1676.00	5623.30	
+3	665487	Fernando Tatis	OF	team_h	43.00	21.39	21.61	43.43	-0.43	matched_by_id	mongo_exact	OF=1.96	0.2980	1676.00	5623.30	
+4	605141	Mookie Betts	SS	team_d	28.00	8.15	19.85	14.73	13.27	matched_by_id	mongo_exact	SS=16.96	0.2980	1676.00	5623.30	
+5	606466	Ketel Marte	OF	team_f	38.00	13.52	24.48	24.17	13.83	matched_by_id	mongo_exact	OF=1.96	0.2980	1676.00	5623.30	
+6	543760	Marcus Semien	2B	team_f	18.00	1.00	17.00	1.69	16.31	matched_by_id	mongo_exact	2B=14.96	0.2980	1676.00	5623.30	
+7	547180	Bryce Harper	1B	team_c	36.00	9.35	26.65	16.56	19.44	matched_by_id	mongo_exact	1B=35.96	0.2980	1676.00	5623.30	
+8	666182	Bo Bichette	SS/3B	team_h	33.00	15.31	17.69	27.79	5.21	matched_by_id	mongo_exact	3B=12.96	0.2980	1676.00	5623.30	
+9	645277	Ozzie Albies	2B	team_g	25.00	3.38	21.62	6.03	18.97	matched_by_id	mongo_exact	2B=14.96	0.2980	1676.00	5623.30	
+10	553993	Eugenio Suarez	3B	team_f	25.00	11.43	13.57	20.37	4.63	matched_by_id	mongo_exact	3B=12.96	0.2980	1676.00	5623.30	
+
+--- Replay catalog diagnostics (this checkpoint, new auction picks) ---
+total_new_picks: 10
+resolved_picks: 10
+unresolved_picks: 0
+missing_catalog_rows (replay status): 0
+by_status: matched_by_id=10 matched_by_name=0 stub_missing_in_catalog=0 stub_unresolved_name=0 synthetic_fixture_id=0 proxy_pool=0
+stubs_among_new_auction_picks: 0
+
+--- Checkpoint summary (new picks only, n=10) ---
+median |paid - prev_adj|: 19.2450
+mean |paid - prev_adj|: 18.9250
+mean |paid - prev_recommended_bid|: 11.1070
+
+Top 10 model > auction (prev_adj > paid; gap = prev_adj - paid, largest gap first):
+  (none — every new pick cleared at or above prior adjusted_value)
+
+Top 10 auction > model (paid > prev_adj; gap = paid - prev_adj, largest gap first):
+  pick 7 Bryce Harper prev_adj=9.35 paid=36.00 gap=26.65 replay=matched_by_id
+  pick 5 Ketel Marte prev_adj=13.52 paid=38.00 gap=24.48 replay=matched_by_id
+  pick 9 Ozzie Albies prev_adj=3.38 paid=25.00 gap=21.62 replay=matched_by_id
+  pick 3 Fernando Tatis prev_adj=21.39 paid=43.00 gap=21.61 replay=matched_by_id
+  pick 4 Mookie Betts prev_adj=8.15 paid=28.00 gap=19.85 replay=matched_by_id
+  pick 1 William Contreras prev_adj=6.36 paid=25.00 gap=18.64 replay=matched_by_id
+  pick 8 Bo Bichette prev_adj=15.31 paid=33.00 gap=17.69 replay=matched_by_id
+  pick 6 Marcus Semien prev_adj=1.00 paid=18.00 gap=17.00 replay=matched_by_id
+  pick 10 Eugenio Suarez prev_adj=11.43 paid=25.00 gap=13.57 replay=matched_by_id
+  pick 2 Daylen Lile prev_adj=3.86 paid=12.00 gap=8.14 replay=matched_by_id
+
+replacement_values_by_slot_or_position (this checkpoint):
+ {
+  "C": 2.96,
+  "1B": 36.96,
+  "2B": 14.96,
+  "3B": 15.96,
+  "SS": 30.96,
+  "OF": 1.96,
+  "CI": 1.96,
+  "MI": 2.96,
+  "UTIL": 43.96,
+  "P": 1.96
+}
+
+Top 20 available players by adjusted_value (this checkpoint; [CATALOG_STUB] = zero-baseline stub row):
+  592450 Aaron Judge RF baseline=113.96 adj=30.68 replay=matched_by_id
+  669373 Tarik Skubal P baseline=103.21 adj=27.83 replay=matched_by_id
+  676979 Garrett Crochet P baseline=90.71 adj=24.52 replay=matched_by_id
+  608070 José Ramírez 3B baseline=83.96 adj=22.73 replay=matched_by_id
+  686613 Hunter Brown P baseline=81.96 adj=22.20 replay=matched_by_id
+  677951 Bobby Witt Jr. SS baseline=80.96 adj=21.67 replay=matched_by_id
+  543135 Nathan Eovaldi P baseline=79.46 adj=21.54 replay=matched_by_id
+  693433 Bryan Woo P baseline=76.96 adj=20.87 replay=matched_by_id
+  547973 Aroldis Chapman P baseline=73.21 adj=19.88 replay=matched_by_id
+  608331 Max Fried P baseline=73.21 adj=19.88 replay=matched_by_id
+  69ac5be91f05b394067e8cb1 Ronald Acuna Jr. OF baseline=71.56 adj=19.44 replay=matched_by_id
+  663728 Cal Raleigh C baseline=71.96 adj=19.28 replay=matched_by_id
+  594798 Jacob deGrom P baseline=70.71 adj=19.22 replay=matched_by_id
+  607074 Carlos Rodón P baseline=70.71 adj=19.22 replay=matched_by_id
+  677594 Julio Rodríguez CF baseline=67.96 adj=18.49 replay=matched_by_id
+  554430 Zack Wheeler SP baseline=66.96 adj=18.22 replay=matched_by_id
+  621242 Edwin Díaz SP baseline=65.71 adj=17.89 replay=matched_by_id
+  647304 Josh Naylor 1B baseline=64.96 adj=17.69 replay=matched_by_id
+  662253 Andrés Muñoz P baseline=64.46 adj=17.56 replay=matched_by_id
+  669432 Trevor Rogers P baseline=64.46 adj=17.56 replay=matched_by_id
+
+--- Top-20 contamination (catalog / data) ---
+stubs_in_top_20_adjusted: 0
+pct_top_20_contaminated_by_stubs: 0.0%
+
+--- Team-adjusted diagnostics (presentation layer) ---
+avg(team_adjusted - adjusted): 1.7979
+distribution: boost=551 flat=0 discount=0
+positional_need_multiplier distribution: {"1.00":77,"1.10":218,"1.25":256}
+budget_pressure_multiplier distribution: {"1.15":551}
+combined multiplier distribution: {"1.00x1.15":77,"1.10x1.15":218,"1.25x1.15":256}
+
+Top 10 largest team_adjusted_value boosts:
+  592450 Aaron Judge RF adj=30.68 team_adj=44.10 delta=13.42 mult=1.25x1.15
+  608070 José Ramírez 3B adj=22.73 team_adj=32.67 delta=9.94 mult=1.25x1.15
+  677951 Bobby Witt Jr. SS adj=21.67 team_adj=31.15 delta=9.48 mult=1.25x1.15
+  69ac5be91f05b394067e8cb1 Ronald Acuna Jr. OF adj=19.44 team_adj=27.95 delta=8.51 mult=1.00x1.15
+  663728 Cal Raleigh C adj=19.28 team_adj=27.71 delta=8.43 mult=1.25x1.15
+  677594 Julio Rodríguez CF adj=18.49 team_adj=26.58 delta=8.09 mult=1.25x1.15
+  647304 Josh Naylor 1B adj=17.69 team_adj=25.43 delta=7.74 mult=1.25x1.15
+  69ac5be91f05b394067e8cb2 Juan Soto OF adj=17.53 team_adj=25.20 delta=7.67 mult=1.00x1.15
+  69ac5be91f05b394067e8cb3 Mookie Betts OF adj=16.90 team_adj=24.29 delta=7.39 mult=1.00x1.15
+  669373 Tarik Skubal P adj=27.83 team_adj=35.20 delta=7.37 mult=1.10x1.15
+
+Top 10 largest team_adjusted_value discounts:
+  605280 Clay Holmes UTIL adj=1.00 team_adj=1.15 delta=0.15 mult=1.00x1.15
+  681911 Alex Vesia UTIL adj=1.00 team_adj=1.15 delta=0.15 mult=1.00x1.15
+  676617 Riley O'Brien UTIL adj=1.00 team_adj=1.15 delta=0.15 mult=1.00x1.15
+  663968 Jake Mangum UTIL adj=1.00 team_adj=1.15 delta=0.15 mult=1.00x1.15
+  669203 Corbin Burnes UTIL adj=1.00 team_adj=1.15 delta=0.15 mult=1.00x1.15
+  677952 Braxton Ashcraft UTIL adj=1.00 team_adj=1.15 delta=0.15 mult=1.00x1.15
+  666971 Lourdes Gurriel Jr. UTIL adj=1.00 team_adj=1.15 delta=0.15 mult=1.00x1.15
+  592206 Nick Castellanos UTIL adj=1.00 team_adj=1.15 delta=0.15 mult=1.00x1.15
+  657757 Gavin Sheets UTIL adj=1.00 team_adj=1.15 delta=0.15 mult=1.00x1.15
+  542303 Marcell Ozuna UTIL adj=1.00 team_adj=1.15 delta=0.15 mult=1.00x1.15
+
+========================================================================
+CHECKPOINT: after_pick_50
+request: test-fixtures/player-api/checkpoints/after_pick_50.json
+inflation_model=replacement_slots_v2 factor=0.25 raw=0.186555 bounded=floor
+budget_rem=820 pool_val=3982.75 players_rem=512
+remaining_slots=77 min_bid=1 surplus_cash=743 total_surplus_mass=3982.75 draftable_pool_size=77 fallback_reason=null
+
+New picks (prior-step adjusted_value vs paid; market columns = prior checkpoint v2 state):
+pick	player_id	player	pos	team_id	paid	prev_adj	delta(paid-prev_adj)	prev_recommended_bid	delta(paid-prev_recommended)	replay_catalog_status	match_method	repl_slot/value	inflation_factor	surplus_cash	total_surplus_mass	fallback_reason
+12	500743	Miguel Rojas	2B	team_f	1.00	1.00	0.00	1.69	-0.69	matched_by_id	mongo_exact	2B=14.96	0.2650	1403.00	5294.90	
+13	608324	Alex Bregman	3B	team_b	26.00	3.91	22.09	7.08	18.92	matched_by_id	mongo_exact	3B=15.96	0.2650	1403.00	5294.90	
+14	605483	Blake Snell	P	team_c	11.00	7.29	3.71	13.74	-2.74	matched_by_id	mongo_exact	P=1.96	0.2650	1403.00	5294.90	
+15	668678	Zac Gallen	P	team_g	15.00	1.00	14.00	1.34	13.66	stub_missing_in_catalog	mlb_api_search	P=1.96	0.2650	1403.00	5294.90	
+16	695243	Mason Miller	P	team_b	32.00	12.92	19.08	24.83	7.17	matched_by_id	mongo_exact	P=1.96	0.2650	1403.00	5294.90	
+17	672640	Otto Lopez	2B/SS	team_a	13.00	3.91	9.09	7.43	5.57	matched_by_id	mongo_exact	2B=14.96	0.2650	1403.00	5294.90	
+18	9000014	Ezekiel Tovar	SS	team_i	11.00	1.00	10.00	1.34	9.66	synthetic_fixture_id	synthetic_unresolved	SS=30.96	0.2650	1403.00	5294.90	
+19	656305	Matt Chapman	3B	team_a	20.00	2.06	17.94	3.42	16.58	matched_by_id	mongo_exact	3B=15.96	0.2650	1403.00	5294.90	
+20	664761	Alex Bohm	3B	team_i	11.00	3.38	7.62	6.03	4.97	matched_by_id	mongo_exact	3B=15.96	0.2650	1403.00	5294.90	
+21	621566	Matt Olson	1B	team_a	35.00	11.07	23.93	21.18	13.82	matched_by_id	mongo_exact	1B=36.96	0.2650	1403.00	5294.90	
+22	669065	Kyle Stowers	OF	team_c	17.00	9.59	7.41	18.26	-1.26	matched_by_id	mongo_exact	OF=1.96	0.2650	1403.00	5294.90	
+23	607192	Tyler Glasnow	P	team_c	18.00	8.29	9.71	15.70	2.30	matched_by_id	mongo_exact	P=1.96	0.2650	1403.00	5294.90	
+24	669257	Will Smith	C	team_d	18.00	5.50	12.50	10.56	7.44	matched_by_id	mongo_exact	C=2.96	0.2650	1403.00	5294.90	
+25	621242	Edwin Diaz	P	team_c	31.00	17.89	13.11	39.41	-8.41	matched_by_id	mongo_exact	P=1.96	0.2650	1403.00	5294.90	
+26	472610	Luis Garcia	P	team_b	11.00	3.32	7.68	5.91	5.09	matched_by_id	mongo_exact	P=1.96	0.2650	1403.00	5294.90	
+27	516811	Eury Perez	P	team_c	25.00	1.00	24.00	1.34	23.66	stub_missing_in_catalog	mlb_api_search	P=1.96	0.2650	1403.00	5294.90	
+28	673357	Luis Robert	OF	team_i	27.00	4.50	22.50	8.23	18.77	matched_by_id	mongo_exact	OF=1.96	0.2650	1403.00	5294.90	
+29	664040	Brandon Lowe	2B	team_a	18.00	7.09	10.91	13.69	4.31	matched_by_id	mongo_exact	2B=14.96	0.2650	1403.00	5294.90	
+30	642207	Devin Williams	P	team_a	18.00	1.00	17.00	1.34	16.66	stub_missing_in_catalog	mlb_api_search	P=1.96	0.2650	1403.00	5294.90	
+31	664023	Ian Happ	OF	team_a	17.00	5.45	11.55	10.11	6.89	matched_by_id	mongo_exact	OF=1.96	0.2650	1403.00	5294.90	
+32	605400	Aaron Nola	P	team_d	9.00	1.00	8.00	1.34	7.66	stub_missing_in_catalog	mlb_api_search	P=1.96	0.2650	1403.00	5294.90	
+33	670770	TJ Friedl	OF	team_d	8.00	5.77	2.23	10.74	-2.74	matched_by_id	mongo_exact	OF=1.96	0.2650	1403.00	5294.90	
+34	661395	Jhoan Duran	P	team_b	30.00	16.90	13.10	37.18	-7.18	matched_by_id	mongo_exact	P=1.96	0.2650	1403.00	5294.90	
+35	593428	Xander Boegarts	SS	team_e	7.00	4.97	2.03	9.52	-2.52	matched_by_id	mongo_exact	SS=30.96	0.2650	1403.00	5294.90	
+36	646240	Rafael Devers	1B	team_g	33.00	10.27	22.73	19.61	13.39	matched_by_id	mongo_exact	1B=36.96	0.2650	1403.00	5294.90	
+37	518876	Merrill Kelly	P	team_d	12.00	1.00	11.00	1.34	10.66	stub_missing_in_catalog	mlb_api_search	P=1.96	0.2650	1403.00	5294.90	
+38	593871	Jorge Polanco	1B	team_g	20.00	6.83	13.17	12.83	7.17	matched_by_id	mongo_exact	1B=36.96	0.2650	1403.00	5294.90	
+39	666160	Mickey Moniak	OF	team_f	16.00	8.00	8.00	15.13	0.87	matched_by_id	mongo_exact	OF=1.96	0.2650	1403.00	5294.90	
+40	554430	Zack Wheeler	P	team_d	21.00	18.22	2.78	40.15	-19.15	matched_by_id	mongo_exact	P=1.96	0.2650	1403.00	5294.90	
+41	686218	Emmet Sheehan	P	team_h	20.00	9.28	10.72	17.66	2.34	matched_by_id	mongo_exact	P=1.96	0.2650	1403.00	5294.90	
+42	606192	Teoscar Hernandez	OF	team_a	18.00	5.77	12.23	10.74	7.26	matched_by_id	mongo_exact	OF=1.96	0.2650	1403.00	5294.90	
+43	694037	Daniel Palencia	P	team_b	18.00	9.94	8.06	18.96	-0.96	matched_by_id	mongo_exact	P=1.96	0.2650	1403.00	5294.90	
+44	668715	Spencer Steer	1B/OF	team_f	16.00	2.59	13.41	4.47	11.53	matched_by_id	mongo_exact	1B=36.96	0.2650	1403.00	5294.90	
+45	686668	Brenton Doyle	OF	team_i	14.00	1.64	12.36	2.59	11.41	matched_by_id	mongo_exact	OF=1.96	0.2650	1403.00	5294.90	
+46	681082	Bryson Stott	2B	team_c	17.00	6.56	10.44	12.65	4.35	matched_by_id	mongo_exact	2B=14.96	0.2650	1403.00	5294.90	
+47	605397	Joe Musgrove	P	team_a	5.00	1.00	4.00	1.34	3.66	stub_missing_in_catalog	mlb_api_search	P=1.96	0.2650	1403.00	5294.90	
+48	467793	Carlos Santana	1B	team_a	5.00	1.00	4.00	1.34	3.66	stub_missing_in_catalog	mlb_api_search	1B=36.96	0.2650	1403.00	5294.90	
+49	592663	JT Realmuto	C	team_f	7.00	1.00	6.00	1.69	5.31	matched_by_id	mongo_exact	C=2.96	0.2650	1403.00	5294.90	
+50	9000015	Trevor McGill	P	team_g	17.00	1.00	16.00	1.34	15.66	synthetic_fixture_id	synthetic_unresolved	P=1.96	0.2650	1403.00	5294.90	
+
+--- Replay catalog diagnostics (this checkpoint, new auction picks) ---
+total_new_picks: 39
+resolved_picks: 30
+unresolved_picks: 9
+missing_catalog_rows (replay status): 7
+by_status: matched_by_id=30 matched_by_name=0 stub_missing_in_catalog=7 stub_unresolved_name=0 synthetic_fixture_id=2 proxy_pool=0
+stubs_among_new_auction_picks: 9
+
+--- Checkpoint summary (new picks only, n=39) ---
+median |paid - prev_adj|: 10.9100
+mean |paid - prev_adj|: 11.3869
+mean |paid - prev_recommended_bid|: 8.3603
+
+Top 10 model > auction (prev_adj > paid; gap = prev_adj - paid, largest gap first):
+  (none — every new pick cleared at or above prior adjusted_value)
+
+Top 10 auction > model (paid > prev_adj; gap = paid - prev_adj, largest gap first):
+  pick 27 Eury Perez prev_adj=1.00 paid=25.00 gap=24.00 replay=stub_missing_in_catalog
+  pick 21 Matt Olson prev_adj=11.07 paid=35.00 gap=23.93 replay=matched_by_id
+  pick 36 Rafael Devers prev_adj=10.27 paid=33.00 gap=22.73 replay=matched_by_id
+  pick 28 Luis Robert prev_adj=4.50 paid=27.00 gap=22.50 replay=matched_by_id
+  pick 13 Alex Bregman prev_adj=3.91 paid=26.00 gap=22.09 replay=matched_by_id
+  pick 16 Mason Miller prev_adj=12.92 paid=32.00 gap=19.08 replay=matched_by_id
+  pick 19 Matt Chapman prev_adj=2.06 paid=20.00 gap=17.94 replay=matched_by_id
+  pick 30 Devin Williams prev_adj=1.00 paid=18.00 gap=17.00 replay=stub_missing_in_catalog
+  pick 50 Trevor McGill prev_adj=1.00 paid=17.00 gap=16.00 replay=synthetic_fixture_id
+  pick 15 Zac Gallen prev_adj=1.00 paid=15.00 gap=14.00 replay=stub_missing_in_catalog
+
+replacement_values_by_slot_or_position (this checkpoint):
+ {
+  "C": 2.96,
+  "1B": 1.96,
+  "2B": 2.96,
+  "3B": 2.96,
+  "SS": 1.96,
+  "OF": 1.96,
+  "CI": 5.96,
+  "MI": 17.96,
+  "UTIL": 43.96,
+  "P": 1.96
+}
+
+Top 20 available players by adjusted_value (this checkpoint; [CATALOG_STUB] = zero-baseline stub row):
+  592450 Aaron Judge RF baseline=113.96 adj=29.00 replay=matched_by_id
+  669373 Tarik Skubal P baseline=103.21 adj=26.31 replay=matched_by_id
+  676979 Garrett Crochet P baseline=90.71 adj=23.19 replay=matched_by_id
+  608070 José Ramírez 3B baseline=83.96 adj=21.25 replay=matched_by_id
+  686613 Hunter Brown P baseline=81.96 adj=21.00 replay=matched_by_id
+  677951 Bobby Witt Jr. SS baseline=80.96 adj=20.75 replay=matched_by_id
+  543135 Nathan Eovaldi P baseline=79.46 adj=20.38 replay=matched_by_id
+  693433 Bryan Woo P baseline=76.96 adj=19.75 replay=matched_by_id
+  547973 Aroldis Chapman P baseline=73.21 adj=18.81 replay=matched_by_id
+  608331 Max Fried P baseline=73.21 adj=18.81 replay=matched_by_id
+  69ac5be91f05b394067e8cb1 Ronald Acuna Jr. OF baseline=71.56 adj=18.40 replay=matched_by_id
+  663728 Cal Raleigh C baseline=71.96 adj=18.25 replay=matched_by_id
+  594798 Jacob deGrom P baseline=70.71 adj=18.19 replay=matched_by_id
+  607074 Carlos Rodón P baseline=70.71 adj=18.19 replay=matched_by_id
+  677594 Julio Rodríguez CF baseline=67.96 adj=17.50 replay=matched_by_id
+  647304 Josh Naylor 1B baseline=64.96 adj=16.75 replay=matched_by_id
+  662253 Andrés Muñoz P baseline=64.46 adj=16.63 replay=matched_by_id
+  669432 Trevor Rogers P baseline=64.46 adj=16.63 replay=matched_by_id
+  69ac5be91f05b394067e8cb2 Juan Soto OF baseline=64.36 adj=16.60 replay=matched_by_id
+  608032 Carlos Estévez P baseline=61.96 adj=16.00 replay=matched_by_id
+
+--- Top-20 contamination (catalog / data) ---
+stubs_in_top_20_adjusted: 0
+pct_top_20_contaminated_by_stubs: 0.0%
+
+--- Team-adjusted diagnostics (presentation layer) ---
+avg(team_adjusted - adjusted): 1.6996
+distribution: boost=512 flat=0 discount=0
+positional_need_multiplier distribution: {"1.00":77,"1.10":202,"1.25":233}
+budget_pressure_multiplier distribution: {"1.15":512}
+combined multiplier distribution: {"1.00x1.15":77,"1.10x1.15":202,"1.25x1.15":233}
+
+Top 10 largest team_adjusted_value boosts:
+  592450 Aaron Judge RF adj=29.00 team_adj=41.69 delta=12.69 mult=1.25x1.15
+  608070 José Ramírez 3B adj=21.25 team_adj=30.55 delta=9.30 mult=1.25x1.15
+  677951 Bobby Witt Jr. SS adj=20.75 team_adj=29.83 delta=9.08 mult=1.25x1.15
+  69ac5be91f05b394067e8cb1 Ronald Acuna Jr. OF adj=18.40 team_adj=26.45 delta=8.05 mult=1.00x1.15
+  663728 Cal Raleigh C adj=18.25 team_adj=26.23 delta=7.98 mult=1.25x1.15
+  677594 Julio Rodríguez CF adj=17.50 team_adj=25.16 delta=7.66 mult=1.25x1.15
+  647304 Josh Naylor 1B adj=16.75 team_adj=24.08 delta=7.33 mult=1.25x1.15
+  69ac5be91f05b394067e8cb2 Juan Soto OF adj=16.60 team_adj=23.86 delta=7.26 mult=1.00x1.15
+  69ac5be91f05b394067e8cb3 Mookie Betts OF adj=16.00 team_adj=23.00 delta=7.00 mult=1.00x1.15
+  669373 Tarik Skubal P adj=26.31 team_adj=33.28 delta=6.97 mult=1.10x1.15
+
+Top 10 largest team_adjusted_value discounts:
+  605280 Clay Holmes UTIL adj=1.00 team_adj=1.15 delta=0.15 mult=1.00x1.15
+  681911 Alex Vesia UTIL adj=1.00 team_adj=1.15 delta=0.15 mult=1.00x1.15
+  676617 Riley O'Brien UTIL adj=1.00 team_adj=1.15 delta=0.15 mult=1.00x1.15
+  663968 Jake Mangum UTIL adj=1.00 team_adj=1.15 delta=0.15 mult=1.00x1.15
+  669203 Corbin Burnes UTIL adj=1.00 team_adj=1.15 delta=0.15 mult=1.00x1.15
+  677952 Braxton Ashcraft UTIL adj=1.00 team_adj=1.15 delta=0.15 mult=1.00x1.15
+  666971 Lourdes Gurriel Jr. UTIL adj=1.00 team_adj=1.15 delta=0.15 mult=1.00x1.15
+  592206 Nick Castellanos UTIL adj=1.00 team_adj=1.15 delta=0.15 mult=1.00x1.15
+  657757 Gavin Sheets UTIL adj=1.00 team_adj=1.15 delta=0.15 mult=1.00x1.15
+  542303 Marcell Ozuna UTIL adj=1.00 team_adj=1.15 delta=0.15 mult=1.00x1.15
+
+========================================================================
+CHECKPOINT: after_pick_100
+request: test-fixtures/player-api/checkpoints/after_pick_100.json
+inflation_model=replacement_slots_v2 factor=0.25 raw=0.178004 bounded=floor
+budget_rem=455 pool_val=2342.65 players_rem=462
+remaining_slots=38 min_bid=1 surplus_cash=417 total_surplus_mass=2342.6499999999996 draftable_pool_size=38 fallback_reason=null
+
+New picks (prior-step adjusted_value vs paid; market columns = prior checkpoint v2 state):
+pick	player_id	player	pos	team_id	paid	prev_adj	delta(paid-prev_adj)	prev_recommended_bid	delta(paid-prev_recommended)	replay_catalog_status	match_method	repl_slot/value	inflation_factor	surplus_cash	total_surplus_mass	fallback_reason
+51	665804	Miguel Amaya	C	team_e	2.00	1.00	1.00	1.34	0.66	stub_missing_in_catalog	mlb_api_search	C=2.96	0.2500	743.00	3982.75	
+52	665833	Oneil Cruz	OF	team_g	29.00	1.00	28.00	1.34	27.66	stub_missing_in_catalog	mlb_api_search	OF=1.96	0.2500	743.00	3982.75	
+53	592885	Christian Yelich	OF	team_h	21.00	14.80	6.20	29.63	-8.63	matched_by_id	mongo_exact	OF=1.96	0.2500	743.00	3982.75	
+54	650333	Luis Arraez	1B	team_d	14.00	7.50	6.50	14.66	-0.66	matched_by_id	mongo_exact	1B=1.96	0.2500	743.00	3982.75	
+55	805300	Jakob Marsee	OF	team_i	20.00	1.30	18.70	1.95	18.05	matched_by_id	mongo_exact	OF=1.96	0.2500	743.00	3982.75	
+56	682622	Noelvi Marte	OF	team_a	22.00	1.90	20.10	3.18	18.82	matched_by_id	mongo_exact	OF=1.96	0.2500	743.00	3982.75	
+57	689414	Liam Hicks	C	team_e	2.00	1.00	1.00	1.69	0.31	matched_by_id	mongo_exact	C=2.96	0.2500	743.00	3982.75	
+58	668881	Hunter Greene	P	team_h	4.00	12.56	-8.56	25.04	-21.04	matched_by_id	mongo_exact	P=1.96	0.2500	743.00	3982.75	
+59	641941	Emilio Pagan	P	team_e	18.00	14.13	3.87	28.25	-10.25	matched_by_id	mongo_exact	P=1.96	0.2500	743.00	3982.75	
+60	656811	Ryan O'Hearn	1B/OF	team_f	9.00	5.25	3.75	10.05	-1.05	matched_by_id	mongo_exact	1B=1.96	0.2500	743.00	3982.75	
+61	681624	Andy Pages	OF	team_g	17.00	12.70	4.30	25.32	-8.32	matched_by_id	mongo_exact	OF=1.96	0.2500	743.00	3982.75	
+62	9000016	Ryan Reynolds	OF	team_h	16.00	1.00	15.00	1.34	14.66	synthetic_fixture_id	synthetic_unresolved	OF=1.96	0.2500	743.00	3982.75	
+63	666023	Freddy Fermin	C	team_i	4.00	1.00	3.00	1.69	2.31	matched_by_id	mongo_exact	C=2.96	0.2500	743.00	3982.75	
+64	680574	Matt McLain	2B	team_d	10.00	1.00	9.00	1.34	8.66	stub_missing_in_catalog	mlb_api_search	2B=2.96	0.2500	743.00	3982.75	
+65	642183	Ryan Walker	P	team_e	9.00	1.00	8.00	1.34	7.66	stub_missing_in_catalog	mlb_api_search	P=1.96	0.2500	743.00	3982.75	
+66	663886	Tyler Stephenson	C	team_f	7.00	1.00	6.00	1.69	5.31	matched_by_id	mongo_exact	C=2.96	0.2500	743.00	3982.75	
+67	656945	Tanner Scott	P	team_a	2.00	1.00	1.00	1.34	0.66	stub_missing_in_catalog	mlb_api_search	P=1.96	0.2500	743.00	3982.75	
+68	665795	Edward Cabrera	P	team_b	11.00	1.00	10.00	1.34	9.66	stub_missing_in_catalog	mlb_api_search	P=1.96	0.2500	743.00	3982.75	
+69	672275	Patrick Bailey	C	team_b	3.00	1.00	2.00	1.69	1.31	matched_by_id	mongo_exact	C=2.96	0.2500	743.00	3982.75	
+70	671218	Heliot Ramos	OF	team_h	10.00	6.10	3.90	11.79	-1.79	matched_by_id	mongo_exact	OF=1.96	0.2500	743.00	3982.75	
+71	666969	Adolis Garcia	OF	team_e	11.00	1.60	9.40	2.57	8.43	matched_by_id	mongo_exact	OF=1.96	0.2500	743.00	3982.75	
+72	683734	Andrew Vaughn	1B	team_e	17.00	1.25	15.75	1.85	15.15	matched_by_id	mongo_exact	1B=1.96	0.2500	743.00	3982.75	
+73	669242	Tommy Edman	2B	team_e	1.00	1.00	0.00	1.69	-0.69	matched_by_id	mongo_exact	2B=2.96	0.2500	743.00	3982.75	
+74	694335	Matt Svanson	P	team_f	8.00	9.44	-1.44	18.63	-10.63	matched_by_id	mongo_exact	P=1.96	0.2500	743.00	3982.75	
+75	664126	Pete Fairbanks	P	team_f	10.00	11.94	-1.94	23.76	-13.76	matched_by_id	mongo_exact	P=1.96	0.2500	743.00	3982.75	
+76	683146	Brett Baty	2B/3B	team_h	5.00	1.50	3.50	2.71	2.29	matched_by_id	mongo_exact	2B=2.96	0.2500	743.00	3982.75	
+77	642701	DTeam D Santana	P	team_f	8.00	13.19	-5.19	26.32	-18.32	matched_by_id	mongo_initials_last	P=1.96	0.2500	743.00	3982.75	
+78	671289	Tyler Freeman	OF	team_b	5.00	2.20	2.80	3.80	1.20	matched_by_id	mongo_exact	OF=1.96	0.2500	743.00	3982.75	
+79	657656	Ramon Laureano	OF	team_f	12.00	10.00	2.00	19.79	-7.79	matched_by_id	mongo_exact	OF=1.96	0.2500	743.00	3982.75	
+80	687597	Jordan Beck	OF	team_c	8.00	5.80	2.20	11.18	-3.18	matched_by_id	mongo_exact	OF=1.96	0.2500	743.00	3982.75	
+81	650489	Willy Castro	2B/3B/OF	team_c	2.00	1.00	1.00	1.69	0.31	matched_by_id	mongo_exact	2B=2.96	0.2500	743.00	3982.75	
+82	681393	Conor Norby	3B	team_e	3.00	1.00	2.00	1.69	1.31	matched_by_id	mongo_exact	3B=2.96	0.2500	743.00	3982.75	
+83	666214	Joey Wentz	P	team_h	2.00	1.00	1.00	1.34	0.66	stub_missing_in_catalog	mlb_api_search	P=1.96	0.2500	743.00	3982.75	
+84	656464	Kevin Ginkel	P	team_f	3.00	1.00	2.00	1.34	1.66	stub_missing_in_catalog	mlb_api_search	P=1.96	0.2500	743.00	3982.75	
+85	673540	Senga	P	team_c	4.00	8.19	-4.19	16.07	-12.07	matched_by_id	mlb_api_search	P=1.96	0.2500	743.00	3982.75	
+86	641816	Tyler Mahle	P	team_i	2.00	10.38	-8.38	20.56	-18.56	matched_by_id	mongo_exact	P=1.96	0.2500	743.00	3982.75	
+87	682842	Abner Uribe	P	team_d	5.00	12.25	-7.25	24.40	-19.40	matched_by_id	mongo_exact	P=1.96	0.2500	743.00	3982.75	
+88	663158	Robert Suarez	P	team_e	4.00	15.69	-11.69	35.95	-31.95	matched_by_id	mongo_exact	P=1.96	0.2500	743.00	3982.75	
+89	669194	Ryne Nelson	P	team_d	3.00	11.31	-8.31	22.48	-19.48	matched_by_id	mongo_exact	P=1.96	0.2500	743.00	3982.75	
+90	669357	Nolan Gorman	2B/3B	team_h	2.00	1.00	1.00	1.34	0.66	stub_missing_in_catalog	mlb_api_search	2B=2.96	0.2500	743.00	3982.75	
+91	691720	Kyle Karros	3B	team_e	1.00	1.00	0.00	1.69	-0.69	matched_by_id	mongo_exact	3B=2.96	0.2500	743.00	3982.75	
+92	676962	Ben Brown	P	team_a	1.00	1.00	0.00	1.34	-0.34	stub_missing_in_catalog	mlb_api_search	P=1.96	0.2500	743.00	3982.75	
+93	9000017	Tobias Meyer	P	team_a	2.00	1.00	1.00	1.34	0.66	synthetic_fixture_id	synthetic_unresolved	P=1.96	0.2500	743.00	3982.75	
+94	682990	Quinn Priester	P	team_b	4.00	10.38	-6.38	20.56	-16.56	matched_by_id	mongo_exact	P=1.96	0.2500	743.00	3982.75	
+95	666971	Lourdes Guerriel	UTIL	team_b	1.00	1.00	0.00	4.84	-3.84	matched_by_id	mongo_exact	UTIL=43.96	0.2500	743.00	3982.75	
+96	807713	Matt Shaw	UTIL	team_d	2.00	1.00	1.00	1.69	0.31	matched_by_id	mongo_exact	UTIL=43.96	0.2500	743.00	3982.75	
+97	657757	Gavin Sheets	UTIL	team_a	4.00	1.00	3.00	2.39	1.61	matched_by_id	mongo_exact	UTIL=43.96	0.2500	743.00	3982.75	
+98	630105	Jake Cronenworth	UTIL	team_i	2.00	1.00	1.00	1.69	0.31	matched_by_id	mongo_exact	UTIL=43.96	0.2500	743.00	3982.75	
+99	121350	Eduardo Rodriguez	UTIL	team_g	2.00	1.00	1.00	1.34	0.66	stub_missing_in_catalog	mlb_api_search	UTIL=43.96	0.2500	743.00	3982.75	
+100	620443	Luis Torrens	UTIL	team_a	1.00	1.00	0.00	1.69	-0.69	matched_by_id	mongo_exact	UTIL=43.96	0.2500	743.00	3982.75	
+
+--- Replay catalog diagnostics (this checkpoint, new auction picks) ---
+total_new_picks: 50
+resolved_picks: 37
+unresolved_picks: 13
+missing_catalog_rows (replay status): 11
+by_status: matched_by_id=37 matched_by_name=0 stub_missing_in_catalog=11 stub_unresolved_name=0 synthetic_fixture_id=2 proxy_pool=0
+stubs_among_new_auction_picks: 13
+
+--- Checkpoint summary (new picks only, n=50) ---
+median |paid - prev_adj|: 3.2500
+mean |paid - prev_adj|: 5.2860
+mean |paid - prev_recommended_bid|: 7.6128
+
+Top 10 model > auction (prev_adj > paid; gap = prev_adj - paid, largest gap first):
+  pick 88 Robert Suarez prev_adj=15.69 paid=4.00 gap=11.69 replay=matched_by_id
+  pick 58 Hunter Greene prev_adj=12.56 paid=4.00 gap=8.56 replay=matched_by_id
+  pick 86 Tyler Mahle prev_adj=10.38 paid=2.00 gap=8.38 replay=matched_by_id
+  pick 89 Ryne Nelson prev_adj=11.31 paid=3.00 gap=8.31 replay=matched_by_id
+  pick 87 Abner Uribe prev_adj=12.25 paid=5.00 gap=7.25 replay=matched_by_id
+  pick 94 Quinn Priester prev_adj=10.38 paid=4.00 gap=6.38 replay=matched_by_id
+  pick 77 DTeam D Santana prev_adj=13.19 paid=8.00 gap=5.19 replay=matched_by_id
+  pick 85 Senga prev_adj=8.19 paid=4.00 gap=4.19 replay=matched_by_id
+  pick 75 Pete Fairbanks prev_adj=11.94 paid=10.00 gap=1.94 replay=matched_by_id
+  pick 74 Matt Svanson prev_adj=9.44 paid=8.00 gap=1.44 replay=matched_by_id
+
+Top 10 auction > model (paid > prev_adj; gap = paid - prev_adj, largest gap first):
+  pick 52 Oneil Cruz prev_adj=1.00 paid=29.00 gap=28.00 replay=stub_missing_in_catalog
+  pick 56 Noelvi Marte prev_adj=1.90 paid=22.00 gap=20.10 replay=matched_by_id
+  pick 55 Jakob Marsee prev_adj=1.30 paid=20.00 gap=18.70 replay=matched_by_id
+  pick 72 Andrew Vaughn prev_adj=1.25 paid=17.00 gap=15.75 replay=matched_by_id
+  pick 62 Ryan Reynolds prev_adj=1.00 paid=16.00 gap=15.00 replay=synthetic_fixture_id
+  pick 68 Edward Cabrera prev_adj=1.00 paid=11.00 gap=10.00 replay=stub_missing_in_catalog
+  pick 71 Adolis Garcia prev_adj=1.60 paid=11.00 gap=9.40 replay=matched_by_id
+  pick 64 Matt McLain prev_adj=1.00 paid=10.00 gap=9.00 replay=stub_missing_in_catalog
+  pick 65 Ryan Walker prev_adj=1.00 paid=9.00 gap=8.00 replay=stub_missing_in_catalog
+  pick 54 Luis Arraez prev_adj=7.50 paid=14.00 gap=6.50 replay=matched_by_id
+
+replacement_values_by_slot_or_position (this checkpoint):
+ {
+  "C": 2.96,
+  "1B": 1.96,
+  "2B": 1.96,
+  "3B": 2.96,
+  "SS": 1.96,
+  "OF": 1.96,
+  "CI": 10.96,
+  "MI": 17.96,
+  "UTIL": 49.96,
+  "P": 1.96
+}
+
+Top 20 available players by adjusted_value (this checkpoint; [CATALOG_STUB] = zero-baseline stub row):
+  592450 Aaron Judge RF baseline=113.96 adj=29.00 replay=matched_by_id
+  669373 Tarik Skubal P baseline=103.21 adj=26.31 replay=matched_by_id
+  676979 Garrett Crochet P baseline=90.71 adj=23.19 replay=matched_by_id
+  608070 José Ramírez 3B baseline=83.96 adj=21.25 replay=matched_by_id
+  686613 Hunter Brown P baseline=81.96 adj=21.00 replay=matched_by_id
+  677951 Bobby Witt Jr. SS baseline=80.96 adj=20.75 replay=matched_by_id
+  543135 Nathan Eovaldi P baseline=79.46 adj=20.38 replay=matched_by_id
+  693433 Bryan Woo P baseline=76.96 adj=19.75 replay=matched_by_id
+  547973 Aroldis Chapman P baseline=73.21 adj=18.81 replay=matched_by_id
+  608331 Max Fried P baseline=73.21 adj=18.81 replay=matched_by_id
+  69ac5be91f05b394067e8cb1 Ronald Acuna Jr. OF baseline=71.56 adj=18.40 replay=matched_by_id
+  663728 Cal Raleigh C baseline=71.96 adj=18.25 replay=matched_by_id
+  594798 Jacob deGrom P baseline=70.71 adj=18.19 replay=matched_by_id
+  607074 Carlos Rodón P baseline=70.71 adj=18.19 replay=matched_by_id
+  677594 Julio Rodríguez CF baseline=67.96 adj=17.50 replay=matched_by_id
+  647304 Josh Naylor 1B baseline=64.96 adj=16.75 replay=matched_by_id
+  662253 Andrés Muñoz P baseline=64.46 adj=16.63 replay=matched_by_id
+  669432 Trevor Rogers P baseline=64.46 adj=16.63 replay=matched_by_id
+  69ac5be91f05b394067e8cb2 Juan Soto OF baseline=64.36 adj=16.60 replay=matched_by_id
+  608032 Carlos Estévez P baseline=61.96 adj=16.00 replay=matched_by_id
+
+--- Top-20 contamination (catalog / data) ---
+stubs_in_top_20_adjusted: 0
+pct_top_20_contaminated_by_stubs: 0.0%
+
+--- Team-adjusted diagnostics (presentation layer) ---
+avg(team_adjusted - adjusted): 1.7294
+distribution: boost=462 flat=0 discount=0
+positional_need_multiplier distribution: {"1.00":71,"1.10":184,"1.25":207}
+budget_pressure_multiplier distribution: {"1.15":462}
+combined multiplier distribution: {"1.00x1.15":71,"1.10x1.15":184,"1.25x1.15":207}
+
+Top 10 largest team_adjusted_value boosts:
+  592450 Aaron Judge RF adj=29.00 team_adj=41.69 delta=12.69 mult=1.25x1.15
+  608070 José Ramírez 3B adj=21.25 team_adj=30.55 delta=9.30 mult=1.25x1.15
+  677951 Bobby Witt Jr. SS adj=20.75 team_adj=29.83 delta=9.08 mult=1.25x1.15
+  69ac5be91f05b394067e8cb1 Ronald Acuna Jr. OF adj=18.40 team_adj=26.45 delta=8.05 mult=1.00x1.15
+  663728 Cal Raleigh C adj=18.25 team_adj=26.23 delta=7.98 mult=1.25x1.15
+  677594 Julio Rodríguez CF adj=17.50 team_adj=25.16 delta=7.66 mult=1.25x1.15
+  647304 Josh Naylor 1B adj=16.75 team_adj=24.08 delta=7.33 mult=1.25x1.15
+  69ac5be91f05b394067e8cb2 Juan Soto OF adj=16.60 team_adj=23.86 delta=7.26 mult=1.00x1.15
+  69ac5be91f05b394067e8cb3 Mookie Betts OF adj=16.00 team_adj=23.00 delta=7.00 mult=1.00x1.15
+  669373 Tarik Skubal P adj=26.31 team_adj=33.28 delta=6.97 mult=1.10x1.15
+
+Top 10 largest team_adjusted_value discounts:
+  605280 Clay Holmes UTIL adj=1.00 team_adj=1.15 delta=0.15 mult=1.00x1.15
+  681911 Alex Vesia UTIL adj=1.00 team_adj=1.15 delta=0.15 mult=1.00x1.15
+  676617 Riley O'Brien UTIL adj=1.00 team_adj=1.15 delta=0.15 mult=1.00x1.15
+  663968 Jake Mangum UTIL adj=1.00 team_adj=1.15 delta=0.15 mult=1.00x1.15
+  669203 Corbin Burnes UTIL adj=1.00 team_adj=1.15 delta=0.15 mult=1.00x1.15
+  677952 Braxton Ashcraft UTIL adj=1.00 team_adj=1.15 delta=0.15 mult=1.00x1.15
+  592206 Nick Castellanos UTIL adj=1.00 team_adj=1.15 delta=0.15 mult=1.00x1.15
+  542303 Marcell Ozuna UTIL adj=1.00 team_adj=1.15 delta=0.15 mult=1.00x1.15
+  660688 Keibert Ruiz UTIL adj=1.00 team_adj=1.15 delta=0.15 mult=1.00x1.15
+  663457 Lars Nootbaar UTIL adj=1.00 team_adj=1.15 delta=0.15 mult=1.00x1.15
+
+========================================================================
+CHECKPOINT: after_pick_130
+request: test-fixtures/player-api/checkpoints/after_pick_130.json
+inflation_model=replacement_slots_v2 factor=0.25 raw=0.171019 bounded=floor
+budget_rem=403 pool_val=2157.65 players_rem=433
+remaining_slots=34 min_bid=1 surplus_cash=369 total_surplus_mass=2157.6499999999996 draftable_pool_size=34 fallback_reason=null
+
+New picks (prior-step adjusted_value vs paid; market columns = prior checkpoint v2 state):
+pick	player_id	player	pos	team_id	paid	prev_adj	delta(paid-prev_adj)	prev_recommended_bid	delta(paid-prev_recommended)	replay_catalog_status	match_method	repl_slot/value	inflation_factor	surplus_cash	total_surplus_mass	fallback_reason
+101	640455	Sean Manaea	UTIL	team_d	2.00	1.00	1.00	1.34	0.66	stub_missing_in_catalog	mlb_api_search	UTIL=49.96	0.2500	417.00	2342.65	
+102	669160	Dustin May	UTIL	team_g	1.00	1.00	0.00	1.34	-0.34	stub_missing_in_catalog	mlb_api_search	UTIL=49.96	0.2500	417.00	2342.65	
+103	663968	Jake Magnum	UTIL	team_b	3.00	1.00	2.00	7.64	-4.64	matched_by_id	mongo_exact	UTIL=49.96	0.2500	417.00	2342.65	
+104	542303	Marcell Ozuna	UTIL	team_c	2.00	1.00	1.00	1.69	0.31	matched_by_id	mongo_exact	UTIL=49.96	0.2500	417.00	2342.65	
+105	669003	Garrett Mitchell	UTIL	team_d	3.00	1.00	2.00	1.34	1.66	stub_missing_in_catalog	mlb_api_search	UTIL=49.96	0.2500	417.00	2342.65	
+106	681198	TJ Rumfield	1B	team_i	1.00	1.00	0.00	1.34	-0.34	stub_missing_in_catalog	mlb_api_search	1B=1.96	0.2500	417.00	2342.65	
+107	543639	David Peterson	UTIL	team_h	2.00	1.00	1.00	1.34	0.66	stub_missing_in_catalog	mlb_api_search	UTIL=49.96	0.2500	417.00	2342.65	
+108	668901	Mark Vientos	UTIL	team_b	2.00	1.00	1.00	1.69	0.31	matched_by_id	mongo_exact	UTIL=49.96	0.2500	417.00	2342.65	
+109	660688	Keibert Ruiz	UTIL	team_h	1.00	1.00	0.00	1.69	-0.69	matched_by_id	mongo_exact	UTIL=49.96	0.2500	417.00	2342.65	
+110	663698	Joey Bart	UTIL	team_g	1.00	1.00	0.00	1.69	-0.69	matched_by_id	mongo_exact	UTIL=49.96	0.2500	417.00	2342.65	
+112	691781	Brady House	UTIL	team_c	1.00	1.00	0.00	1.69	-0.69	matched_by_id	mongo_exact	UTIL=49.96	0.2500	417.00	2342.65	
+113	664056	Harrison Bader	OF	team_h	2.00	6.40	-4.40	12.41	-10.41	matched_by_id	mongo_exact	OF=1.96	0.2500	417.00	2342.65	
+114	676974	Max Meyer	UTIL	team_i	3.00	1.00	2.00	1.34	1.66	stub_missing_in_catalog	mlb_api_search	UTIL=49.96	0.2500	417.00	2342.65	
+115	669461	Matthew Libartore	P	team_e	1.00	1.00	0.00	1.34	-0.34	stub_missing_in_catalog	mlb_api_search	P=1.96	0.2500	417.00	2342.65	
+116	643565	Mike Tauchman	OF	team_a	1.00	1.30	-0.30	1.95	-0.95	matched_by_id	mongo_exact	OF=1.96	0.2500	417.00	2342.65	
+117	694477	Chad Patrick	UTIL	team_h	1.00	1.00	0.00	1.34	-0.34	stub_missing_in_catalog	mlb_api_search	UTIL=49.96	0.2500	417.00	2342.65	
+118	680779	Henry Davis	UTIL	team_g	1.00	1.00	0.00	1.34	-0.34	stub_missing_in_catalog	mlb_api_search	UTIL=49.96	0.2500	417.00	2342.65	
+119	677952	Braxton Ashcraft	UTIL	team_i	4.00	1.00	3.00	7.64	-3.64	matched_by_id	mongo_exact	UTIL=49.96	0.2500	417.00	2342.65	
+120	663457	Lars Nootbaar	UTIL	team_d	1.00	1.00	0.00	1.69	-0.69	matched_by_id	mongo_exact	UTIL=49.96	0.2500	417.00	2342.65	
+121	664983	Jake McCarthy	UTIL	team_i	3.00	1.00	2.00	1.34	1.66	stub_missing_in_catalog	mlb_api_search	UTIL=49.96	0.2500	417.00	2342.65	
+122	622761	Jorge Mateo	UTIL	team_e	1.00	1.00	0.00	1.34	-0.34	stub_missing_in_catalog	mlb_api_search	UTIL=49.96	0.2500	417.00	2342.65	
+123	681911	Alex Vesia	UTIL	team_h	1.00	1.00	0.00	9.04	-8.04	matched_by_id	mongo_exact	UTIL=49.96	0.2500	417.00	2342.65	
+124	592206	Nick Castellanos	UTIL	team_g	1.00	1.00	0.00	3.44	-2.44	matched_by_id	mongo_exact	UTIL=49.96	0.2500	417.00	2342.65	
+125	669203	Corbin Burnes	UTIL	team_c	1.00	1.00	0.00	7.64	-6.64	matched_by_id	mongo_exact	UTIL=49.96	0.2500	417.00	2342.65	
+126	596133	Luke Weaver	UTIL	team_h	3.00	1.00	2.00	1.34	1.66	stub_missing_in_catalog	mlb_api_search	UTIL=49.96	0.2500	417.00	2342.65	
+127	694393	Jaxon Wiggins	UTIL	team_i	1.00	1.00	0.00	1.34	-0.34	stub_missing_in_catalog	mlb_api_search	UTIL=49.96	0.2500	417.00	2342.65	
+128	676617	Riley O'Brien	UTIL	team_g	3.00	1.00	2.00	8.69	-5.69	matched_by_id	mongo_exact	UTIL=49.96	0.2500	417.00	2342.65	
+129	605280	Clay Holmes	UTIL	team_g	1.00	1.00	0.00	9.74	-8.74	matched_by_name	mlb_api_search	UTIL=49.96	0.2500	417.00	2342.65	
+130	9000018	Spencer Shellenbach	UTIL	team_c	1.00	1.00	0.00	1.34	-0.34	synthetic_fixture_id	synthetic_unresolved	UTIL=49.96	0.2500	417.00	2342.65	
+
+--- Replay catalog diagnostics (this checkpoint, new auction picks) ---
+total_new_picks: 29
+resolved_picks: 15
+unresolved_picks: 14
+missing_catalog_rows (replay status): 13
+by_status: matched_by_id=14 matched_by_name=1 stub_missing_in_catalog=13 stub_unresolved_name=0 synthetic_fixture_id=1 proxy_pool=0
+stubs_among_new_auction_picks: 14
+
+--- Checkpoint summary (new picks only, n=29) ---
+median |paid - prev_adj|: 0.0000
+mean |paid - prev_adj|: 0.8172
+mean |paid - prev_recommended_bid|: 2.2500
+
+Top 10 model > auction (prev_adj > paid; gap = prev_adj - paid, largest gap first):
+  pick 113 Harrison Bader prev_adj=6.40 paid=2.00 gap=4.40 replay=matched_by_id
+  pick 116 Mike Tauchman prev_adj=1.30 paid=1.00 gap=0.30 replay=matched_by_id
+
+Top 10 auction > model (paid > prev_adj; gap = paid - prev_adj, largest gap first):
+  pick 119 Braxton Ashcraft prev_adj=1.00 paid=4.00 gap=3.00 replay=matched_by_id
+  pick 103 Jake Magnum prev_adj=1.00 paid=3.00 gap=2.00 replay=matched_by_id
+  pick 105 Garrett Mitchell prev_adj=1.00 paid=3.00 gap=2.00 replay=stub_missing_in_catalog
+  pick 114 Max Meyer prev_adj=1.00 paid=3.00 gap=2.00 replay=stub_missing_in_catalog
+  pick 121 Jake McCarthy prev_adj=1.00 paid=3.00 gap=2.00 replay=stub_missing_in_catalog
+  pick 126 Luke Weaver prev_adj=1.00 paid=3.00 gap=2.00 replay=stub_missing_in_catalog
+  pick 128 Riley O'Brien prev_adj=1.00 paid=3.00 gap=2.00 replay=matched_by_id
+  pick 101 Sean Manaea prev_adj=1.00 paid=2.00 gap=1.00 replay=stub_missing_in_catalog
+  pick 104 Marcell Ozuna prev_adj=1.00 paid=2.00 gap=1.00 replay=matched_by_id
+  pick 107 David Peterson prev_adj=1.00 paid=2.00 gap=1.00 replay=stub_missing_in_catalog
+
+replacement_values_by_slot_or_position (this checkpoint):
+ {
+  "C": 2.96,
+  "1B": 1.96,
+  "2B": 1.96,
+  "3B": 2.96,
+  "SS": 1.96,
+  "OF": 1.96,
+  "CI": 10.96,
+  "MI": 17.96,
+  "UTIL": 49.96,
+  "P": 1.96
+}
+
+Top 20 available players by adjusted_value (this checkpoint; [CATALOG_STUB] = zero-baseline stub row):
+  592450 Aaron Judge RF baseline=113.96 adj=29.00 replay=matched_by_id
+  669373 Tarik Skubal P baseline=103.21 adj=26.31 replay=matched_by_id
+  676979 Garrett Crochet P baseline=90.71 adj=23.19 replay=matched_by_id
+  608070 José Ramírez 3B baseline=83.96 adj=21.25 replay=matched_by_id
+  686613 Hunter Brown P baseline=81.96 adj=21.00 replay=matched_by_id
+  677951 Bobby Witt Jr. SS baseline=80.96 adj=20.75 replay=matched_by_id
+  543135 Nathan Eovaldi P baseline=79.46 adj=20.38 replay=matched_by_id
+  693433 Bryan Woo P baseline=76.96 adj=19.75 replay=matched_by_id
+  547973 Aroldis Chapman P baseline=73.21 adj=18.81 replay=matched_by_id
+  608331 Max Fried P baseline=73.21 adj=18.81 replay=matched_by_id
+  69ac5be91f05b394067e8cb1 Ronald Acuna Jr. OF baseline=71.56 adj=18.40 replay=matched_by_id
+  663728 Cal Raleigh C baseline=71.96 adj=18.25 replay=matched_by_id
+  594798 Jacob deGrom P baseline=70.71 adj=18.19 replay=matched_by_id
+  607074 Carlos Rodón P baseline=70.71 adj=18.19 replay=matched_by_id
+  677594 Julio Rodríguez CF baseline=67.96 adj=17.50 replay=matched_by_id
+  647304 Josh Naylor 1B baseline=64.96 adj=16.75 replay=matched_by_id
+  662253 Andrés Muñoz P baseline=64.46 adj=16.63 replay=matched_by_id
+  669432 Trevor Rogers P baseline=64.46 adj=16.63 replay=matched_by_id
+  69ac5be91f05b394067e8cb2 Juan Soto OF baseline=64.36 adj=16.60 replay=matched_by_id
+  608032 Carlos Estévez P baseline=61.96 adj=16.00 replay=matched_by_id
+
+--- Top-20 contamination (catalog / data) ---
+stubs_in_top_20_adjusted: 0
+pct_top_20_contaminated_by_stubs: 0.0%
+
+--- Team-adjusted diagnostics (presentation layer) ---
+avg(team_adjusted - adjusted): 1.8272
+distribution: boost=433 flat=0 discount=0
+positional_need_multiplier distribution: {"1.00":46,"1.10":183,"1.25":204}
+budget_pressure_multiplier distribution: {"1.15":433}
+combined multiplier distribution: {"1.00x1.15":46,"1.10x1.15":183,"1.25x1.15":204}
+
+Top 10 largest team_adjusted_value boosts:
+  592450 Aaron Judge RF adj=29.00 team_adj=41.69 delta=12.69 mult=1.25x1.15
+  608070 José Ramírez 3B adj=21.25 team_adj=30.55 delta=9.30 mult=1.25x1.15
+  677951 Bobby Witt Jr. SS adj=20.75 team_adj=29.83 delta=9.08 mult=1.25x1.15
+  69ac5be91f05b394067e8cb1 Ronald Acuna Jr. OF adj=18.40 team_adj=26.45 delta=8.05 mult=1.00x1.15
+  663728 Cal Raleigh C adj=18.25 team_adj=26.23 delta=7.98 mult=1.25x1.15
+  677594 Julio Rodríguez CF adj=17.50 team_adj=25.16 delta=7.66 mult=1.25x1.15
+  647304 Josh Naylor 1B adj=16.75 team_adj=24.08 delta=7.33 mult=1.25x1.15
+  69ac5be91f05b394067e8cb2 Juan Soto OF adj=16.60 team_adj=23.86 delta=7.26 mult=1.00x1.15
+  69ac5be91f05b394067e8cb3 Mookie Betts OF adj=16.00 team_adj=23.00 delta=7.00 mult=1.00x1.15
+  669373 Tarik Skubal P adj=26.31 team_adj=33.28 delta=6.97 mult=1.10x1.15
+
+Top 10 largest team_adjusted_value discounts:
+  695238 Will Wagner X adj=1.00 team_adj=1.15 delta=0.15 mult=1.00x1.15
+  650490 Yandy Díaz DH adj=1.00 team_adj=1.26 delta=0.26 mult=1.10x1.15
+  667670 Brent Rooker DH adj=1.00 team_adj=1.26 delta=0.26 mult=1.10x1.15
+  671056 Iván Herrera DH adj=1.00 team_adj=1.26 delta=0.26 mult=1.10x1.15
+  519317 Giancarlo Stanton DH adj=1.00 team_adj=1.26 delta=0.26 mult=1.10x1.15
+  609280 Miguel Andujar DH adj=1.00 team_adj=1.26 delta=0.26 mult=1.10x1.15
+  545361 Mike Trout DH adj=1.00 team_adj=1.26 delta=0.26 mult=1.10x1.15
+  457705 Andrew McCutchen DH adj=1.00 team_adj=1.26 delta=0.26 mult=1.10x1.15
+  516782 Starling Marte DH adj=1.00 team_adj=1.26 delta=0.26 mult=1.10x1.15
+  527038 Wilmer Flores DH adj=1.00 team_adj=1.26 delta=0.26 mult=1.10x1.15
+
+Done.
+
+Wrote missing-catalog report (36 row(s)): /Users/ssperrottet/dev/AmethystAPI/test-fixtures/replay-evaluator/missing-catalog-report.json
+
+========================================================================
+EXPORT / CONVERSION SUMMARY (conversion-match-report.json)
+stub_unresolved_count: 18
+match_method counts: {"mongo_initials_last":54,"mlb_api_search":103,"synthetic_unresolved":18,"mongo_exact":94}
+pick_gaps_in_sheet: none
+
+Largest |paid - prev_adj| among new picks (|delta|>=15, all checkpoints combined):
+(rows with stub/synthetic catalog: 5 of 22 total large-miss events)
+  pick 52 id=665833 Oneil Cruz paid=29.00 prev_adj=1.00 delta=28.00 replay=stub_missing_in_catalog method=mlb_api_search
+  pick 7 id=547180 Bryce Harper paid=36.00 prev_adj=9.35 delta=26.65 replay=matched_by_id method=mongo_exact
+  pick 5 id=606466 Ketel Marte paid=38.00 prev_adj=13.52 delta=24.48 replay=matched_by_id method=mongo_exact
+  pick 27 id=516811 Eury Perez paid=25.00 prev_adj=1.00 delta=24.00 replay=stub_missing_in_catalog method=mlb_api_search
+  pick 21 id=621566 Matt Olson paid=35.00 prev_adj=11.07 delta=23.93 replay=matched_by_id method=mongo_exact
+  pick 36 id=646240 Rafael Devers paid=33.00 prev_adj=10.27 delta=22.73 replay=matched_by_id method=mongo_exact
+  pick 28 id=673357 Luis Robert paid=27.00 prev_adj=4.50 delta=22.50 replay=matched_by_id method=mongo_exact
+  pick 13 id=608324 Alex Bregman paid=26.00 prev_adj=3.91 delta=22.09 replay=matched_by_id method=mongo_exact
+  pick 9 id=645277 Ozzie Albies paid=25.00 prev_adj=3.38 delta=21.62 replay=matched_by_id method=mongo_exact
+  pick 3 id=665487 Fernando Tatis paid=43.00 prev_adj=21.39 delta=21.61 replay=matched_by_id method=mongo_exact
+  pick 56 id=682622 Noelvi Marte paid=22.00 prev_adj=1.90 delta=20.10 replay=matched_by_id method=mongo_exact
+  pick 4 id=605141 Mookie Betts paid=28.00 prev_adj=8.15 delta=19.85 replay=matched_by_id method=mongo_exact
+
+========================================================================
+PAID ERROR COMPARISON (new picks, replay filters applied)
+mean |paid - prev_adj|: 7.1980
+mean |paid - prev_recommended_bid|: 6.8985
+recommended_bid MAE improvement: 0.2995 (positive means lower error)
+
+========================================================================
+REPLAY READINESS (diagnostic only — valuation math unchanged)
+Unique catalog/data problem player_ids (missing report): 36. Large paid-vs-adjusted misses (|delta|>=15): 17 likely model/signal on clean catalog rows, 5 on stub/synthetic rows (baseline/catalog issue).
+Top-20 lists showed at least one catalog stub in some checkpoint: no.
+replacement_slots_v2: use this split to decide whether misses are trustworthy; refresh Mongo/catalog coverage if stub misses dominate.

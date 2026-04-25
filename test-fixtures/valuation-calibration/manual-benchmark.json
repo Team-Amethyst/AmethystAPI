@@ -26,6 +26,7 @@
     "league_scope": "Mixed",
     "scoring_format": "5x5",
     "deterministic": true,
+    "inflation_model": "global_v1",
     "seed": 11,
     "drafted_players": [
       {

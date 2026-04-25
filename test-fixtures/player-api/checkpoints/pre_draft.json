@@ -89,153 +89,154 @@
   "num_teams": 9,
   "league_scope": "Mixed",
   "scoring_format": "5x5",
+  "inflation_model": "replacement_slots_v2",
   "drafted_players": [],
   "pre_draft_rosters": [
     {
       "team_id": "team_a",
       "players": [
         {
-          "player_id": "53",
+          "player_id": "686948",
           "name": "D. Baldwin",
           "position": "C",
           "team": "UNK",
           "team_id": "team_a",
-          "paid": 0,
+          "paid": 5,
           "is_keeper": true
         },
         {
-          "player_id": "269",
+          "player_id": "669364",
           "name": "X. Edwards (2/S)",
           "position": "2B",
           "team": "UNK",
           "team_id": "team_a",
-          "paid": 0,
+          "paid": 23,
           "is_keeper": true
         },
         {
-          "player_id": "2",
+          "player_id": "676475",
           "name": "A. Burleson (1/O)",
           "position": "OF",
           "team": "UNK",
           "team_id": "team_a",
-          "paid": 0,
+          "paid": 15,
           "is_keeper": true
         },
         {
-          "player_id": "232",
+          "player_id": "684007",
           "name": "S. Imanaga",
           "position": "P",
           "team": "UNK",
           "team_id": "team_a",
-          "paid": 0,
+          "paid": 10,
           "is_keeper": true
         },
         {
-          "player_id": "36",
+          "player_id": "690990",
           "name": "C. Horton",
           "position": "P",
           "team": "UNK",
           "team_id": "team_a",
-          "paid": 0,
+          "paid": 5,
           "is_keeper": true
         },
         {
-          "player_id": "19",
+          "player_id": "694297",
           "name": "B. Pfaadt",
           "position": "P",
           "team": "UNK",
           "team_id": "team_a",
-          "paid": 0,
+          "paid": 15,
           "is_keeper": true
         },
         {
-          "player_id": "108",
+          "player_id": "9000001",
           "name": "J. Misorowski",
           "position": "P",
           "team": "UNK",
           "team_id": "team_a",
-          "paid": 0,
+          "paid": 5,
           "is_keeper": true
         },
         {
-          "player_id": "191",
+          "player_id": "571448",
           "name": "N. Arenado",
           "position": "3B",
           "team": "UNK",
           "team_id": "team_a",
-          "paid": 0,
+          "paid": 11,
           "is_keeper": true
         },
         {
-          "player_id": "230",
+          "player_id": "686217",
           "name": "S. Frelick",
           "position": "OF",
           "team": "UNK",
           "team_id": "team_a",
-          "paid": 0,
+          "paid": 15,
           "is_keeper": true
         },
         {
-          "player_id": "104",
+          "player_id": "694192",
           "name": "J. Chourio",
           "position": "OF",
           "team": "UNK",
           "team_id": "team_a",
-          "paid": 0,
+          "paid": 10,
           "is_keeper": true
         },
         {
-          "player_id": "83",
+          "player_id": "112824",
           "name": "F. Crews",
           "position": "OF",
           "team": "UNK",
           "team_id": "team_a",
-          "paid": 0,
+          "paid": 5,
           "is_keeper": true
         },
         {
-          "player_id": "212",
+          "player_id": "117913",
           "name": "R. Lopez",
           "position": "P",
           "team": "UNK",
           "team_id": "team_a",
-          "paid": 0,
+          "paid": 4,
           "is_keeper": true
         },
         {
-          "player_id": "168",
+          "player_id": "700241",
           "name": "M. McGreevy",
           "position": "P",
           "team": "UNK",
           "team_id": "team_a",
-          "paid": 0,
+          "paid": 1,
           "is_keeper": true
         },
         {
-          "player_id": "38",
+          "player_id": "519242",
           "name": "C. Sale",
           "position": "P",
           "team": "UNK",
           "team_id": "team_a",
-          "paid": 0,
+          "paid": 15,
           "is_keeper": true
         },
         {
-          "player_id": "110",
+          "player_id": "592791",
           "name": "J. Taillon",
           "position": "P",
           "team": "UNK",
           "team_id": "team_a",
-          "paid": 0,
+          "paid": 1,
           "is_keeper": true
         },
         {
-          "player_id": "20",
+          "player_id": "122268",
           "name": "B. Singer",
           "position": "P",
           "team": "UNK",
           "team_id": "team_a",
-          "paid": 0,
+          "paid": 4,
           "is_keeper": true
         }
       ]
@@ -244,61 +245,61 @@
       "team_id": "team_b",
       "players": [
         {
-          "player_id": "82",
+          "player_id": "682626",
           "name": "F. Alvarez",
           "position": "C",
           "team": "UNK",
           "team_id": "team_b",
-          "paid": 0,
+          "paid": 10,
           "is_keeper": true
         },
         {
-          "player_id": "231",
+          "player_id": "9000002",
           "name": "S. Horowitz",
           "position": "1B",
           "team": "UNK",
           "team_id": "team_b",
-          "paid": 0,
+          "paid": 3,
           "is_keeper": true
         },
         {
-          "player_id": "213",
+          "player_id": "677595",
           "name": "R. Mauricio",
           "position": "3B",
           "team": "UNK",
           "team_id": "team_b",
-          "paid": 0,
+          "paid": 5,
           "is_keeper": true
         },
         {
-          "player_id": "40",
+          "player_id": "682928",
           "name": "C.J. Abrams",
           "position": "SS",
           "team": "UNK",
           "team_id": "team_b",
-          "paid": 0,
+          "paid": 20,
           "is_keeper": true
         },
         {
-          "player_id": "107",
+          "player_id": "701538",
           "name": "J. Merrill",
           "position": "OF",
           "team": "UNK",
           "team_id": "team_b",
-          "paid": 0,
+          "paid": 10,
           "is_keeper": true
         },
         {
-          "player_id": "164",
+          "player_id": "671739",
           "name": "M. Harris",
           "position": "OF",
           "team": "UNK",
           "team_id": "team_b",
-          "paid": 0,
+          "paid": 20,
           "is_keeper": true
         },
         {
-          "player_id": "135",
+          "player_id": "9000003",
           "name": "Joseph Ortiz",
           "position": "U",
           "team": "UNK",
@@ -307,52 +308,52 @@
           "is_keeper": true
         },
         {
-          "player_id": "229",
+          "player_id": "150161",
           "name": "S. Alcantara",
           "position": "P",
           "team": "UNK",
           "team_id": "team_b",
-          "paid": 0,
+          "paid": 1,
           "is_keeper": true
         },
         {
-          "player_id": "166",
+          "player_id": "650633",
           "name": "M. King",
           "position": "P",
           "team": "UNK",
           "team_id": "team_b",
-          "paid": 0,
+          "paid": 16,
           "is_keeper": true
         },
         {
-          "player_id": "234",
+          "player_id": "675911",
           "name": "S. Strider",
           "position": "P",
           "team": "UNK",
           "team_id": "team_b",
-          "paid": 0,
+          "paid": 16,
           "is_keeper": true
         },
         {
-          "player_id": "271",
+          "player_id": "808967",
           "name": "Y. Yamamoto",
           "position": "P",
           "team": "UNK",
           "team_id": "team_b",
-          "paid": 0,
+          "paid": 10,
           "is_keeper": true
         },
         {
-          "player_id": "163",
+          "player_id": "683737",
           "name": "M. Busch",
           "position": "1B",
           "team": "UNK",
           "team_id": "team_b",
-          "paid": 0,
+          "paid": 10,
           "is_keeper": true
         },
         {
-          "player_id": "17",
+          "player_id": "663586",
           "name": "Austin Riley",
           "position": "3B",
           "team": "UNK",
@@ -361,57 +362,57 @@
           "is_keeper": true
         },
         {
-          "player_id": "206",
+          "player_id": "656976",
           "name": "P. Smith (1B)",
           "position": "CI",
           "team": "UNK",
           "team_id": "team_b",
-          "paid": 0,
+          "paid": 1,
           "is_keeper": true
         },
         {
-          "player_id": "170",
+          "player_id": "691026",
           "name": "M. Winn",
           "position": "SS",
           "team": "UNK",
           "team_id": "team_b",
-          "paid": 0,
+          "paid": 10,
           "is_keeper": true
         },
         {
-          "player_id": "210",
+          "player_id": "660670",
           "name": "R. Acuna",
           "position": "OF",
           "team": "UNK",
           "team_id": "team_b",
-          "paid": 0,
+          "paid": 31,
           "is_keeper": true
         },
         {
-          "player_id": "171",
+          "player_id": "9000004",
           "name": "M. Yastremski",
           "position": "OF",
           "team": "UNK",
           "team_id": "team_b",
-          "paid": 0,
+          "paid": 2,
           "is_keeper": true
         },
         {
-          "player_id": "194",
+          "player_id": "666157",
           "name": "N. Lodolo",
           "position": "P",
           "team": "UNK",
           "team_id": "team_b",
-          "paid": 0,
+          "paid": 7,
           "is_keeper": true
         },
         {
-          "player_id": "106",
+          "player_id": "666200",
           "name": "J. Luzardo",
           "position": "P",
           "team": "UNK",
           "team_id": "team_b",
-          "paid": 0,
+          "paid": 1,
           "is_keeper": true
         }
       ]
@@ -420,147 +421,147 @@
       "team_id": "team_c",
       "players": [
         {
-          "player_id": "94",
+          "player_id": "696100",
           "name": "H. Goodman",
           "position": "C",
           "team": "UNK",
           "team_id": "team_c",
-          "paid": 0,
+          "paid": 1,
           "is_keeper": true
         },
         {
-          "player_id": "90",
+          "player_id": "672515",
           "name": "G. Moreno",
           "position": "C",
           "team": "UNK",
           "team_id": "team_c",
-          "paid": 0,
+          "paid": 10,
           "is_keeper": true
         },
         {
-          "player_id": "21",
+          "player_id": "668930",
           "name": "B. Turang",
           "position": "2B",
           "team": "UNK",
           "team_id": "team_c",
-          "paid": 0,
+          "paid": 7,
           "is_keeper": true
         },
         {
-          "player_id": "245",
+          "player_id": "607208",
           "name": "T. Turner",
           "position": "SS",
           "team": "UNK",
           "team_id": "team_c",
-          "paid": 0,
+          "paid": 34,
           "is_keeper": true
         },
         {
-          "player_id": "34",
+          "player_id": "682998",
           "name": "C. Carroll",
           "position": "OF",
           "team": "UNK",
           "team_id": "team_c",
-          "paid": 0,
+          "paid": 15,
           "is_keeper": true
         },
         {
-          "player_id": "204",
+          "player_id": "691718",
           "name": "P. Crow-Armstrong",
           "position": "OF",
           "team": "UNK",
           "team_id": "team_c",
-          "paid": 0,
+          "paid": 10,
           "is_keeper": true
         },
         {
-          "player_id": "111",
+          "player_id": "112660",
           "name": "J. Walker",
           "position": "OF",
           "team": "UNK",
           "team_id": "team_c",
-          "paid": 0,
+          "paid": 1,
           "is_keeper": true
         },
         {
-          "player_id": "162",
+          "player_id": "571510",
           "name": "M. Boyd",
           "position": "P",
           "team": "UNK",
           "team_id": "team_c",
-          "paid": 0,
+          "paid": 1,
           "is_keeper": true
         },
         {
-          "player_id": "22",
+          "player_id": "605540",
           "name": "B. Woodruff",
           "position": "P",
           "team": "UNK",
           "team_id": "team_c",
-          "paid": 0,
+          "paid": 4,
           "is_keeper": true
         },
         {
-          "player_id": "37",
+          "player_id": "608348",
           "name": "C. Kelly",
           "position": "C",
           "team": "UNK",
           "team_id": "team_c",
-          "paid": 0,
+          "paid": 2,
           "is_keeper": true
         },
         {
-          "player_id": "84",
+          "player_id": "518692",
           "name": "F. Freeman",
           "position": "1B",
           "team": "UNK",
           "team_id": "team_c",
-          "paid": 0,
+          "paid": 31,
           "is_keeper": true
         },
         {
-          "player_id": "64",
+          "player_id": "682829",
           "name": "E. De La Cruz",
           "position": "SS",
           "team": "UNK",
           "team_id": "team_c",
-          "paid": 0,
+          "paid": 15,
           "is_keeper": true
         },
         {
-          "player_id": "54",
+          "player_id": "621020",
           "name": "D. Swanson (SS)",
           "position": "MI",
           "team": "UNK",
           "team_id": "team_c",
-          "paid": 0,
+          "paid": 8,
           "is_keeper": true
         },
         {
-          "player_id": "105",
+          "player_id": "808982",
           "name": "J. Hoo Lee",
           "position": "OF",
           "team": "UNK",
           "team_id": "team_c",
-          "paid": 0,
+          "paid": 5,
           "is_keeper": true
         },
         {
-          "player_id": "35",
+          "player_id": "676917",
           "name": "C. Cavalli",
           "position": "P",
           "team": "UNK",
           "team_id": "team_c",
-          "paid": 0,
+          "paid": 5,
           "is_keeper": true
         },
         {
-          "player_id": "150",
+          "player_id": "657277",
           "name": "L. Webb",
           "position": "P",
           "team": "UNK",
           "team_id": "team_c",
-          "paid": 0,
+          "paid": 28,
           "is_keeper": true
         }
       ]
@@ -569,156 +570,156 @@
       "team_id": "team_d",
       "players": [
         {
-          "player_id": "169",
+          "player_id": "571970",
           "name": "M. Muncy",
           "position": "3B",
           "team": "UNK",
           "team_id": "team_d",
-          "paid": 0,
+          "paid": 9,
           "is_keeper": true
         },
         {
-          "player_id": "193",
+          "player_id": "663538",
           "name": "N. Hoerner",
           "position": "2B",
           "team": "UNK",
           "team_id": "team_d",
-          "paid": 0,
+          "paid": 17,
           "is_keeper": true
         },
         {
-          "player_id": "85",
+          "player_id": "596019",
           "name": "F. Lindor",
           "position": "SS",
           "team": "UNK",
           "team_id": "team_d",
-          "paid": 0,
+          "paid": 36,
           "is_keeper": true
         },
         {
-          "player_id": "18",
+          "player_id": "669016",
           "name": "B. Marsh",
           "position": "OF",
           "team": "UNK",
           "team_id": "team_d",
-          "paid": 0,
+          "paid": 1,
           "is_keeper": true
         },
         {
-          "player_id": "112",
+          "player_id": "695578",
           "name": "J. Wood",
           "position": "OF",
           "team": "UNK",
           "team_id": "team_d",
-          "paid": 0,
+          "paid": 10,
           "is_keeper": true
         },
         {
-          "player_id": "165",
+          "player_id": "116919",
           "name": "M. Keller",
           "position": "P",
           "team": "UNK",
           "team_id": "team_d",
-          "paid": 0,
+          "paid": 7,
           "is_keeper": true
         },
         {
-          "player_id": "211",
+          "player_id": "628452",
           "name": "R. Iglesias",
           "position": "P",
           "team": "UNK",
           "team_id": "team_d",
-          "paid": 0,
+          "paid": 18,
           "is_keeper": true
         },
         {
-          "player_id": "3",
+          "player_id": "682663",
           "name": "A. Ramirez",
           "position": "C",
           "team": "UNK",
           "team_id": "team_d",
-          "paid": 0,
+          "paid": 1,
           "is_keeper": true
         },
         {
-          "player_id": "167",
+          "player_id": "592518",
           "name": "M. Machado",
           "position": "3B",
           "team": "UNK",
           "team_id": "team_d",
-          "paid": 0,
+          "paid": 33,
           "is_keeper": true
         },
         {
-          "player_id": "265",
+          "player_id": "642715",
           "name": "W. Adames",
           "position": "SS",
           "team": "UNK",
           "team_id": "team_d",
-          "paid": 0,
+          "paid": 11,
           "is_keeper": true
         },
         {
-          "player_id": "264",
+          "player_id": "9000005",
           "name": "V. Scott II",
           "position": "OF",
           "team": "UNK",
           "team_id": "team_d",
-          "paid": 0,
+          "paid": 5,
           "is_keeper": true
         },
         {
-          "player_id": "235",
+          "player_id": "673548",
           "name": "S. Suzuki",
           "position": "OF",
           "team": "UNK",
           "team_id": "team_d",
-          "paid": 0,
+          "paid": 18,
           "is_keeper": true
         },
         {
-          "player_id": "89",
+          "player_id": "116100",
           "name": "G. Holmes",
           "position": "P",
           "team": "UNK",
           "team_id": "team_d",
-          "paid": 0,
+          "paid": 5,
           "is_keeper": true
         },
         {
-          "player_id": "39",
+          "player_id": "650911",
           "name": "C. Sanchez",
           "position": "P",
           "team": "UNK",
           "team_id": "team_d",
-          "paid": 0,
+          "paid": 9,
           "is_keeper": true
         },
         {
-          "player_id": "195",
+          "player_id": "601713",
           "name": "N. Pivetta",
           "position": "P",
           "team": "UNK",
           "team_id": "team_d",
-          "paid": 0,
+          "paid": 13,
           "is_keeper": true
         },
         {
-          "player_id": "214",
+          "player_id": "110856",
           "name": "R. Ray",
           "position": "P",
           "team": "UNK",
           "team_id": "team_d",
-          "paid": 0,
+          "paid": 15,
           "is_keeper": true
         },
         {
-          "player_id": "233",
+          "player_id": "660271",
           "name": "S. Ohtani",
           "position": "P",
           "team": "UNK",
           "team_id": "team_d",
-          "paid": 0,
+          "paid": 46,
           "is_keeper": true
         }
       ]
@@ -727,75 +728,75 @@
       "team_id": "team_e",
       "players": [
         {
-          "player_id": "91",
+          "player_id": "672695",
           "name": "G. Perdomo",
           "position": "SS",
           "team": "UNK",
           "team_id": "team_e",
-          "paid": 0,
+          "paid": 1,
           "is_keeper": true
         },
         {
-          "player_id": "109",
+          "player_id": "665742",
           "name": "J. Soto",
           "position": "OF",
           "team": "UNK",
           "team_id": "team_e",
-          "paid": 0,
+          "paid": 47,
           "is_keeper": true
         },
         {
-          "player_id": "141",
+          "player_id": "663656",
           "name": "K. Tucker",
           "position": "OF",
           "team": "UNK",
           "team_id": "team_e",
-          "paid": 0,
+          "paid": 44,
           "is_keeper": true
         },
         {
-          "player_id": "140",
+          "player_id": "656941",
           "name": "K. Schwarber",
           "position": "U",
           "team": "UNK",
           "team_id": "team_e",
-          "paid": 0,
+          "paid": 23,
           "is_keeper": true
         },
         {
-          "player_id": "1",
+          "player_id": "671096",
           "name": "A. Abbott",
           "position": "P",
           "team": "UNK",
           "team_id": "team_e",
-          "paid": 0,
+          "paid": 4,
           "is_keeper": true
         },
         {
-          "player_id": "86",
+          "player_id": "642547",
           "name": "F. Peralta",
           "position": "P",
           "team": "UNK",
           "team_id": "team_e",
-          "paid": 0,
+          "paid": 25,
           "is_keeper": true
         },
         {
-          "player_id": "205",
+          "player_id": "694973",
           "name": "P. Skenes",
           "position": "P",
           "team": "UNK",
           "team_id": "team_e",
-          "paid": 0,
+          "paid": 10,
           "is_keeper": true
         },
         {
-          "player_id": "192",
+          "player_id": "233694",
           "name": "N. Cortes",
           "position": "P",
           "team": "UNK",
           "team_id": "team_e",
-          "paid": 0,
+          "paid": 14,
           "is_keeper": true
         }
       ]
@@ -806,7 +807,7 @@
       "team_id": "team_a",
       "players": [
         {
-          "player_id": "119",
+          "player_id": "691620",
           "name": "Jeferson Quero",
           "position": "UTIL",
           "team": "UNK",
@@ -814,7 +815,7 @@
           "paid": 0
         },
         {
-          "player_id": "68",
+          "player_id": "695490",
           "name": "Edwin Arroyo",
           "position": "UTIL",
           "team": "UNK",
@@ -822,7 +823,7 @@
           "paid": 0
         },
         {
-          "player_id": "243",
+          "player_id": "806965",
           "name": "Starlyn Caba",
           "position": "UTIL",
           "team": "UNK",
@@ -830,7 +831,7 @@
           "paid": 0
         },
         {
-          "player_id": "72",
+          "player_id": "815896",
           "name": "Emil Morales",
           "position": "UTIL",
           "team": "UNK",
@@ -838,7 +839,7 @@
           "paid": 0
         },
         {
-          "player_id": "71",
+          "player_id": "816113",
           "name": "Eli Willits",
           "position": "UTIL",
           "team": "UNK",
@@ -846,7 +847,7 @@
           "paid": 0
         },
         {
-          "player_id": "144",
+          "player_id": "682634",
           "name": "Kevin Alcantara",
           "position": "UTIL",
           "team": "UNK",
@@ -854,7 +855,7 @@
           "paid": 0
         },
         {
-          "player_id": "70",
+          "player_id": "9000006",
           "name": "Edwin Florentino",
           "position": "UTIL",
           "team": "UNK",
@@ -862,7 +863,7 @@
           "paid": 0
         },
         {
-          "player_id": "220",
+          "player_id": "702281",
           "name": "Robby Snelling",
           "position": "UTIL",
           "team": "UNK",
@@ -870,15 +871,7 @@
           "paid": 0
         },
         {
-          "player_id": "247",
-          "name": "Team F",
-          "position": "UTIL",
-          "team": "UNK",
-          "team_id": "team_a",
-          "paid": 0
-        },
-        {
-          "player_id": "126",
+          "player_id": "118086",
           "name": "Joe Mack",
           "position": "UTIL",
           "team": "UNK",
@@ -886,7 +879,7 @@
           "paid": 0
         },
         {
-          "player_id": "223",
+          "player_id": "691775",
           "name": "Ryan Clifford",
           "position": "UTIL",
           "team": "UNK",
@@ -894,7 +887,7 @@
           "paid": 0
         },
         {
-          "player_id": "222",
+          "player_id": "808963",
           "name": "Roki Sasaki",
           "position": "UTIL",
           "team": "UNK",
@@ -902,7 +895,7 @@
           "paid": 0
         },
         {
-          "player_id": "154",
+          "player_id": "701656",
           "name": "Logan Henderson",
           "position": "UTIL",
           "team": "UNK",
@@ -910,7 +903,7 @@
           "paid": 0
         },
         {
-          "player_id": "131",
+          "player_id": "804636",
           "name": "Jonah Tong",
           "position": "UTIL",
           "team": "UNK",
@@ -918,7 +911,7 @@
           "paid": 0
         },
         {
-          "player_id": "253",
+          "player_id": "806258",
           "name": "Thomas White",
           "position": "UTIL",
           "team": "UNK",
@@ -931,7 +924,7 @@
       "team_id": "team_b",
       "players": [
         {
-          "player_id": "146",
+          "player_id": "682210",
           "name": "Kody Hoese",
           "position": "UTIL",
           "team": "UNK",
@@ -939,7 +932,7 @@
           "paid": 0
         },
         {
-          "player_id": "122",
+          "player_id": "815908",
           "name": "Jesus Made",
           "position": "UTIL",
           "team": "UNK",
@@ -947,7 +940,7 @@
           "paid": 0
         },
         {
-          "player_id": "97",
+          "player_id": "691616",
           "name": "Hedbert Perez",
           "position": "UTIL",
           "team": "UNK",
@@ -955,7 +948,7 @@
           "paid": 0
         },
         {
-          "player_id": "75",
+          "player_id": "699013",
           "name": "Esmerlyn Valdez",
           "position": "UTIL",
           "team": "UNK",
@@ -963,7 +956,7 @@
           "paid": 0
         },
         {
-          "player_id": "189",
+          "player_id": "694208",
           "name": "Moises Ballesteros",
           "position": "UTIL",
           "team": "UNK",
@@ -971,7 +964,7 @@
           "paid": 0
         },
         {
-          "player_id": "152",
+          "player_id": "9000007",
           "name": "Liam Doyle",
           "position": "UTIL",
           "team": "UNK",
@@ -979,15 +972,7 @@
           "paid": 0
         },
         {
-          "player_id": "248",
-          "name": "Team G",
-          "position": "UTIL",
-          "team": "UNK",
-          "team_id": "team_b",
-          "paid": 0
-        },
-        {
-          "player_id": "55",
+          "player_id": "687221",
           "name": "Dalton Rushing",
           "position": "UTIL",
           "team": "UNK",
@@ -995,7 +980,7 @@
           "paid": 0
         },
         {
-          "player_id": "236",
+          "player_id": "701398",
           "name": "Sal Stewart",
           "position": "UTIL",
           "team": "UNK",
@@ -1003,7 +988,7 @@
           "paid": 0
         },
         {
-          "player_id": "139",
+          "player_id": "702222",
           "name": "Justin Crawford",
           "position": "UTIL",
           "team": "UNK",
@@ -1011,7 +996,7 @@
           "paid": 0
         },
         {
-          "player_id": "252",
+          "player_id": "702261",
           "name": "Termarr Johnson",
           "position": "UTIL",
           "team": "UNK",
@@ -1019,7 +1004,7 @@
           "paid": 0
         },
         {
-          "player_id": "244",
+          "player_id": "829162",
           "name": "Steele Hall",
           "position": "UTIL",
           "team": "UNK",
@@ -1027,7 +1012,7 @@
           "paid": 0
         },
         {
-          "player_id": "8",
+          "player_id": "805795",
           "name": "Aidan Miller",
           "position": "UTIL",
           "team": "UNK",
@@ -1035,7 +1020,7 @@
           "paid": 0
         },
         {
-          "player_id": "4",
+          "player_id": "805999",
           "name": "A.J. Ewing",
           "position": "UTIL",
           "team": "UNK",
@@ -1043,7 +1028,7 @@
           "paid": 0
         },
         {
-          "player_id": "254",
+          "player_id": "693311",
           "name": "Tink Hence",
           "position": "UTIL",
           "team": "UNK",
@@ -1056,7 +1041,7 @@
       "team_id": "team_c",
       "players": [
         {
-          "player_id": "117",
+          "player_id": "701649",
           "name": "James Triantos",
           "position": "UTIL",
           "team": "UNK",
@@ -1064,7 +1049,7 @@
           "paid": 0
         },
         {
-          "player_id": "42",
+          "player_id": "702253",
           "name": "Cam Collier",
           "position": "UTIL",
           "team": "UNK",
@@ -1072,7 +1057,7 @@
           "paid": 0
         },
         {
-          "player_id": "136",
+          "player_id": "9000008",
           "name": "Josuar De Jesus Gonzalez",
           "position": "UTIL",
           "team": "UNK",
@@ -1080,7 +1065,7 @@
           "paid": 0
         },
         {
-          "player_id": "158",
+          "player_id": "434524",
           "name": "Luis Pena",
           "position": "UTIL",
           "team": "UNK",
@@ -1088,7 +1073,7 @@
           "paid": 0
         },
         {
-          "player_id": "120",
+          "player_id": "800473",
           "name": "Jefferson Rojas",
           "position": "UTIL",
           "team": "UNK",
@@ -1096,7 +1081,7 @@
           "paid": 0
         },
         {
-          "player_id": "128",
+          "player_id": "806959",
           "name": "Joendry Vargas",
           "position": "UTIL",
           "team": "UNK",
@@ -1104,7 +1089,7 @@
           "paid": 0
         },
         {
-          "player_id": "123",
+          "player_id": "702518",
           "name": "Jett Williams",
           "position": "UTIL",
           "team": "UNK",
@@ -1112,7 +1097,7 @@
           "paid": 0
         },
         {
-          "player_id": "125",
+          "player_id": "9000009",
           "name": "Jodue De Paula",
           "position": "UTIL",
           "team": "UNK",
@@ -1120,15 +1105,7 @@
           "paid": 0
         },
         {
-          "player_id": "249",
-          "name": "Team H",
-          "position": "UTIL",
-          "team": "UNK",
-          "team_id": "team_c",
-          "paid": 0
-        },
-        {
-          "player_id": "202",
+          "player_id": "683357",
           "name": "Owen Caissie",
           "position": "UTIL",
           "team": "UNK",
@@ -1136,7 +1113,7 @@
           "paid": 0
         },
         {
-          "player_id": "59",
+          "player_id": "666206",
           "name": "Delvin Perez",
           "position": "UTIL",
           "team": "UNK",
@@ -1144,7 +1121,7 @@
           "paid": 0
         },
         {
-          "player_id": "65",
+          "player_id": "690992",
           "name": "Ed Howard",
           "position": "UTIL",
           "team": "UNK",
@@ -1152,7 +1129,7 @@
           "paid": 0
         },
         {
-          "player_id": "101",
+          "player_id": "666183",
           "name": "Hunter Bishop",
           "position": "UTIL",
           "team": "UNK",
@@ -1160,7 +1137,7 @@
           "paid": 0
         },
         {
-          "player_id": "61",
+          "player_id": "687551",
           "name": "Drew Gilbert",
           "position": "UTIL",
           "team": "UNK",
@@ -1168,7 +1145,7 @@
           "paid": 0
         },
         {
-          "player_id": "100",
+          "player_id": "687431",
           "name": "Hudson Head",
           "position": "UTIL",
           "team": "UNK",
@@ -1176,7 +1153,7 @@
           "paid": 0
         },
         {
-          "player_id": "187",
+          "player_id": "701527",
           "name": "Mike Sirota",
           "position": "UTIL",
           "team": "UNK",
@@ -1184,7 +1161,7 @@
           "paid": 0
         },
         {
-          "player_id": "226",
+          "player_id": "814439",
           "name": "Ryan Waldschmidt",
           "position": "UTIL",
           "team": "UNK",
@@ -1197,7 +1174,7 @@
       "team_id": "team_d",
       "players": [
         {
-          "player_id": "96",
+          "player_id": "695670",
           "name": "Harry Ford",
           "position": "UTIL",
           "team": "UNK",
@@ -1205,7 +1182,7 @@
           "paid": 0
         },
         {
-          "player_id": "50",
+          "player_id": "806198",
           "name": "Cooper Pratt",
           "position": "UTIL",
           "team": "UNK",
@@ -1213,7 +1190,7 @@
           "paid": 0
         },
         {
-          "player_id": "33",
+          "player_id": "696149",
           "name": "Bubba Chandler",
           "position": "UTIL",
           "team": "UNK",
@@ -1221,7 +1198,7 @@
           "paid": 0
         },
         {
-          "player_id": "199",
+          "player_id": "690997",
           "name": "Nolan McLean",
           "position": "UTIL",
           "team": "UNK",
@@ -1229,7 +1206,7 @@
           "paid": 0
         },
         {
-          "player_id": "41",
+          "player_id": "9000010",
           "name": "Cam Caminiti",
           "position": "UTIL",
           "team": "UNK",
@@ -1237,15 +1214,7 @@
           "paid": 0
         },
         {
-          "player_id": "250",
-          "name": "Team I",
-          "position": "UTIL",
-          "team": "UNK",
-          "team_id": "team_d",
-          "paid": 0
-        },
-        {
-          "player_id": "240",
+          "player_id": "9000011",
           "name": "Seth Hernandez",
           "position": "UTIL",
           "team": "UNK",
@@ -1253,7 +1222,7 @@
           "paid": 0
         },
         {
-          "player_id": "147",
+          "player_id": "804606",
           "name": "Konnor Griffin",
           "position": "UTIL",
           "team": "UNK",
@@ -1261,7 +1230,7 @@
           "paid": 0
         },
         {
-          "player_id": "78",
+          "player_id": "806956",
           "name": "Ethan Salas",
           "position": "UTIL",
           "team": "UNK",
@@ -1269,7 +1238,7 @@
           "paid": 0
         },
         {
-          "player_id": "216",
+          "player_id": "823787",
           "name": "Rainiel Rodriguez",
           "position": "UTIL",
           "team": "UNK",
@@ -1277,7 +1246,7 @@
           "paid": 0
         },
         {
-          "player_id": "13",
+          "player_id": "806957",
           "name": "Alfredo Duno",
           "position": "UTIL",
           "team": "UNK",
@@ -1290,7 +1259,7 @@
       "team_id": "team_e",
       "players": [
         {
-          "player_id": "45",
+          "player_id": "695505",
           "name": "Chase Burns",
           "position": "UTIL",
           "team": "UNK",
@@ -1298,7 +1267,7 @@
           "paid": 0
         },
         {
-          "player_id": "14",
+          "player_id": "691725",
           "name": "Andrew Painter",
           "position": "UTIL",
           "team": "UNK",
@@ -1306,7 +1275,7 @@
           "paid": 0
         },
         {
-          "player_id": "218",
+          "player_id": "695076",
           "name": "Rhett Lowder",
           "position": "UTIL",
           "team": "UNK",
@@ -1314,7 +1283,7 @@
           "paid": 0
         },
         {
-          "player_id": "9",
+          "player_id": "9000012",
           "name": "Aiva Arquette",
           "position": "UTIL",
           "team": "UNK",
@@ -1322,7 +1291,7 @@
           "paid": 0
         },
         {
-          "player_id": "52",
+          "player_id": "678707",
           "name": "Cristian Hernandez",
           "position": "UTIL",
           "team": "UNK",
@@ -1330,7 +1299,7 @@
           "paid": 0
         },
         {
-          "player_id": "77",
+          "player_id": "815787",
           "name": "Ethan Holliday",
           "position": "UTIL",
           "team": "UNK",
@@ -1338,7 +1307,7 @@
           "paid": 0
         },
         {
-          "player_id": "238",
+          "player_id": "814409",
           "name": "Seaver King",
           "position": "UTIL",
           "team": "UNK",
@@ -1346,7 +1315,7 @@
           "paid": 0
         },
         {
-          "player_id": "76",
+          "player_id": "9000013",
           "name": "Ethan Conrad",
           "position": "UTIL",
           "team": "UNK",
