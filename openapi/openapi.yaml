@@ -40,6 +40,16 @@ info:
     `RATE_LIMIT_CATALOG_MAX` + `RATE_LIMIT_CATALOG_WINDOW_MS`. Defaults ~300/min valuation,
     ~1200/min catalog; **off automatically under Vitest** unless `RATE_LIMIT_ENABLED=1`.
 
+    **Valuation requests — `league_id`:** Send optional **`league_id`** on flat bodies (or nested
+    **`league.id`**) so `context_v2.scope.league_id` is not `"unknown"`.
+
+    **Valuation responses — field semantics:** `baseline_value` is the **post–scoring-baseline**
+    list price (Mongo `value` after format/roster/projection steps), **not** raw catalog dollars.
+    **`inflation_factor`** is clamped by the workflow (floor/cap) when pool list dollars are
+    extreme vs remaining budget. **`scarcity_adjustment`** is **`0`** (scarcity is embedded in
+    **`baseline_value`**); **`inflation_adjustment`** equals **`adjusted_value - baseline_value`**
+    (the full auction delta). **`explain_v2.adjustments`** reconcile to that same delta.
+
     **Developer portal — key minting:** `GET /api/keys/status` and `POST /api/keys/issue` mint
     MongoDB `apikeys` documents by default; set `KEY_ISSUANCE_ENABLED=0|false|off` to disable.
     Optional `KEY_ISSUANCE_SECRET` requires header `X-Key-Issuance-Token`.
@@ -92,6 +102,11 @@ components:
 
     ValuationResponse:
       type: object
+      description: |
+        Per-player `baseline_value` is list price after the scoring/roster baseline engine
+        (not raw Mongo `value`). `adjusted_value = baseline_value * inflation_factor`.
+        `inflation_factor` may hit workflow floor/cap. `valuation_model_version` is a deploy label
+        (`VALUATION_MODEL_VERSION` / git SHA / package name@version).
       required:
         - engine_contract_version
         - inflation_factor
@@ -106,14 +121,19 @@ components:
           example: "1"
         inflation_factor:
           type: number
+          description: League-wide multiplier; may be workflow floor/capped when pool $ ≫ budget remaining.
         total_budget_remaining:
           type: number
         pool_value_remaining:
           type: number
+          description: Sum of undrafted players' baseline list dollars after the baseline engine.
         players_remaining:
           type: integer
         calculated_at:
           type: string
+        valuation_model_version:
+          type: string
+          description: Operator-facing build label (env `VALUATION_MODEL_VERSION`, CI git SHA, or package.json).
         market_notes:
           type: array
           description: Human-readable league context (inflation, scarcity, monopolies).
@@ -186,6 +206,9 @@ components:
 
     ValuedPlayer:
       type: object
+      description: |
+        `scarcity_adjustment` is always 0 (roster scarcity is inside `baseline_value`).
+        `inflation_adjustment` is the full delta `adjusted_value - baseline_value`.
       properties:
         player_id:
           type: string
@@ -201,13 +224,30 @@ components:
           type: integer
         baseline_value:
           type: number
+          description: Post–baseline-engine list price (includes embedded scarcity when applicable).
         adjusted_value:
           type: number
+          description: baseline_value × league inflation_factor (same factor on every row).
         indicator:
           type: string
           enum: [Steal, Reach, Fair Value]
         inflation_factor:
           type: number
+        baseline_components:
+          type: object
+          properties:
+            scoring_format:
+              type: string
+            projection_component:
+              type: number
+            scarcity_component:
+              type: number
+        scarcity_adjustment:
+          type: number
+          description: Always 0; use baseline_components.scarcity_component and baseline_value for scarcity economics.
+        inflation_adjustment:
+          type: number
+          description: adjusted_value minus baseline_value (total auction delta from inflation factor).
         why:
           type: array
           description: Short rationale strings for UI / trust.
@@ -226,6 +266,7 @@ components:
               type: number
             adjustments:
               type: object
+              description: scarcity is 0 (embedded in list_value); inflation + other = auction_target − list_value.
               properties:
                 scarcity:
                   type: number

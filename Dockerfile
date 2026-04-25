@@ -20,6 +20,10 @@ COPY tsconfig.json ./
 # Build TypeScript
 RUN pnpm build
 
+# Injected at `docker build --build-arg BUILD_GIT_SHA=...` so responses expose a real deploy id.
+ARG BUILD_GIT_SHA=
+ENV VALUATION_MODEL_VERSION=${BUILD_GIT_SHA}
+
 # Production stage
 FROM node:20-slim
 

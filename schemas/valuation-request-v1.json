@@ -16,6 +16,10 @@
       "type": "string",
       "description": "Activity / grader checkpoint id (e.g. pre_draft, after_pick_10)."
     },
+    "league_id": {
+      "type": "string",
+      "description": "Optional; overrides league.id for context_v2.scope.league_id."
+    },
     "league": { "$ref": "#/$defs/league" },
     "draft_state": {
       "type": "array",
@@ -120,7 +124,11 @@
         "league_scope": { "type": "string", "enum": ["Mixed", "AL", "NL"] },
         "scoring_format": { "type": "string" },
         "hitter_budget_pct": { "type": "number" },
-        "pos_eligibility_threshold": { "type": "number" }
+        "pos_eligibility_threshold": { "type": "number" },
+        "id": {
+          "type": "string",
+          "description": "League id from Draft; used as league_id in responses when top-level league_id is absent."
+        }
       }
     },
     "draftedPlayer": {

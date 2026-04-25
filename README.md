@@ -124,6 +124,7 @@ The **AmethystDraft** API forwards a single JSON object (no extra wrapper): eith
 |---|---|
 | `schema_version` / `schemaVersion` | Contract version; majors `0` and `1` supported |
 | `checkpoint` | e.g. `pre_draft`, `after_pick_10`, … (logged, no PII) |
+| `league_id` | Optional; echoed in `context_v2.scope.league_id`. Nested bodies may use `league.id` instead; top-level `league_id` wins |
 | `budget_by_team_id` | Per-team **remaining** $; when non-empty, league remaining = **sum(map)** and **`paid` ignored** — see [API contract](#api-contract-draft--engine-alignment) |
 | `scoring_format` | `5x5` \| `6x6` \| `points` (validated; v1 inflation may ignore) |
 | `hitter_budget_pct`, `pos_eligibility_threshold` | Forward-compatible; v1 math may ignore |
@@ -148,8 +149,10 @@ If `player_id` is missing, returns `400` with `{ errors: [{ field: "player_id", 
 If `player_id` is not in the current valuation pool, returns `404` with `{ errors: [{ field: "player_id", message: "Player not found in valuation pool" }] }`.
 `valuations[]` rows include optional explainability metadata:
 - `baseline_components` (`scoring_format`, `projection_component`, `scarcity_component`)
-- `scarcity_adjustment`
-- `inflation_adjustment`
+- `scarcity_adjustment` — always `0` (roster scarcity is already in `baseline_value`)
+- `inflation_adjustment` — full delta `adjusted_value - baseline_value` from the league-wide inflation factor
+
+Deploy label **`valuation_model_version`**: env `VALUATION_MODEL_VERSION`, or Docker `BUILD_GIT_SHA` (CI sets this), else `package.json` `name@version`. Set **`VALUATION_AGGREGATE_LOG=1`** for structured per-request pool/inflation logs.
 
 ### `POST /catalog/batch-values`
 First-class baseline read: same **`player_id`** rules as valuation (string MLB id / `mlbId`). Returns **`engine_contract_version`** plus `players[]`. Responses are **cached 120s** per request body (Redis when configured). Merge with MLB bios in Draft. `league_scope` filters the list. `pos_eligibility_threshold` is reserved for future eligibility rules.

@@ -59,6 +59,8 @@ const rosterSlotsNestedUnion = z.union([
 ]);
 
 const leagueBlockSchema = z.object({
+  /** Draft league id; echoed in `context_v2.scope.league_id` when no top-level `league_id`. */
+  id: z.string().optional(),
   roster_slots: rosterSlotsNestedUnion,
   scoring_categories: z.array(scoringCategorySchema).min(1),
   total_budget: z.number().positive(),
@@ -152,9 +154,10 @@ function buildNormalizedFromNested(
 ): NormalizedValuationInput {
   const { league, draft_state, ...rest } = parsed;
   const sv = mergedSchemaVersion(rest, "1.0.0");
+  const leagueId = rest.league_id ?? league.id;
   return {
     schemaVersion: sv,
-    ...(rest.league_id ? { league_id: rest.league_id } : {}),
+    ...(leagueId ? { league_id: leagueId } : {}),
     checkpoint: rest.checkpoint,
     roster_slots: league.roster_slots,
     scoring_categories: league.scoring_categories,

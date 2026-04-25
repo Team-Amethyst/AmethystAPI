@@ -171,7 +171,12 @@ export interface ValuedPlayer {
     projection_component: number;
     scarcity_component: number;
   };
+  /**
+   * Always `0` in current responses: roster/scarcity is already in `baseline_value`
+   * (`baseline_components.scarcity_component`). Kept for wire compatibility.
+   */
   scarcity_adjustment?: number;
+  /** `adjusted_value - baseline_value` (full delta from the league-wide inflation factor). */
   inflation_adjustment?: number;
   /** Human-readable rationale (additive contract field). */
   why?: string[];
@@ -203,6 +208,7 @@ export interface ValuationResponse {
   players_remaining: number;
   valuations: ValuedPlayer[];
   calculated_at: string;
+  /** Build label: `VALUATION_MODEL_VERSION`, git SHA at deploy, or `package.json` name@version. */
   valuation_model_version?: string;
   /** League-wide human notes (inflation, scarcity alerts, monopolies). */
   market_notes?: string[];

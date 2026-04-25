@@ -1,4 +1,5 @@
 import { ENGINE_CONTRACT_VERSION } from "../lib/engineContract";
+import { getValuationModelVersion } from "../lib/valuationModelVersion";
 import { filterByScope } from "../lib/leagueScope";
 import {
   CalculateInflationOptions,
@@ -195,9 +196,9 @@ export function calculateInflation(
         projection_component: meta?.projection_component ?? 0,
         scarcity_component: meta?.scarcity_component ?? 0,
       },
-      scarcity_adjustment: parseFloat(
-        ((meta?.scarcity_component ?? 0) * baselineValue).toFixed(2)
-      ),
+      // scarcity_adjustment: always 0 — roster/scarcity is in baseline_value (baseline_components).
+      scarcity_adjustment: 0,
+      // inflation_adjustment: full delta from league-wide factor (adjusted − baseline).
       inflation_adjustment: parseFloat((adjustedValue - baselineValue).toFixed(2)),
     };
   });
@@ -214,6 +215,6 @@ export function calculateInflation(
     players_remaining: undrafted.length,
     valuations,
     calculated_at: calculatedAt,
-    valuation_model_version: "v2-expert-manual-shape",
+    valuation_model_version: getValuationModelVersion(),
   };
 }

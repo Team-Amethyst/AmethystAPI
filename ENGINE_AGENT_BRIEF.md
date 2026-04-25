@@ -61,7 +61,7 @@ The Engine also mounts **the same licensed routers** under a **`/v1` prefix** (s
   - `confidence` + `assumptions` for trust/caveat display
 - Prefer row-level `explain_v2` over free-text parsing:
   - `auction_target` / `list_value` for display values
-  - `adjustments` for reconciled math chips
+  - `adjustments` — **`scarcity` is `0`** (scarcity is in `list_value`); **`inflation` + `other` = auction_target − list_value`**
   - `drivers[]` for ordered impact reasons
 - `market_notes` is still returned for compatibility and is now generated from `context_v2` to keep both layers consistent.
 
@@ -70,6 +70,7 @@ The Engine also mounts **the same licensed routers** under a **`/v1` prefix** (s
 Draft ends every valuation call with **`finalizeEngineValuationPostPayload()`** after building `EngineValuationContext` in `apps/api/src/lib/engineContext.ts`. Treat the POST body as a **single JSON object** with (at least) these concepts:
 
 - **`roster_slots`**, **`scoring_categories`**, **`total_budget`**, **`num_teams`**, **`league_scope`** (`Mixed` | `AL` | `NL`).
+- **`league_id`** (optional string): **strongly recommended** — Engine echoes it in **`context_v2.scope.league_id`**. Without it, clients see `"unknown"`. Nested checkpoints may send **`league.id`** instead; top-level **`league_id`** wins when both are present.
 - **`drafted_players`**: **auction picks only** (not keepers bucketed separately).
 - **`pre_draft_rosters`**: optional keepers / pre-auction roster sections (nested array of `{ team_id, players[] }` or flat record keyed by `team_id` — Draft supports both shapes upstream; normalize/validate in Engine per your contract).
 - **`budget_by_team_id`**: optional map of remaining budgets.
@@ -112,6 +113,15 @@ Draft’s web client allows **`engine_contract_version`** (or similar) on valuat
 ## Reliability note (set expectations)
 
 Valuations depend on Engine uptime, Draft Mongo consistency for live league routes, and catalog/data freshness. There is no claim of universal “bulletproof” behavior without Engine + data in good shape.
+
+## Engine env (valuation observability)
+
+| Variable | Purpose |
+|----------|---------|
+| **`VALUATION_MODEL_VERSION`** | Overrides the string returned as **`valuation_model_version`** (defaults to **`GITHUB_SHA`** / **`GIT_COMMIT`** / **`package.json`** `name@version`). |
+| **`VALUATION_AGGREGATE_LOG=1`** | Logs one structured **`valuation_aggregate`** line per successful valuation (inflation, pool $, budgets, model version). |
+
+Docker images built in CI pass **`BUILD_GIT_SHA=${{ github.sha }}`** into **`VALUATION_MODEL_VERSION`** so deployed responses carry a real commit id.
 
 ## Checklist (Engine work items)
 

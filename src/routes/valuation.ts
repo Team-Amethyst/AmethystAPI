@@ -59,6 +59,18 @@ async function runValuation(
     });
     return null;
   }
+  if (process.env.VALUATION_AGGREGATE_LOG === "1") {
+    reqLog.info(
+      {
+        inflation_factor: outcome.response.inflation_factor,
+        pool_value_remaining: outcome.response.pool_value_remaining,
+        total_budget_remaining: outcome.response.total_budget_remaining,
+        players_remaining: outcome.response.players_remaining,
+        valuation_model_version: outcome.response.valuation_model_version ?? null,
+      },
+      "valuation_aggregate"
+    );
+  }
   return outcome.response;
 }
 

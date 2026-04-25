@@ -1239,7 +1239,7 @@
           <p class="when" style="margin-bottom:8px">Response header <code>X-Request-Id</code> echoes your id or a generated UUID. OpenAPI: repo <code>openapi/openapi.yaml</code>.</p>
           <div class="code-block"><pre>{
   <span class="t-key">"engine_contract_version"</span>: <span class="t-str">"1"</span>,  <span class="t-cmt">// API contract id — detect drift vs Draft</span>
-  <span class="t-key">"valuation_model_version"</span>: <span class="t-str">"v2-expert-manual-shape"</span>,
+  <span class="t-key">"valuation_model_version"</span>: <span class="t-str">"amethyst-api@1.0.0"</span>,  <span class="t-cmt">// or git SHA in production image</span>
   <span class="t-key">"inflation_factor"</span>:      <span class="t-num">1.12</span>,    <span class="t-cmt">// &gt;1.0 = inflated market</span>
   <span class="t-key">"total_budget_remaining"</span>: <span class="t-num">2184</span>,
   <span class="t-key">"pool_value_remaining"</span>:   <span class="t-num">1948</span>,
@@ -1257,8 +1257,8 @@
       <span class="t-key">"projection_component"</span>: <span class="t-num">4.2</span>,
       <span class="t-key">"scarcity_component"</span>: <span class="t-num">0.1</span>
     },
-    <span class="t-key">"scarcity_adjustment"</span>: <span class="t-num">5.8</span>,
-    <span class="t-key">"inflation_adjustment"</span>: <span class="t-num">7</span>
+    <span class="t-key">"scarcity_adjustment"</span>: <span class="t-num">0</span>,       <span class="t-cmt">// embedded in baseline_value</span>
+    <span class="t-key">"inflation_adjustment"</span>: <span class="t-num">7</span>        <span class="t-cmt">// adjusted − baseline</span>
   }],
   <span class="t-key">"calculated_at"</span>: <span class="t-str">"2026-03-07T17:39:19Z"</span>
 }</pre>

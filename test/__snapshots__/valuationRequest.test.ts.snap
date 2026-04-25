@@ -8,7 +8,7 @@ exports[`calculateInflation with normalized fixtures > legacy-empty deterministi
   "players_remaining": 2,
   "pool_value_remaining": 52,
   "total_budget_remaining": 3120,
-  "valuation_model_version": "v2-expert-manual-shape",
+  "valuation_model_version": "amethyst-api@1.0.0",
   "valuations": [
     {
       "adjusted_value": 2400,
@@ -60,7 +60,7 @@ exports[`calculateInflation with normalized fixtures > nested-after-pick applies
   "players_remaining": 1,
   "pool_value_remaining": 12,
   "total_budget_remaining": 3065,
-  "valuation_model_version": "v2-expert-manual-shape",
+  "valuation_model_version": "amethyst-api@1.0.0",
   "valuations": [
     {
       "adjusted_value": 3065,

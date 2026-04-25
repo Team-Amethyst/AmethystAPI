@@ -93,7 +93,9 @@ function main(): void {
     console.log(
       `  context_v2: league_id=${res.context_v2?.scope.league_id} headline_snip=${(res.context_v2?.market_summary.headline ?? "").slice(0, 72)}…`
     );
-    console.log(`  first row decomp check (|Δ - (scarcity_adj+infl_adj)|) max over all rows: ${maxDecompErr.toFixed(4)}`);
+    console.log(
+      `  decomp: max |Δ − (scarcity_adj + infl_adj)| over all rows (expect ~0): ${maxDecompErr.toFixed(4)}`
+    );
     console.log(`  first row sample:`, JSON.stringify(s));
     const explain = v0.explain_v2;
     if (explain) {

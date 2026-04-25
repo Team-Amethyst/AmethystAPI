@@ -90,9 +90,7 @@ describe("executeValuationWorkflow", () => {
     const res = executeValuationWorkflow(players, minimalInput());
     expect(res.ok).toBe(true);
     if (!res.ok) return;
-    expect(res.response.valuation_model_version).toBe(
-      "v2-expert-manual-shape"
-    );
+    expect(res.response.valuation_model_version).toMatch(/^amethyst-api@/);
     expect(res.response.valuations[0].baseline_components).toBeDefined();
     expect(Array.isArray(res.response.market_notes)).toBe(true);
     expect(res.response.market_notes!.length).toBeGreaterThan(0);

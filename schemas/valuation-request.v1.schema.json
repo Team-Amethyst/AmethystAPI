@@ -33,6 +33,10 @@
       "description": "Fixture / contract version from Draft (e.g. 1.0.0). engine also accepts camelCase schemaVersion."
     },
     "schemaVersion": { "type": "string" },
+    "league_id": {
+      "type": "string",
+      "description": "Optional stable league id from Draft; echoed in valuation `context_v2.scope.league_id`."
+    },
     "checkpoint": {
       "type": "string",
       "description": "e.g. pre_draft | after_pick_10 | after_pick_50 | after_pick_100 | after_pick_130"

@@ -252,6 +252,19 @@ describe("POST /valuation/calculate — AmethystDraft BFF alignment", () => {
     expect(res.body.engine_contract_version).toBe("1");
   });
 
+  it("passes league_id through to context_v2.scope", async () => {
+    const res = await request(app)
+      .post("/valuation/calculate")
+      .send({
+        ...validFlatBase,
+        league_id: "test-league-xyz",
+        schema_version: "1.0.0",
+        deterministic: true,
+      })
+      .expect(200);
+    expect(res.body.context_v2?.scope.league_id).toBe("test-league-xyz");
+  });
+
   it("budget: with budget_by_team_id, ignores paid and sums map values", async () => {
     const res = await request(app)
       .post("/valuation/calculate")
@@ -297,7 +310,7 @@ describe("POST /valuation/calculate — AmethystDraft BFF alignment", () => {
     expect(valuations).toHaveLength(expectedUndrafted);
     expect(aggregateRest).toMatchObject({
       engine_contract_version: "1",
-      valuation_model_version: "v2-expert-manual-shape",
+      valuation_model_version: expect.stringMatching(/^amethyst-api@/),
       calculated_at: "1970-01-01T00:00:00.000Z",
       players_remaining: expectedUndrafted,
       inflation_factor: expect.any(Number),

@@ -83,6 +83,19 @@ describe("parseValuationRequest + Draft checkpoint fixtures", () => {
     if (!r.success) return;
     expect(r.normalized.schemaVersion).toBe("1.0.0");
   });
+
+  it("accepts league_id on flat body", () => {
+    const r = parseValuationRequest({
+      league_id: "league_flat_1",
+      roster_slots: [{ position: "OF", count: 3 }],
+      scoring_categories: [{ name: "HR", type: "batting" }],
+      total_budget: 260,
+      drafted_players: [],
+    });
+    expect(r.success).toBe(true);
+    if (!r.success) return;
+    expect(r.normalized.league_id).toBe("league_flat_1");
+  });
 });
 
 describe("parseValuationRequest nested (Draft checkpoint interop)", () => {
@@ -107,6 +120,37 @@ describe("parseValuationRequest nested (Draft checkpoint interop)", () => {
       ])
     );
     expect(r.normalized.roster_slots).toHaveLength(3);
+  });
+
+  it("maps league.id to league_id (top-level league_id wins)", () => {
+    const fromLeagueOnly = parseValuationRequest({
+      schemaVersion: "1.0.0",
+      league: {
+        id: "lg_nested",
+        roster_slots: [{ position: "OF", count: 3 }],
+        scoring_categories: [{ name: "HR", type: "batting" }],
+        total_budget: 260,
+      },
+      draft_state: [],
+    });
+    expect(fromLeagueOnly.success).toBe(true);
+    if (!fromLeagueOnly.success) return;
+    expect(fromLeagueOnly.normalized.league_id).toBe("lg_nested");
+
+    const topWins = parseValuationRequest({
+      league_id: "lg_top",
+      schemaVersion: "1.0.0",
+      league: {
+        id: "lg_nested",
+        roster_slots: [{ position: "OF", count: 3 }],
+        scoring_categories: [{ name: "HR", type: "batting" }],
+        total_budget: 260,
+      },
+      draft_state: [],
+    });
+    expect(topWins.success).toBe(true);
+    if (!topWins.success) return;
+    expect(topWins.normalized.league_id).toBe("lg_top");
   });
 });
 

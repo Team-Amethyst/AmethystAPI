@@ -82,6 +82,7 @@ function cacheKey(
     inflation: response.inflation_factor,
     budget: response.total_budget_remaining,
     players: response.players_remaining,
+    leagueId: input.league_id ?? null,
     scope,
     drafted: input.drafted_players.map((d) => [d.player_id, d.team_id, d.paid ?? null]),
     budgets: input.budget_by_team_id ?? null,
@@ -95,29 +96,28 @@ function buildDriverRows(row: ValuedPlayer, inflationFactor: number) {
   const inflationImpact = rounded(row.inflation_adjustment ?? 0);
   const delta = rounded(row.adjusted_value - row.baseline_value);
   const otherImpact = rounded(delta - scarcityImpact - inflationImpact);
+  const scFac = row.baseline_components?.scarcity_component ?? 0;
   const drivers = [
-    {
-      label: `Scarcity at ${row.position}`,
-      impact: scarcityImpact,
-      reason:
-        Math.abs(scarcityImpact) < 0.25
-          ? "No meaningful scarcity premium in current pool."
-          : `Scarcity/fit layer moved price by ${scarcityImpact >= 0 ? "+" : ""}$${Math.abs(
-              scarcityImpact
-            ).toFixed(1)}.`,
-    },
     {
       label: "League inflation",
       impact: inflationImpact,
-      reason: `Inflation factor ${inflationFactor.toFixed(2)}x applied to baseline and scarcity-adjusted value.`,
+      reason: `League-wide factor ${inflationFactor.toFixed(2)}× applied to list_value (baseline already includes scoring/roster scarcity).`,
+    },
+    {
+      label: `Scarcity context (${row.position})`,
+      impact: scarcityImpact,
+      reason:
+        Math.abs(scFac) < 0.001
+          ? "No roster scarcity multiplier on this row (see baseline_components)."
+          : `Scarcity multiplier ${scFac.toFixed(3)} is embedded in list_value; scarcity_adjustment stays 0 so drivers reconcile to auction_target − list_value.`,
     },
     {
       label: "Other model effects",
       impact: otherImpact,
       reason:
         Math.abs(otherImpact) < 0.25
-          ? "No additional model adjustments."
-          : "Small residual effects from rounding and model components.",
+          ? "No residual; Steal/Reach comes from ADP vs value rank, not an extra dollar line item."
+          : "Rounding residual only.",
     },
   ].sort((a, b) => Math.abs(b.impact) - Math.abs(a.impact));
   return { scarcityImpact, inflationImpact, otherImpact, drivers };
@@ -145,13 +145,10 @@ function buildPlayerWhy(
     `Adjusted auction $${row.adjusted_value.toFixed(1)} vs baseline $${row.baseline_value.toFixed(1)} after league inflation (${leagueInflation.toFixed(2)}×).`
   );
 
-  if (
-    row.scarcity_adjustment != null &&
-    Number.isFinite(row.scarcity_adjustment) &&
-    Math.abs(row.scarcity_adjustment) >= 0.5
-  ) {
+  const scFac = row.baseline_components?.scarcity_component ?? 0;
+  if (Number.isFinite(scFac) && Math.abs(scFac) >= 0.01) {
     why.push(
-      `Scarcity / roster-fit layer shifted baseline by about $${row.scarcity_adjustment.toFixed(1)} before inflation.`
+      `Roster/scarcity is reflected in baseline list price (scarcity_component=${scFac.toFixed(3)} on baseline_components), before the league inflation factor.`
     );
   }
 
@@ -253,8 +250,10 @@ export function attachValuationExplainability(
       position_alerts: sortedAlerts,
       assumptions: [
         "Auction inflation is computed from remaining budget divided by remaining pool value.",
+        "The inflation factor may be clamped to a workflow floor/cap when pool list dollars are extreme versus remaining cash.",
         "Scarcity urgency uses remaining elite and mid-tier supply versus league demand.",
         "Draft state is treated as stateless full-context input for every request.",
+        "pool_value_remaining sums baseline list dollars on undrafted players; real auction accuracy depends on catalog value quality — run `pnpm run audit:valuation-response` for fixture QA.",
       ],
       confidence: {
         overall: confidenceOverall,
