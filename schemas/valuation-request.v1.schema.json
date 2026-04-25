@@ -14,25 +14,46 @@
     "roster_slots": {
       "type": "array",
       "minItems": 1,
-      "items": { "$ref": "#/$defs/rosterSlot" }
+      "items": {
+        "$ref": "#/$defs/rosterSlot"
+      }
     },
     "scoring_categories": {
       "type": "array",
       "minItems": 1,
-      "items": { "$ref": "#/$defs/scoringCategory" }
+      "items": {
+        "$ref": "#/$defs/scoringCategory"
+      }
     },
-    "total_budget": { "type": "number", "exclusiveMinimum": 0 },
-    "num_teams": { "type": "integer", "minimum": 1 },
-    "league_scope": { "type": "string", "enum": ["Mixed", "AL", "NL"] },
+    "total_budget": {
+      "type": "number",
+      "exclusiveMinimum": 0
+    },
+    "num_teams": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "league_scope": {
+      "type": "string",
+      "enum": [
+        "Mixed",
+        "AL",
+        "NL"
+      ]
+    },
     "drafted_players": {
       "type": "array",
-      "items": { "$ref": "#/$defs/draftedPlayer" }
+      "items": {
+        "$ref": "#/$defs/draftedPlayer"
+      }
     },
     "schema_version": {
       "type": "string",
       "description": "Fixture / contract version from Draft (e.g. 1.0.0). engine also accepts camelCase schemaVersion."
     },
-    "schemaVersion": { "type": "string" },
+    "schemaVersion": {
+      "type": "string"
+    },
     "league_id": {
       "type": "string",
       "description": "Optional stable league id from Draft; echoed in valuation `context_v2.scope.league_id`."
@@ -43,83 +64,182 @@
     },
     "budget_by_team_id": {
       "type": "object",
-      "additionalProperties": { "type": "number", "minimum": 0 }
+      "additionalProperties": {
+        "type": "number",
+        "minimum": 0
+      }
     },
-    "scoring_format": { "type": "string", "enum": ["5x5", "6x6", "points"] },
-    "hitter_budget_pct": { "type": "number" },
-    "pos_eligibility_threshold": { "type": "number" },
+    "scoring_format": {
+      "type": "string",
+      "enum": [
+        "5x5",
+        "6x6",
+        "points"
+      ]
+    },
+    "hitter_budget_pct": {
+      "type": "number"
+    },
+    "pos_eligibility_threshold": {
+      "type": "number"
+    },
     "minors": {
       "type": "array",
-      "items": { "$ref": "#/$defs/teamBucket" }
+      "items": {
+        "$ref": "#/$defs/teamBucket"
+      }
     },
     "taxi": {
       "type": "array",
-      "items": { "$ref": "#/$defs/teamBucket" }
+      "items": {
+        "$ref": "#/$defs/teamBucket"
+      }
     },
-    "deterministic": { "type": "boolean" },
-    "seed": { "type": "number" },
+    "deterministic": {
+      "type": "boolean"
+    },
+    "seed": {
+      "type": "number"
+    },
     "player_ids": {
       "type": "array",
-      "items": { "type": "string", "minLength": 1 }
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "inflation_model": {
+      "type": "string",
+      "enum": [
+        "global_v1",
+        "surplus_slots_v1",
+        "replacement_slots_v2"
+      ],
+      "description": "global_v1 = league-wide list rescale. surplus_slots_v1 = single replacement slice. replacement_slots_v2 = slot/position-aware replacement + surplus (Draftroom preferred). Defaults to global_v1 when omitted."
     },
     "pre_draft_rosters": {
       "description": "Keepers / pre-draft rosters: either a map team_id → rows, or an array of { team_id, players } (Draft BFF finalize payload).",
       "oneOf": [
         {
           "type": "object",
-          "additionalProperties": { "type": "array" }
+          "additionalProperties": {
+            "type": "array"
+          }
         },
         {
           "type": "array",
-          "items": { "$ref": "#/$defs/teamBucket" }
+          "items": {
+            "$ref": "#/$defs/teamBucket"
+          }
         }
       ]
+    },
+    "user_team_id": {
+      "type": "string",
+      "description": "Optional team context for team_adjusted_value; defaults to team_1 when omitted."
     }
   },
   "$defs": {
     "rosterSlot": {
       "type": "object",
-      "required": ["position", "count"],
+      "required": [
+        "position",
+        "count"
+      ],
       "properties": {
-        "position": { "type": "string" },
-        "count": { "type": "integer", "minimum": 1 }
+        "position": {
+          "type": "string"
+        },
+        "count": {
+          "type": "integer",
+          "minimum": 1
+        }
       },
       "additionalProperties": false
     },
     "scoringCategory": {
       "type": "object",
-      "required": ["name", "type"],
+      "required": [
+        "name",
+        "type"
+      ],
       "properties": {
-        "name": { "type": "string" },
-        "type": { "type": "string", "enum": ["batting", "pitching"] }
+        "name": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string",
+          "enum": [
+            "batting",
+            "pitching"
+          ]
+        }
       },
       "additionalProperties": false
     },
     "draftedPlayer": {
       "type": "object",
-      "required": ["player_id", "name", "position", "team", "team_id"],
+      "required": [
+        "player_id",
+        "name",
+        "position",
+        "team",
+        "team_id"
+      ],
       "properties": {
-        "player_id": { "type": "string", "minLength": 1 },
-        "name": { "type": "string" },
-        "position": { "type": "string" },
-        "team": { "type": "string" },
-        "team_id": { "type": "string" },
-        "paid": { "type": "number", "minimum": 0 },
-        "positions": { "type": "array", "items": { "type": "string" } },
-        "is_keeper": { "type": "boolean" },
-        "roster_slot": { "type": "string" },
-        "pick_number": { "type": "integer" }
+        "player_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "name": {
+          "type": "string"
+        },
+        "position": {
+          "type": "string"
+        },
+        "team": {
+          "type": "string"
+        },
+        "team_id": {
+          "type": "string"
+        },
+        "paid": {
+          "type": "number",
+          "minimum": 0
+        },
+        "positions": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "is_keeper": {
+          "type": "boolean"
+        },
+        "roster_slot": {
+          "type": "string"
+        },
+        "pick_number": {
+          "type": "integer"
+        }
       },
       "additionalProperties": false
     },
     "teamBucket": {
       "type": "object",
-      "required": ["team_id", "players"],
+      "required": [
+        "team_id",
+        "players"
+      ],
       "properties": {
-        "team_id": { "type": "string" },
+        "team_id": {
+          "type": "string"
+        },
         "players": {
           "type": "array",
-          "items": { "$ref": "#/$defs/draftedPlayer" }
+          "items": {
+            "$ref": "#/$defs/draftedPlayer"
+          }
         }
       },
       "additionalProperties": false

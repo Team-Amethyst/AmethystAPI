@@ -13,6 +13,8 @@ function baseRow(over: Partial<ValuedPlayer> = {}): ValuedPlayer {
     tier: 1,
     baseline_value: 10,
     adjusted_value: 11,
+    recommended_bid: 10.65,
+    team_adjusted_value: 10.12,
     indicator: "Fair Value",
     inflation_factor: 1.1,
     ...over,
@@ -22,6 +24,7 @@ function baseRow(over: Partial<ValuedPlayer> = {}): ValuedPlayer {
 function baseResponse(over: Partial<ValuationResponse> = {}): ValuationResponse {
   return {
     engine_contract_version: ENGINE_CONTRACT_VERSION,
+    inflation_model: "global_v1",
     inflation_factor: 1.1,
     inflation_raw: 1.1,
     inflation_bounded_by: "none",
@@ -79,6 +82,15 @@ describe("validateValuationResponse", () => {
     expect(q.ok).toBe(false);
   });
 
+  it("rejects invalid inflation_model", () => {
+    const bad = {
+      ...baseResponse(),
+      inflation_model: "bogus" as ValuationResponse["inflation_model"],
+    };
+    const q = validateValuationResponse(bad);
+    expect(q.ok).toBe(false);
+  });
+
   it("rejects negative total_budget_remaining", () => {
     const q = validateValuationResponse(
       baseResponse({ total_budget_remaining: -1 })
@@ -128,6 +140,24 @@ describe("validateValuationResponse", () => {
       baseResponse({ valuations: [baseRow({ adjusted_value: -5 })] })
     );
     expect(q.ok).toBe(false);
+  });
+
+  it("rejects recommended_bid outside [adjusted_value, baseline_value]", () => {
+    const q = validateValuationResponse(
+      baseResponse({ valuations: [baseRow({ recommended_bid: 50 })] })
+    );
+    expect(q.ok).toBe(false);
+    if (q.ok) return;
+    expect(q.issues.some((i) => i.includes("recommended_bid"))).toBe(true);
+  });
+
+  it("rejects team_adjusted_value above 1.5x baseline", () => {
+    const q = validateValuationResponse(
+      baseResponse({ valuations: [baseRow({ team_adjusted_value: 20 })] })
+    );
+    expect(q.ok).toBe(false);
+    if (q.ok) return;
+    expect(q.issues.some((i) => i.includes("team_adjusted_value"))).toBe(true);
   });
 
   it("rejects invalid indicator", () => {

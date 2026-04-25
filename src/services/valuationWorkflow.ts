@@ -8,6 +8,8 @@ import { logger } from "../lib/logger";
 import { validateValuationResponse } from "../lib/valuationQuality";
 import { calculateInflation } from "./inflationEngine";
 import { scoringAwareBaselinePlayers } from "./baselineValueEngine";
+import { computeRemainingLeagueRosterSlots } from "../lib/remainingLeagueRosterSlots";
+import { buildRosteredPlayersForSlotEngine } from "../lib/rosteredPlayersForSlots";
 
 /**
  * Valuation pipeline (course UML activity diagram — first pass mapping)
@@ -18,7 +20,8 @@ import { scoringAwareBaselinePlayers } from "./baselineValueEngine";
  *    should carry 3-year stats, age, role, injury signals populated by your analytics/sync
  *    pipeline (not an external valuation API).
  * 3. **Filter drafted / ineligible** — Inside `calculateInflation` (drafted ids + league_scope).
- *    Optional `player_ids` only limits **returned rows**; inflation uses the **full** undrafted pool.
+ *    Optional `player_ids` only limits **returned rows**; inflation basis follows **`inflation_model`**
+ *    (`global_v1`, `surplus_slots_v1`, or `replacement_slots_v2`; see `docs/valuation-inflation-semantics.md`).
  * 4. **Choose scoring system** — Branch on `scoring_format`: `points` vs category-style
  *    (`5x5` / `6x6` / default rotisserie-style). **v1:** Baseline auction $ still come from
  *    `LeanPlayer.value` (your model’s output in DB). Per-system stat→dollar conversion is
@@ -114,6 +117,13 @@ export function executeValuationWorkflow(
     input.roster_slots
   );
   const extra = extractDraftedIdsAndSpend(input);
+  const rosteredPlayersForSlots = buildRosteredPlayersForSlotEngine(input);
+  const remainingLeagueSlots = computeRemainingLeagueRosterSlots(
+    input.roster_slots,
+    input.num_teams,
+    input.drafted_players,
+    extra.additionalDraftedIds
+  );
 
   const retryPlan = [
     { inflationCap: 3.0, inflationFloor: 0.25 },
@@ -136,10 +146,14 @@ export function executeValuationWorkflow(
         seed: input.seed,
         playerIdsFilter: input.player_ids,
         budgetByTeamId: input.budget_by_team_id,
+        userTeamId: input.user_team_id,
         additionalSpent: extra.additionalSpent,
         additionalDraftedIds: extra.additionalDraftedIds,
         inflationCap: pass.inflationCap,
         inflationFloor: pass.inflationFloor,
+        inflationModel: input.inflation_model ?? "global_v1",
+        remainingLeagueSlots,
+        rosteredPlayersForSlots,
       }
     );
 

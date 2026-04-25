@@ -104,12 +104,18 @@ components:
       type: object
       description: |
         Per-player `baseline_value` is list price after the scoring/roster baseline engine
-        (not raw Mongo `value`). `adjusted_value = baseline_value * inflation_factor`.
-        `inflation_factor` may hit workflow floor/cap. `inflation_raw` is the pre-clamp ratio; `inflation_bounded_by`
-        states whether cap or floor was applied. `pool_value_remaining` / `players_remaining` describe the **full**
-        undrafted inflation pool (not `valuations.length` when `player_ids` is set). `valuation_model_version` is a deploy label.
+        (not raw Mongo `value`).         `inflation_model` selects the inflation pass: `global_v1` uses
+        `adjusted_value = baseline_value * inflation_factor` with the **full** undrafted pool as
+        the denominator; `surplus_slots_v1` uses roster-derived remaining slots, reserves $1
+        per empty slot, and sets `adjusted_value = min_bid + inflation_factor * max(0, baseline_value - replacement)`;
+        `replacement_slots_v2` uses slot/position-aware replacement + surplus allocation (Draftroom preferred;
+        see `docs/valuation-inflation-semantics.md` and response metadata fields). `inflation_factor` may hit workflow floor/cap.
+        `inflation_raw` is the pre-clamp ratio (meaning depends on `inflation_model`). `players_remaining`
+        is always the count of the full undrafted pool; `pool_value_remaining` matches the inflation
+        denominator for the active model. `valuation_model_version` is a deploy label.
       required:
         - engine_contract_version
+        - inflation_model
         - inflation_factor
         - inflation_raw
         - inflation_bounded_by
@@ -122,12 +128,16 @@ components:
         engine_contract_version:
           type: string
           example: "1"
+        inflation_model:
+          type: string
+          enum: [global_v1, surplus_slots_v1, replacement_slots_v2]
+          description: Inflation pass used for this response (echoes request defaulting rule).
         inflation_factor:
           type: number
           description: League-wide multiplier after cap/floor (applied).
         inflation_raw:
           type: number
-          description: Remaining budget divided by full undrafted pool list dollars, before cap/floor.
+          description: Pre–cap/floor ratio; see `inflation_model` (global = budget ÷ full pool $; surplus v1 = surplus cash ÷ draftable surplus $; v2 = surplus cash ÷ total_surplus_mass when applicable).
         inflation_bounded_by:
           type: string
           enum: [none, cap, floor]
@@ -136,7 +146,36 @@ components:
           type: number
         pool_value_remaining:
           type: number
-          description: Sum of undrafted players' baseline list dollars after the baseline engine.
+          description: Inflation denominator for the active model (full undrafted baseline $ for `global_v1`; sum of surplus baseline $ in the draftable slice for `surplus_slots_v1`; `total_surplus_mass` for `replacement_slots_v2`).
+        remaining_slots:
+          type: integer
+          minimum: 0
+          description: Present for `replacement_slots_v2` — unfilled roster slots (league-wide) before the undrafted assignment pass.
+        min_bid:
+          type: number
+          description: Present for `replacement_slots_v2` — reserved dollars per remaining slot (currently 1).
+        surplus_cash:
+          type: number
+          minimum: 0
+          description: Present for `replacement_slots_v2` — `total_budget_remaining − remaining_slots×min_bid`.
+        total_surplus_mass:
+          type: number
+          minimum: 0
+          description: Present for `replacement_slots_v2` — sum of per-player surplus basis over the slot-assigned draftable pool.
+        draftable_pool_size:
+          type: integer
+          minimum: 0
+          description: Present for `replacement_slots_v2` — count of undrafted players assigned into remaining slots in the greedy fill.
+        replacement_values_by_slot_or_position:
+          type: object
+          additionalProperties:
+            type: number
+            minimum: 0
+          description: Present for `replacement_slots_v2` — replacement baseline $ per roster slot key after greedy fill.
+        fallback_reason:
+          type: string
+          nullable: true
+          description: Present for `replacement_slots_v2` when a non-standard path was used (e.g. `no_surplus_cash`); never falls back to `global_v1`.
         players_remaining:
           type: integer
           description: Count of undrafted players in the inflation basis pool (full pool; not filtered by player_ids).
@@ -150,6 +189,15 @@ components:
           description: Human-readable league context (inflation, scarcity, monopolies).
           items:
             type: string
+        recommended_bid_note:
+          type: string
+          description: Presentation-only guidance text for how `recommended_bid` is derived.
+        user_team_id_used:
+          type: string
+          description: Team context used for team_adjusted_value (defaults to team_1).
+        team_adjusted_value_note:
+          type: string
+          description: Presentation-only guidance text for how `team_adjusted_value` is derived.
         context_v2:
           type: object
           description: Structured valuation context for UI clarity and machine consumption.
@@ -244,6 +292,12 @@ components:
         adjusted_value:
           type: number
           description: baseline_value × league inflation_factor (same factor on every row).
+        recommended_bid:
+          type: number
+          description: Presentation-layer auction guidance blend of adjusted_value and baseline_value; clamped between them.
+        team_adjusted_value:
+          type: number
+          description: Team-specific bid signal (adjusted_value scaled by positional need and budget pressure; clamped to 1.5 × baseline_value).
         indicator:
           type: string
           enum: [Steal, Reach, Fair Value]
@@ -609,6 +663,10 @@ paths:
           application/json:
             schema:
               type: object
+              properties:
+                user_team_id:
+                  type: string
+                  description: Optional team context for team_adjusted_value (defaults to team_1).
               additionalProperties: true
       responses:
         "200":

@@ -43,12 +43,21 @@ export function normalizeCatalogPlayers(
       onIssue(`player ${label}: invalid tier, using 0`);
     }
 
+    let mlbId: number | undefined;
+    const rawMlb = d.mlbId;
+    if (typeof rawMlb === "number" && Number.isFinite(rawMlb)) {
+      mlbId = rawMlb;
+    } else if (typeof rawMlb === "string") {
+      const t = rawMlb.trim();
+      if (t && /^\d+$/.test(t)) {
+        const n = Number(t);
+        if (Number.isSafeInteger(n)) mlbId = n;
+      }
+    }
+
     rows.push({
       _id: d._id,
-      mlbId:
-        typeof d.mlbId === "number" && Number.isFinite(d.mlbId)
-          ? d.mlbId
-          : undefined,
+      mlbId,
       name: typeof d.name === "string" ? d.name : "Unknown",
       team: typeof d.team === "string" ? d.team : "",
       position: typeof d.position === "string" ? d.position : "",

@@ -11,12 +11,16 @@ const VALUATION_INTEGRATION_MOCK_POOL = 512;
 
 function countUniquePlayerIdsInRequestBody(body: Record<string, unknown>): number {
   const ids = new Set<string>();
+  const isInMockPool = (pid: string): boolean => {
+    const n = Number(pid);
+    return Number.isInteger(n) && n >= 1 && n <= VALUATION_INTEGRATION_MOCK_POOL;
+  };
   const collectRows = (rows: unknown) => {
     if (!Array.isArray(rows)) return;
     for (const row of rows) {
       if (row != null && typeof row === "object" && "player_id" in row) {
         const pid = (row as { player_id?: unknown }).player_id;
-        if (typeof pid === "string" && pid.length > 0) ids.add(pid);
+        if (typeof pid === "string" && pid.length > 0 && isInMockPool(pid)) ids.add(pid);
       }
     }
   };
@@ -77,7 +81,9 @@ describe("POST /valuation/calculate (Draft checkpoint bodies)", () => {
   app.use(requestIdMiddleware);
   app.post("/valuation/calculate", valuationCalculateHandler);
 
-  const files = readdirSync(checkpointsDir).filter((f) => f.endsWith(".json"));
+  const files = readdirSync(checkpointsDir)
+    .filter((f) => f.endsWith(".json"))
+    .filter((f) => /^pre_draft\.json$|^after_pick_\d+\.json$/.test(f));
 
   it.each(files)("200 and stable response shape for %s", async (file) => {
     const body = JSON.parse(
@@ -90,6 +96,9 @@ describe("POST /valuation/calculate (Draft checkpoint bodies)", () => {
 
     expect(res.body).toMatchObject({
       engine_contract_version: "1",
+      inflation_model: expect.stringMatching(
+        /^(global_v1|surplus_slots_v1|replacement_slots_v2)$/
+      ),
       inflation_factor: expect.any(Number),
       inflation_raw: expect.any(Number),
       inflation_bounded_by: expect.stringMatching(/^(none|cap|floor)$/),
@@ -98,6 +107,9 @@ describe("POST /valuation/calculate (Draft checkpoint bodies)", () => {
       players_remaining: expect.any(Number),
       calculated_at: expect.any(String),
       market_notes: expect.any(Array),
+      user_team_id_used: expect.any(String),
+      team_adjusted_value_note:
+        "team_adjusted_value reflects team-specific need and budget relative to the league",
       context_v2: expect.objectContaining({
         schema_version: "2",
         calculated_at: expect.any(String),
@@ -124,6 +136,8 @@ describe("POST /valuation/calculate (Draft checkpoint bodies)", () => {
         position: expect.any(String),
         baseline_value: expect.any(Number),
         adjusted_value: expect.any(Number),
+        recommended_bid: expect.any(Number),
+        team_adjusted_value: expect.any(Number),
         indicator: expect.stringMatching(/^(Steal|Reach|Fair Value)$/),
         explain_v2: expect.objectContaining({
           indicator: expect.stringMatching(/^(Steal|Reach|Fair Value)$/),
@@ -134,6 +148,22 @@ describe("POST /valuation/calculate (Draft checkpoint bodies)", () => {
           confidence: expect.any(Number),
         }),
       });
+      expect(res.body.valuations[0].recommended_bid).toBeGreaterThanOrEqual(
+        Math.min(
+          res.body.valuations[0].adjusted_value,
+          res.body.valuations[0].baseline_value
+        )
+      );
+      expect(res.body.valuations[0].recommended_bid).toBeLessThanOrEqual(
+        Math.max(
+          res.body.valuations[0].adjusted_value,
+          res.body.valuations[0].baseline_value
+        )
+      );
+      expect(res.body.valuations[0].team_adjusted_value).toBeGreaterThanOrEqual(0);
+      expect(res.body.valuations[0].team_adjusted_value).toBeLessThanOrEqual(
+        res.body.valuations[0].baseline_value * 1.5
+      );
     }
   });
 });
@@ -224,6 +254,9 @@ describe("POST /valuation/calculate — AmethystDraft BFF alignment", () => {
       .expect(200);
 
     expect(res.body.engine_contract_version).toBe("1");
+    expect(res.body.recommended_bid_note).toBe(
+      "recommended_bid blends model marginal value with baseline strength for auction guidance"
+    );
     expect(res.body.valuations).toHaveLength(3);
     expect(res.body.valuations.map((r: { player_id: string }) => r.player_id).sort()).toEqual([
       "1",
@@ -314,6 +347,9 @@ describe("POST /valuation/calculate — AmethystDraft BFF alignment", () => {
     expect(valuations).toHaveLength(expectedUndrafted);
     expect(aggregateRest).toMatchObject({
       engine_contract_version: "1",
+      inflation_model: expect.stringMatching(
+        /^(global_v1|surplus_slots_v1|replacement_slots_v2)$/
+      ),
       valuation_model_version: expect.stringMatching(/^amethyst-api@/),
       calculated_at: "1970-01-01T00:00:00.000Z",
       players_remaining: expectedUndrafted,
@@ -322,6 +358,11 @@ describe("POST /valuation/calculate — AmethystDraft BFF alignment", () => {
       inflation_bounded_by: expect.stringMatching(/^(none|cap|floor)$/),
       pool_value_remaining: expect.any(Number),
       total_budget_remaining: expect.any(Number),
+      recommended_bid_note:
+        "recommended_bid blends model marginal value with baseline strength for auction guidance",
+      team_adjusted_value_note:
+        "team_adjusted_value reflects team-specific need and budget relative to the league",
+      user_team_id_used: expect.any(String),
     });
     expect(aggregateRest.inflation_factor).toBeGreaterThanOrEqual(0.25);
     expect(aggregateRest.inflation_factor).toBeLessThanOrEqual(3);
@@ -333,6 +374,8 @@ describe("POST /valuation/calculate — AmethystDraft BFF alignment", () => {
       name: expect.any(String),
       baseline_value: expect.any(Number),
       adjusted_value: expect.any(Number),
+      recommended_bid: expect.any(Number),
+      team_adjusted_value: expect.any(Number),
       indicator: expect.stringMatching(/^(Steal|Reach|Fair Value)$/),
       baseline_components: expect.objectContaining({
         scoring_format: expect.any(String),
@@ -397,6 +440,7 @@ describe("POST /valuation/player", () => {
 
     expect(single.body.total_budget_remaining).toBe(calc.body.total_budget_remaining);
     expect(single.body.inflation_factor).toBeCloseTo(calc.body.inflation_factor, 5);
+    expect(single.body.inflation_model).toBe(calc.body.inflation_model);
     expect(single.body.inflation_raw).toBeCloseTo(calc.body.inflation_raw, 5);
     expect(single.body.inflation_bounded_by).toBe(calc.body.inflation_bounded_by);
     expect(single.body.pool_value_remaining).toBeCloseTo(

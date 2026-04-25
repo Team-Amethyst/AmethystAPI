@@ -6,10 +6,14 @@ exports[`calculateInflation with normalized fixtures > legacy-empty deterministi
   "engine_contract_version": "1",
   "inflation_bounded_by": "none",
   "inflation_factor": 60,
+  "inflation_model": "global_v1",
   "inflation_raw": 60,
   "players_remaining": 2,
   "pool_value_remaining": 52,
+  "recommended_bid_note": "recommended_bid blends model marginal value with baseline strength for auction guidance",
+  "team_adjusted_value_note": "team_adjusted_value reflects team-specific need and budget relative to the league",
   "total_budget_remaining": 3120,
+  "user_team_id_used": "team_1",
   "valuation_model_version": "amethyst-api@1.0.0",
   "valuations": [
     {
@@ -27,8 +31,10 @@ exports[`calculateInflation with normalized fixtures > legacy-empty deterministi
       "name": "Alpha",
       "player_id": "1",
       "position": "OF",
+      "recommended_bid": 1338,
       "scarcity_adjustment": 0,
       "team": "NYY",
+      "team_adjusted_value": 60,
       "tier": 1,
     },
     {
@@ -46,8 +52,10 @@ exports[`calculateInflation with normalized fixtures > legacy-empty deterministi
       "name": "Beta",
       "player_id": "2",
       "position": "SP",
+      "recommended_bid": 401.4,
       "scarcity_adjustment": 0,
       "team": "BOS",
+      "team_adjusted_value": 18,
       "tier": 3,
     },
   ],
@@ -60,10 +68,14 @@ exports[`calculateInflation with normalized fixtures > nested-after-pick applies
   "engine_contract_version": "1",
   "inflation_bounded_by": "none",
   "inflation_factor": 255.4167,
+  "inflation_model": "global_v1",
   "inflation_raw": 255.416667,
   "players_remaining": 1,
   "pool_value_remaining": 12,
+  "recommended_bid_note": "recommended_bid blends model marginal value with baseline strength for auction guidance",
+  "team_adjusted_value_note": "team_adjusted_value reflects team-specific need and budget relative to the league",
   "total_budget_remaining": 3065,
+  "user_team_id_used": "team_1",
   "valuation_model_version": "amethyst-api@1.0.0",
   "valuations": [
     {
@@ -81,8 +93,10 @@ exports[`calculateInflation with normalized fixtures > nested-after-pick applies
       "name": "Beta",
       "player_id": "2",
       "position": "SP",
+      "recommended_bid": 1691.15,
       "scarcity_adjustment": 0,
       "team": "BOS",
+      "team_adjusted_value": 18,
       "tier": 3,
     },
   ],
@@ -96,6 +110,7 @@ exports[`parseValuationRequest + root fixtures > normalizes legacy-empty.json 1`
   "deterministic": false,
   "drafted_players": [],
   "hitter_budget_pct": undefined,
+  "inflation_model": "global_v1",
   "league_scope": "Mixed",
   "minors": undefined,
   "num_teams": 12,
@@ -119,6 +134,7 @@ exports[`parseValuationRequest + root fixtures > normalizes legacy-empty.json 1`
   "seed": undefined,
   "taxi": undefined,
   "total_budget": 260,
+  "user_team_id": undefined,
 }
 `;
 
@@ -144,6 +160,7 @@ exports[`parseValuationRequest + root fixtures > normalizes nested-after-pick.js
     },
   ],
   "hitter_budget_pct": undefined,
+  "inflation_model": "global_v1",
   "league_scope": "Mixed",
   "minors": undefined,
   "num_teams": 12,
@@ -169,6 +186,7 @@ exports[`parseValuationRequest + root fixtures > normalizes nested-after-pick.js
   "seed": undefined,
   "taxi": undefined,
   "total_budget": 260,
+  "user_team_id": undefined,
 }
 `;
 
@@ -179,6 +197,7 @@ exports[`parseValuationRequest + root fixtures > normalizes nested-pre-draft.jso
   "deterministic": true,
   "drafted_players": [],
   "hitter_budget_pct": 0.65,
+  "inflation_model": "global_v1",
   "league_scope": "Mixed",
   "minors": {},
   "num_teams": 12,
@@ -204,5 +223,6 @@ exports[`parseValuationRequest + root fixtures > normalizes nested-pre-draft.jso
   "seed": undefined,
   "taxi": {},
   "total_budget": 260,
+  "user_team_id": undefined,
 }
 `;

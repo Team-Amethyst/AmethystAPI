@@ -79,11 +79,23 @@ function cacheKey(
 ): string {
   const payload = JSON.stringify({
     model: response.valuation_model_version ?? "unknown",
+    inflationModel: response.inflation_model,
     inflation: response.inflation_factor,
     inflationRaw: response.inflation_raw,
     inflationBounded: response.inflation_bounded_by,
     budget: response.total_budget_remaining,
     players: response.players_remaining,
+    v2meta:
+      response.inflation_model === "replacement_slots_v2"
+        ? {
+            remaining_slots: response.remaining_slots ?? null,
+            surplus_cash: response.surplus_cash ?? null,
+            total_surplus_mass: response.total_surplus_mass ?? null,
+            draftable_pool_size: response.draftable_pool_size ?? null,
+            fallback_reason: response.fallback_reason ?? null,
+            repl: response.replacement_values_by_slot_or_position ?? null,
+          }
+        : null,
     leagueId: input.league_id ?? null,
     scope,
     drafted: input.drafted_players.map((d) => [d.player_id, d.team_id, d.paid ?? null]),
@@ -102,7 +114,10 @@ function buildDriverRows(row: ValuedPlayer, response: ValuationResponse) {
   const scFac = row.baseline_components?.scarcity_component ?? 0;
   const raw = response.inflation_raw;
   const bounded = response.inflation_bounded_by;
-  let leagueReason = `League-wide factor ${inflationFactor.toFixed(2)}× applied to list_value (baseline already includes scoring/roster scarcity).`;
+  let leagueReason =
+    response.inflation_model === "replacement_slots_v2"
+      ? `replacement_slots_v2: slot-aware surplus allocation (factor ${inflationFactor.toFixed(2)}× on marginal list $ above replacement); see response replacement_values_by_slot_or_position and fallback_reason.`
+      : `League-wide factor ${inflationFactor.toFixed(2)}× applied to list_value (baseline already includes scoring/roster scarcity).`;
   if (bounded === "cap") {
     leagueReason += ` Raw ratio was ${raw.toFixed(2)}× before the workflow cap.`;
   } else if (bounded === "floor") {
@@ -262,8 +277,12 @@ export function attachValuationExplainability(
       },
       position_alerts: sortedAlerts,
       assumptions: [
-        "Auction inflation is computed from remaining budget divided by remaining pool value.",
-        "The inflation factor may be clamped to a workflow floor/cap when pool list dollars are extreme versus remaining cash.",
+        response.inflation_model === "replacement_slots_v2"
+          ? "Auction inflation used replacement_slots_v2: greedy league-wide slot fill yields per-slot replacement baselines; surplus cash maps to value above replacement (see docs/valuation-inflation-semantics.md)."
+          : response.inflation_model === "surplus_slots_v1"
+            ? "Auction inflation used surplus_slots_v1: $1 per remaining empty roster slot is reserved; surplus cash is mapped through value above replacement in a top draftable slice (see docs/valuation-inflation-semantics.md)."
+            : "Auction inflation used global_v1: remaining budget is divided by the full undrafted pool baseline list dollars.",
+        "The inflation factor may be clamped to a workflow floor/cap when list dollars versus remaining cash are extreme.",
         ...(response.inflation_bounded_by !== "none"
           ? [
               `This response used inflation_raw=${response.inflation_raw.toFixed(4)} before clamp; applied factor is ${response.inflation_factor.toFixed(4)} (${response.inflation_bounded_by}).`,
@@ -271,8 +290,13 @@ export function attachValuationExplainability(
           : []),
         "Scarcity urgency uses remaining elite and mid-tier supply versus league demand.",
         "Draft state is treated as stateless full-context input for every request.",
-        "pool_value_remaining and players_remaining describe the full undrafted inflation pool; valuations.length may be smaller when player_ids filters the response.",
-        "pool_value_remaining sums baseline list dollars on undrafted players; real auction accuracy depends on catalog value quality — run `pnpm run audit:valuation-response` for fixture QA.",
+        "players_remaining is always the count of the full undrafted pool; valuations.length may be smaller when player_ids filters the response.",
+        response.inflation_model === "replacement_slots_v2"
+          ? "pool_value_remaining equals total_surplus_mass (sum of marginal surplus $ in the slot-assigned draftable pool)."
+          : response.inflation_model === "surplus_slots_v1"
+            ? "pool_value_remaining is the sum of max(0, baseline − replacement) over the draftable inflation slice, not full-wire list dollars."
+            : "pool_value_remaining sums baseline list dollars on all undrafted players (the global_v1 denominator).",
+        "Real auction accuracy depends on catalog value quality — run `pnpm run audit:valuation-response` for fixture QA.",
       ],
       confidence: {
         overall: confidenceOverall,

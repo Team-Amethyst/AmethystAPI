@@ -74,6 +74,12 @@ export interface LeanPlayer {
 // ─── Valuation ───────────────────────────────────────────────────────────────
 
 /** Legacy flat POST body (schemaVersion implicit 0.0.0). */
+/** Inflation pass: league-wide list rescale vs roster-constrained surplus dollars. */
+export type InflationModel =
+  | "global_v1"
+  | "surplus_slots_v1"
+  | "replacement_slots_v2";
+
 export interface ValuationRequest {
   roster_slots: RosterSlot[];
   scoring_categories: ScoringCategory[];
@@ -94,8 +100,17 @@ export interface ValuationRequest {
   seed?: number;
   /** Restrict valuation rows to these undrafted player ids (subset evaluation). */
   player_ids?: string[];
+  /**
+   * `global_v1` — multiply every baseline by one factor (budget ÷ full undrafted pool $).
+   * `surplus_slots_v1` — reserve $1 per remaining roster slot, inflate only value above
+   * replacement within a top draftable slice sized from remaining slots (see docs).
+   * `replacement_slots_v2` — position/slot-aware replacement + surplus allocation (preferred for Draftroom).
+   */
+  inflation_model?: InflationModel;
   /** When set, total remaining league budget = sum of values (ignores sum of paid). */
   budget_by_team_id?: Record<string, number>;
+  /** Team context for team_adjusted_value (defaults to team_1 when omitted). */
+  user_team_id?: string;
   scoring_format?: ScoringFormat;
   hitter_budget_pct?: number;
   pos_eligibility_threshold?: number;
@@ -113,6 +128,7 @@ export interface ValuationLeagueBlock {
   scoring_format?: ScoringFormat;
   hitter_budget_pct?: number;
   pos_eligibility_threshold?: number;
+  inflation_model?: InflationModel;
 }
 
 /**
@@ -140,6 +156,9 @@ export interface NormalizedValuationInput {
   seed?: number;
   player_ids?: string[];
   budget_by_team_id?: Record<string, number>;
+  user_team_id?: string;
+  /** Defaults to `global_v1` when omitted (`executeValuationWorkflow` normalizes). */
+  inflation_model?: InflationModel;
 }
 
 export interface CalculateInflationOptions {
@@ -151,6 +170,18 @@ export interface CalculateInflationOptions {
   additionalDraftedIds?: string[];
   inflationCap?: number;
   inflationFloor?: number;
+  inflationModel?: InflationModel;
+  /** Required for `surplus_slots_v1` (league empty slots from roster − filled ids). */
+  remainingLeagueSlots?: number;
+  /**
+   * Draftable slice = `ceil(remainingLeagueSlots × multiplier)` capped by undrafted count.
+   * @default 1.35
+   */
+  surplusDraftablePoolMultiplier?: number;
+  /** Rostered players (auction + keepers + minors/taxi) for slot demand in `replacement_slots_v2`. */
+  rosteredPlayersForSlots?: DraftedPlayer[];
+  /** Team context for team_adjusted_value (defaults to team_1 when omitted). */
+  userTeamId?: string;
 }
 
 export type ValueIndicator = "Steal" | "Reach" | "Fair Value";
@@ -164,6 +195,13 @@ export interface ValuedPlayer {
   tier: number;
   baseline_value: number;
   adjusted_value: number;
+  /**
+   * Presentation-layer bid guidance: blends marginal auction value (`adjusted_value`)
+   * with baseline list strength (`baseline_value`) without changing valuation math.
+   */
+  recommended_bid?: number;
+  /** Team-specific bid signal for Draftroom decisions (additive presentation layer). */
+  team_adjusted_value?: number;
   indicator: ValueIndicator;
   inflation_factor: number;
   baseline_components?: {
@@ -203,9 +241,19 @@ export type InflationBoundedBy = "none" | "cap" | "floor";
 export interface ValuationResponse {
   /** Engine HTTP/JSON contract major version (debug drift vs Draft). */
   engine_contract_version: string;
+  /** Which inflation pass produced this response (echo of request defaulting rule). */
+  inflation_model: InflationModel;
   /** > 1.0 = inflated market; < 1.0 = deflated */
   inflation_factor: number;
-  /** `budget_remaining / pool_value` before workflow cap/floor (same pool as `pool_value_remaining`). */
+  /**
+   * Pre–cap/floor ratio. Meaning depends on `inflation_model`:
+   * - `global_v1`: `total_budget_remaining / pool_value_remaining` (full undrafted baseline $).
+   * - `surplus_slots_v1`: `surplus_cash / sum(surplus baseline $ in draftable pool)` where
+   *   `surplus_cash = total_budget_remaining − remaining_slots×min_bid` and `pool_value_remaining`
+   *   matches the surplus denominator (not full-wire list $).
+   * - `replacement_slots_v2`: `surplus_cash / total_surplus_mass` over the slot-assigned draftable pool;
+   *   see response metadata fields.
+   */
   inflation_raw: number;
   /** Whether `inflation_factor` was raised to floor, lowered to cap, or left as raw. */
   inflation_bounded_by: InflationBoundedBy;
@@ -218,6 +266,21 @@ export interface ValuationResponse {
   valuation_model_version?: string;
   /** League-wide human notes (inflation, scarcity alerts, monopolies). */
   market_notes?: string[];
+  /** Set when `inflation_model` is `replacement_slots_v2` (transparent economics / QA). */
+  remaining_slots?: number;
+  min_bid?: number;
+  surplus_cash?: number;
+  total_surplus_mass?: number;
+  draftable_pool_size?: number;
+  replacement_values_by_slot_or_position?: Record<string, number>;
+  /** Why v2 used a non-standard price path (never falls back to `global_v1`). */
+  fallback_reason?: string | null;
+  /** Product copy for `recommended_bid` semantics (presentation layer guidance). */
+  recommended_bid_note?: string;
+  /** Team context used to compute team_adjusted_value (defaults to team_1). */
+  user_team_id_used?: string;
+  /** Product copy for `team_adjusted_value` semantics (presentation layer guidance). */
+  team_adjusted_value_note?: string;
   context_v2?: {
     schema_version: "2";
     calculated_at: string;

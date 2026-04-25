@@ -1,13 +1,30 @@
 /**
  * Converts instructor 2026Draft.xlsx → five valuation checkpoint JSON files.
- * See docs/draft-2026-xlsx-mapping.md
+ * Resolves canonical MLB player_id (Mongo / MLB Stats API) with abbreviated-name
+ * matching; writes conversion-match-report.json for replay diagnostics.
  *
- * Usage: pnpm run convert-2026-draft -- [path/to/2026Draft.xlsx]
+ * Usage: pnpm run convert-2026-draft -- [path/to/2026Draft.xlsx] [--skip-mlb-search]
+ *
+ * See docs/draft-2026-xlsx-mapping.md
  */
+import "dotenv/config";
 import * as fs from "fs";
 import * as path from "path";
 import * as XLSX from "xlsx";
 import type { CellObject } from "xlsx";
+import mongoose from "mongoose";
+import Player from "../src/models/Player";
+import {
+  type CatalogRow,
+  type ConversionReportEntry,
+  type MatchMethod,
+  type Resolution,
+  resolveAgainstCatalog,
+  resolveViaMlbSearch,
+  rosterIdentityKey,
+  sanitizeSheetPlayerName,
+  nextSyntheticMlbId,
+} from "./lib/draftPlayerIdResolve";
 
 type Drafted = {
   player_id: string;
@@ -62,6 +79,13 @@ function cellStr(c: unknown): string {
   return String(c).trim();
 }
 
+function parseMoney(raw: unknown): number {
+  if (typeof raw === "number" && Number.isFinite(raw)) return raw;
+  const s = cellStr(raw).replace(/[$,\s]/g, "");
+  const n = Number(s);
+  return Number.isFinite(n) ? n : 0;
+}
+
 function teamIdFromLabel(label: string): string | null {
   const m = /^Team\s+([A-Za-z])/i.exec(label.trim());
   if (!m) return null;
@@ -99,11 +123,9 @@ function parsePreDraftRoster(rows: unknown[][]): TeamBucket[] {
       const pos = cellStr(row[b.startCol]);
       const name = cellStr(row[b.startCol + 1]);
       if (!name) continue;
+      if (/^team\s+[a-z]$/i.test(name.trim())) continue;
       const salRaw = row[b.startCol + 3];
-      const paid =
-        typeof salRaw === "number" && Number.isFinite(salRaw)
-          ? salRaw
-          : Number(cellStr(salRaw)) || 0;
+      const paid = parseMoney(salRaw);
       byTeam.get(b.team_id)!.push({
         player_id: "",
         name,
@@ -134,6 +156,7 @@ function parseMinors(rows: unknown[][]): TeamBucket[] {
     for (const t of teamCols) {
       const name = cellStr(row[t.nameCol]);
       if (!name) continue;
+      if (/^team\s+[a-z]$/i.test(name.trim())) continue;
       byTeam.get(t.team_id)!.push({
         player_id: "",
         name,
@@ -156,6 +179,9 @@ function parseDraft(rows: unknown[][]): {
     wonTeamId: string;
     salary: number;
   }[];
+  warnings: string[];
+  pickGaps: number[];
+  duplicatePickNumbers: number[];
 } {
   const picks: {
     pick: number;
@@ -165,14 +191,21 @@ function parseDraft(rows: unknown[][]): {
     wonTeamId: string;
     salary: number;
   }[] = [];
+  const warnings: string[] = [];
+  const seenPick = new Map<number, number>();
   for (let r = 1; r < rows.length; r++) {
     const row = rows[r] ?? [];
     const pick = Number(row[0]);
     if (!Number.isFinite(pick)) continue;
     const won = cellStr(row[5]);
     const tid = teamIdFromLabel(won);
-    if (!tid) continue;
-    const salary = typeof row[6] === "number" ? row[6] : Number(cellStr(row[6])) || 0;
+    if (!tid) {
+      warnings.push(
+        `Draft row ${r + 1}: pick ${pick} skipped — could not parse winning team from "${won}" (expected "Team X")`
+      );
+      continue;
+    }
+    const salary = parseMoney(row[6]);
     picks.push({
       pick,
       player: cellStr(row[2]),
@@ -181,44 +214,210 @@ function parseDraft(rows: unknown[][]): {
       wonTeamId: tid,
       salary,
     });
+    seenPick.set(pick, (seenPick.get(pick) ?? 0) + 1);
   }
   picks.sort((a, b) => a.pick - b.pick);
-  return { picks };
+
+  const duplicatePickNumbers: number[] = [];
+  for (const [pn, count] of seenPick) {
+    if (count > 1) {
+      duplicatePickNumbers.push(pn);
+      warnings.push(
+        `DUPLICATE_PICK|pick=${pn}|rows=${count}|detail=Excel has multiple Draft rows for the same pick number; last row wins after sort`
+      );
+    }
+  }
+
+  const pickGaps: number[] = [];
+  if (picks.length > 0) {
+    const maxP = picks[picks.length - 1]!.pick;
+    const have = new Set(picks.map((p) => p.pick));
+    for (let i = 1; i < maxP; i++) {
+      if (!have.has(i)) pickGaps.push(i);
+    }
+    if (pickGaps.length) {
+      warnings.push(
+        `PICK_GAPS|missing=${pickGaps.slice(0, 40).join(",")}${pickGaps.length > 40 ? ",…" : ""}|max_pick_in_sheet=${maxP}|detail=No Draft row for those pick numbers (blank rows or parse failures)`
+      );
+    }
+  }
+
+  return { picks, warnings, pickGaps, duplicatePickNumbers };
 }
 
-function collectNames(
+type ResolveTask = {
+  /** Longest raw spelling seen for this identity (prefer full name over abbrev). */
+  rawName: string;
+  teamHint: string;
+  context: ConversionReportEntry["context"];
+  pick?: number;
+};
+
+async function loadMongoCatalog(): Promise<CatalogRow[]> {
+  const uri = process.env.MONGO_URI?.trim();
+  if (!uri) return [];
+  await mongoose.connect(uri);
+  try {
+    const docs = await Player.find({ mlbId: { $exists: true, $ne: null } })
+      .select("mlbId name team")
+      .lean()
+      .exec();
+    const rows: CatalogRow[] = [];
+    for (const d of docs as { mlbId?: number; name?: string; team?: string }[]) {
+      const mid = Number(d.mlbId);
+      if (!Number.isFinite(mid)) continue;
+      rows.push({
+        mlbId: mid,
+        name: String(d.name ?? ""),
+        team: String(d.team ?? ""),
+      });
+    }
+    return rows;
+  } finally {
+    await mongoose.disconnect().catch(() => undefined);
+  }
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((r) => setTimeout(r, ms));
+}
+
+async function resolveAllTasks(
+  tasks: Map<string, ResolveTask>,
+  catalog: CatalogRow[],
+  skipMlbSearch: boolean,
+  globalWarnings: string[]
+): Promise<{
+  idByIdentity: Map<string, string>;
+  entries: ConversionReportEntry[];
+}> {
+  const idByIdentity = new Map<string, string>();
+  const entries: ConversionReportEntry[] = [];
+  const synth = { n: 0 };
+
+  for (const [ik, task] of tasks) {
+    const sheetSan = sanitizeSheetPlayerName(task.rawName);
+    let res: Resolution | null = null;
+    if (catalog.length) {
+      res = resolveAgainstCatalog(task.rawName, task.teamHint, catalog);
+    }
+    if (!res && !skipMlbSearch) {
+      await sleep(110);
+      res = await resolveViaMlbSearch(task.rawName, task.teamHint);
+    }
+
+    let mlbId: number;
+    let method: MatchMethod;
+    let detail: string;
+    let canonical: string | undefined;
+    let status: "resolved" | "stub";
+
+    if (res) {
+      mlbId = res.mlbId;
+      method = res.method;
+      detail = res.detail;
+      canonical = res.canonicalName;
+      status = "resolved";
+    } else {
+      mlbId = nextSyntheticMlbId(synth);
+      method = "synthetic_unresolved";
+      status = "stub";
+      detail = `no Mongo match and ${skipMlbSearch ? "MLB search skipped (--skip-mlb-search)" : "MLB search returned no people"}`;
+      globalWarnings.push(
+        `UNRESOLVED|identity_key=${ik}|sheet_name=${JSON.stringify(task.rawName)}|sanitized=${JSON.stringify(sheetSan)}|team_hint=${JSON.stringify(task.teamHint)}|context=${task.context}|pick=${task.pick ?? ""}|detail=${detail}`
+      );
+    }
+
+    const player_id = String(mlbId);
+    idByIdentity.set(ik, player_id);
+
+    entries.push({
+      player_id,
+      sheet_name: task.rawName,
+      canonical_name: canonical,
+      team_hint: task.teamHint || "",
+      match_method: method,
+      catalog_match_status: status,
+      detail,
+      pick_number: task.pick,
+      context: task.context,
+    });
+  }
+
+  return { idByIdentity, entries };
+}
+
+function collectTasks(
   preBuckets: TeamBucket[],
   minorBuckets: TeamBucket[],
-  picks: { player: string }[]
-): string[] {
-  const set = new Set<string>();
-  for (const b of [...preBuckets, ...minorBuckets]) {
+  picks: { pick: number; player: string; mlbTeam: string }[]
+): Map<string, ResolveTask> {
+  const tasks = new Map<string, ResolveTask>();
+
+  const add = (rawName: string, teamHint: string, context: ResolveTask["context"], pick?: number) => {
+    if (!rawName.trim()) return;
+    const ik = rosterIdentityKey(rawName);
+    if (!ik) return;
+    const hint = (teamHint || "").trim();
+    const existing = tasks.get(ik);
+    if (!existing) {
+      tasks.set(ik, {
+        rawName: rawName.trim(),
+        teamHint: hint === "UNK" ? "" : hint,
+        context,
+        pick,
+      });
+      return;
+    }
+    if (rawName.trim().length > existing.rawName.length) {
+      existing.rawName = rawName.trim();
+    }
+    if (hint && hint !== "UNK" && (!existing.teamHint || existing.teamHint === "")) {
+      existing.teamHint = hint;
+    }
+    if (pick != null && (existing.pick == null || pick < existing.pick)) {
+      existing.pick = pick;
+    }
+  };
+
+  for (const b of preBuckets) {
     for (const p of b.players) {
-      if (p.name) set.add(p.name.trim());
+      add(p.name, "", "keeper");
+    }
+  }
+  for (const b of minorBuckets) {
+    for (const p of b.players) {
+      add(p.name, "", "minors");
     }
   }
   for (const p of picks) {
-    if (p.player) set.add(p.player.trim());
+    add(p.player, p.mlbTeam || "", "draft", p.pick);
   }
-  return [...set].sort((a, b) => a.localeCompare(b));
+  return tasks;
 }
 
-function assignIds(names: string[]): Map<string, string> {
-  const m = new Map<string, string>();
-  let i = 1;
-  for (const n of names) {
-    m.set(n.toLowerCase(), String(i));
-    i += 1;
-  }
-  return m;
-}
+function applyPlayerIds(
+  preBuckets: TeamBucket[],
+  minorBuckets: TeamBucket[],
+  idByIdentity: Map<string, string>
+): void {
+  const setPid = (name: string, target: Drafted) => {
+    const ik = rosterIdentityKey(name);
+    const id = idByIdentity.get(ik);
+    if (!id) {
+      throw new Error(`Internal: missing resolution for identity ${ik} (${name})`);
+    }
+    target.player_id = id;
+  };
 
-function fillIds(buckets: TeamBucket[], idByName: Map<string, string>): void {
-  for (const b of buckets) {
+  for (const b of preBuckets) {
     for (const p of b.players) {
-      const id = idByName.get(p.name.trim().toLowerCase());
-      if (!id) throw new Error(`Missing id for ${p.name}`);
-      p.player_id = id;
+      setPid(p.name, p);
+    }
+  }
+  for (const b of minorBuckets) {
+    for (const p of b.players) {
+      setPid(p.name, p);
     }
   }
 }
@@ -234,9 +433,10 @@ function distinctTeamIds(
   return [...s].sort();
 }
 
-function main(): void {
-  const args = process.argv.slice(2).filter((a) => a !== "--");
-  const argPath = args[0];
+async function main(): Promise<void> {
+  const argv = process.argv.slice(2).filter((a) => a !== "--");
+  const skipMlbSearch = argv.includes("--skip-mlb-search");
+  const argPath = argv.find((a) => !a.startsWith("-"));
   const xlsxPath = argPath
     ? path.resolve(argPath)
     : path.join(process.env.HOME ?? "", "Downloads", "2026Draft.xlsx");
@@ -265,12 +465,34 @@ function main(): void {
 
   const preBuckets = parsePreDraftRoster(preRows);
   const minorBuckets = parseMinors(minorRows);
-  const { picks } = parseDraft(draftRows);
+  const { picks, warnings: draftWarnings, pickGaps, duplicatePickNumbers } = parseDraft(draftRows);
 
-  const names = collectNames(preBuckets, minorBuckets, picks);
-  const idByName = assignIds(names);
-  fillIds(preBuckets, idByName);
-  fillIds(minorBuckets, idByName);
+  const catalog = await loadMongoCatalog();
+  console.log(
+    `Mongo catalog: ${catalog.length} rows${process.env.MONGO_URI ? "" : " (MONGO_URI unset — Mongo matching disabled)"}`
+  );
+
+  const tasks = collectTasks(preBuckets, minorBuckets, picks);
+  console.log(`Unique name resolution tasks: ${tasks.size}`);
+
+  const allWarnings: string[] = [...draftWarnings];
+  const { idByIdentity, entries } = await resolveAllTasks(
+    tasks,
+    catalog,
+    skipMlbSearch,
+    allWarnings
+  );
+
+  applyPlayerIds(preBuckets, minorBuckets, idByIdentity);
+
+  const stubCount = entries.filter((e) => e.catalog_match_status === "stub").length;
+  console.log(
+    `Resolved: ${entries.length - stubCount} / ${entries.length}; stub(synthetic): ${stubCount}`
+  );
+  if (allWarnings.length) {
+    console.warn(`Warnings (${allWarnings.length}), first 25:`);
+    for (const w of allWarnings.slice(0, 25)) console.warn(" ", w);
+  }
 
   const teamIds = distinctTeamIds(preBuckets, minorBuckets, picks);
   const numTeams = Math.max(teamIds.length, 1);
@@ -282,6 +504,27 @@ function main(): void {
 
   fs.mkdirSync(OUT_TEST, { recursive: true });
   fs.mkdirSync(OUT_PUBLIC, { recursive: true });
+
+  const report = {
+    schema_version: "1" as const,
+    generated_at: new Date().toISOString(),
+    xlsx_path: xlsxPath,
+    mongo_catalog_rows: catalog.length,
+    mongo_uri_set: Boolean(process.env.MONGO_URI?.trim()),
+    skip_mlb_search: skipMlbSearch,
+    entries,
+    warnings: allWarnings,
+    pick_gaps: pickGaps,
+    duplicate_pick_numbers: duplicatePickNumbers,
+    summary: {
+      unique_resolution_tasks: entries.length,
+      stub_unresolved_count: stubCount,
+    },
+  };
+  const reportJson = JSON.stringify(report, null, 2);
+  fs.writeFileSync(path.join(OUT_TEST, "conversion-match-report.json"), reportJson, "utf8");
+  fs.writeFileSync(path.join(OUT_PUBLIC, "conversion-match-report.json"), reportJson, "utf8");
+  console.log("wrote conversion-match-report.json");
 
   for (const nPicks of CHECKPOINTS) {
     const checkpoint =
@@ -296,15 +539,19 @@ function main(): void {
               : "after_pick_130";
 
     const slice = nPicks === 0 ? [] : picks.filter((p) => p.pick <= nPicks);
-    const drafted: Drafted[] = slice.map((p) => ({
-      player_id: idByName.get(p.player.trim().toLowerCase())!,
-      name: p.player,
-      position: p.position,
-      team: p.mlbTeam,
-      team_id: p.wonTeamId,
-      paid: p.salary,
-      pick_number: p.pick,
-    }));
+    const drafted: Drafted[] = slice.map((p) => {
+      const player_id = idByIdentity.get(rosterIdentityKey(p.player));
+      if (!player_id) throw new Error(`Missing id for draft pick ${p.pick} ${p.player}`);
+      return {
+        player_id,
+        name: p.player,
+        position: p.position,
+        team: p.mlbTeam,
+        team_id: p.wonTeamId,
+        paid: p.salary,
+        pick_number: p.pick,
+      };
+    });
 
     const spendByTeam = new Map<string, number>();
     for (const tid of teamIds) spendByTeam.set(tid, 0);
@@ -326,6 +573,7 @@ function main(): void {
       num_teams: numTeams,
       league_scope: "Mixed" as const,
       scoring_format: "5x5" as const,
+      inflation_model: "replacement_slots_v2" as const,
       drafted_players: drafted,
       pre_draft_rosters: preBuckets,
       minors: minorBuckets,
@@ -336,16 +584,17 @@ function main(): void {
     };
 
     const fname =
-      checkpoint === "pre_draft"
-        ? "pre_draft.json"
-        : `after_pick_${nPicks}.json`;
+      checkpoint === "pre_draft" ? "pre_draft.json" : `after_pick_${nPicks}.json`;
     const json = JSON.stringify(body, null, 2);
     fs.writeFileSync(path.join(OUT_TEST, fname), json, "utf8");
     fs.writeFileSync(path.join(OUT_PUBLIC, fname), json, "utf8");
     console.log("wrote", fname, "drafted", drafted.length);
   }
 
-  console.log("max synthetic player_id:", String(names.length));
+  console.log("done.");
 }
 
-main();
+main().catch((e) => {
+  console.error(e);
+  process.exit(1);
+});

@@ -149,6 +149,125 @@ describe("inflation engine properties", () => {
       5
     );
   });
+
+  it("surplus_slots_v1 keeps sub-replacement list dollars near min bid while stars absorb surplus", () => {
+    const deep = Array.from({ length: 20 }, (_, i) =>
+      mkPlayer(100 + i, 2, 5, "OF")
+    );
+    const stars = [mkPlayer(1, 50, 1), mkPlayer(2, 40, 2), mkPlayer(3, 10, 3)];
+    const players = [...stars, ...deep];
+    /** 2 teams × 4 roster slots = 8 remaining picks; only stars + a few deep undrafted. */
+    const res = calculateInflation(
+      players,
+      [],
+      100,
+      2,
+      [
+        { position: "C", count: 1 },
+        { position: "OF", count: 3 },
+      ],
+      "Mixed",
+      {
+        deterministic: true,
+        seed: 42,
+        inflationCap: 3,
+        inflationFloor: 0.25,
+        inflationModel: "surplus_slots_v1",
+        remainingLeagueSlots: 8,
+        surplusDraftablePoolMultiplier: 1.35,
+      }
+    );
+    expect(res.inflation_model).toBe("surplus_slots_v1");
+    const star50 = res.valuations.find((v) => v.player_id === "1");
+    const scrub = res.valuations.find((v) => v.player_id === "100");
+    expect(star50).toBeDefined();
+    expect(scrub).toBeDefined();
+    expect(scrub!.adjusted_value).toBeLessThanOrEqual(2);
+    expect(star50!.adjusted_value).toBeGreaterThan(star50!.baseline_value);
+  });
+
+  it("does not let player_ids shrink surplus inflation (subset rows only)", () => {
+    const players = [mkPlayer(1, 30, 2), mkPlayer(2, 40, 3), mkPlayer(3, 25, 4)];
+    const rosterSurplus: RosterSlot[] = [{ position: "OF", count: 5 }];
+    const opts = {
+      deterministic: true,
+      seed: 9,
+      inflationCap: 100,
+      inflationFloor: 0.05,
+      inflationModel: "surplus_slots_v1" as const,
+      remainingLeagueSlots: 10,
+    };
+    const full = calculateInflation(
+      players,
+      [],
+      50,
+      4,
+      rosterSurplus,
+      "Mixed",
+      opts
+    );
+    const subset = calculateInflation(
+      players,
+      [],
+      50,
+      4,
+      rosterSurplus,
+      "Mixed",
+      { ...opts, playerIdsFilter: ["1"] }
+    );
+    expect(subset.valuations).toHaveLength(1);
+    expect(subset.inflation_factor).toBeCloseTo(full.inflation_factor, 7);
+    expect(subset.inflation_raw).toBeCloseTo(full.inflation_raw, 7);
+    const fullRow = full.valuations.find((v) => v.player_id === "1");
+    expect(fullRow).toBeDefined();
+    expect(subset.valuations[0].adjusted_value).toBeCloseTo(
+      fullRow!.adjusted_value,
+      5
+    );
+  });
+
+  it("does not let player_ids shrink replacement_slots_v2 inflation (subset rows only)", () => {
+    const players = [mkPlayer(1, 30, 2), mkPlayer(2, 40, 3), mkPlayer(3, 25, 4)];
+    const rosterV2: RosterSlot[] = [
+      { position: "OF", count: 4 },
+      { position: "C", count: 1 },
+    ];
+    const opts = {
+      deterministic: true,
+      seed: 9,
+      inflationCap: 100,
+      inflationFloor: 0.05,
+      inflationModel: "replacement_slots_v2" as const,
+      rosteredPlayersForSlots: [] as DraftedPlayer[],
+    };
+    const full = calculateInflation(
+      players,
+      [],
+      50,
+      1,
+      rosterV2,
+      "Mixed",
+      opts
+    );
+    const subset = calculateInflation(
+      players,
+      [],
+      50,
+      1,
+      rosterV2,
+      "Mixed",
+      { ...opts, playerIdsFilter: ["1"] }
+    );
+    expect(subset.valuations).toHaveLength(1);
+    expect(subset.inflation_raw).toBeCloseTo(full.inflation_raw, 5);
+    expect(subset.inflation_factor).toBeCloseTo(full.inflation_factor, 5);
+    const fullRow = full.valuations.find((v) => v.player_id === "1");
+    expect(fullRow).toBeDefined();
+    expect(subset.valuations[0].adjusted_value).toBeCloseTo(
+      fullRow!.adjusted_value,
+      5
+    );
+  });
 });
 
 describe("scarcity engine properties", () => {

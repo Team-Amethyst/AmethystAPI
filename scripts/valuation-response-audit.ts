@@ -88,7 +88,7 @@ function main(): void {
 
     console.log(`--- ${file} ---`);
     console.log(
-      `  aggregate: inflation=${res.inflation_factor} raw=${res.inflation_raw} bounded=${res.inflation_bounded_by} budget_rem=${res.total_budget_remaining} pool_val=${res.pool_value_remaining} players_rem=${res.players_remaining} model=${res.valuation_model_version}`
+      `  aggregate: model=${res.inflation_model} inflation=${res.inflation_factor} raw=${res.inflation_raw} bounded=${res.inflation_bounded_by} budget_rem=${res.total_budget_remaining} pool_val=${res.pool_value_remaining} players_rem=${res.players_remaining} model=${res.valuation_model_version}`
     );
     console.log(
       `  context_v2: league_id=${res.context_v2?.scope.league_id} headline_snip=${(res.context_v2?.market_summary.headline ?? "").slice(0, 72)}…`

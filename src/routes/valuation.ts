@@ -62,6 +62,7 @@ async function runValuation(
   if (process.env.VALUATION_AGGREGATE_LOG === "1") {
     reqLog.info(
       {
+        inflation_model: outcome.response.inflation_model,
         inflation_factor: outcome.response.inflation_factor,
         inflation_raw: outcome.response.inflation_raw,
         inflation_bounded_by: outcome.response.inflation_bounded_by,

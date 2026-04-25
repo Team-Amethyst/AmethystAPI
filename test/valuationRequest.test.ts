@@ -50,7 +50,9 @@ describe("parseValuationRequest + root fixtures", () => {
 describe("parseValuationRequest + Draft checkpoint fixtures", () => {
   it.each(
     existsSync(checkpointsDir)
-      ? readdirSync(checkpointsDir).filter((f) => f.endsWith(".json"))
+      ? readdirSync(checkpointsDir)
+          .filter((f) => f.endsWith(".json"))
+          .filter((f) => /^pre_draft|^after_pick_/.test(f))
       : []
   )("parses checkpoint %s", (file) => {
     const raw = JSON.parse(
@@ -95,6 +97,19 @@ describe("parseValuationRequest + Draft checkpoint fixtures", () => {
     expect(r.success).toBe(true);
     if (!r.success) return;
     expect(r.normalized.league_id).toBe("league_flat_1");
+  });
+
+  it("accepts user_team_id and keeps it in normalized payload", () => {
+    const r = parseValuationRequest({
+      user_team_id: "team_9",
+      roster_slots: [{ position: "OF", count: 3 }],
+      scoring_categories: [{ name: "HR", type: "batting" }],
+      total_budget: 260,
+      drafted_players: [],
+    });
+    expect(r.success).toBe(true);
+    if (!r.success) return;
+    expect(r.normalized.user_team_id).toBe("team_9");
   });
 });
 
@@ -219,6 +234,40 @@ describe("parseValuationRequest errors", () => {
     if (r.success) return;
     expect(r.errors[0]?.field).toBe("drafted_players");
     expect(r.errors[0]?.message).toMatch(/Duplicate player_id/);
+  });
+
+  it("accepts inflation_model on flat body and defaults to global_v1", () => {
+    const surplus = parseValuationRequest({
+      roster_slots: [{ position: "OF", count: 3 }],
+      scoring_categories: [{ name: "HR", type: "batting" }],
+      total_budget: 260,
+      drafted_players: [],
+      inflation_model: "surplus_slots_v1",
+    });
+    expect(surplus.success).toBe(true);
+    if (!surplus.success) return;
+    expect(surplus.normalized.inflation_model).toBe("surplus_slots_v1");
+
+    const v2 = parseValuationRequest({
+      roster_slots: [{ position: "OF", count: 3 }],
+      scoring_categories: [{ name: "HR", type: "batting" }],
+      total_budget: 260,
+      drafted_players: [],
+      inflation_model: "replacement_slots_v2",
+    });
+    expect(v2.success).toBe(true);
+    if (!v2.success) return;
+    expect(v2.normalized.inflation_model).toBe("replacement_slots_v2");
+
+    const def = parseValuationRequest({
+      roster_slots: [{ position: "OF", count: 3 }],
+      scoring_categories: [{ name: "HR", type: "batting" }],
+      total_budget: 260,
+      drafted_players: [],
+    });
+    expect(def.success).toBe(true);
+    if (!def.success) return;
+    expect(def.normalized.inflation_model).toBe("global_v1");
   });
 
   it("rejects spend above league cap without budget_by_team_id", () => {

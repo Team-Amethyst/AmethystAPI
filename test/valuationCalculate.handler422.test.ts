@@ -30,6 +30,7 @@ vi.mock("../src/models/Player", () => ({
 vi.mock("../src/services/inflationEngine", () => ({
   calculateInflation: vi.fn(() => ({
     engine_contract_version: ENGINE_CONTRACT_VERSION,
+    inflation_model: "global_v1",
     inflation_factor: Number.NaN,
     inflation_raw: Number.NaN,
     inflation_bounded_by: "none",

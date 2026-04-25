@@ -1,0 +1,139 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/amethyst/amethyst-api/schemas/valuation-response.v1.schema.json",
+  "title": "Amethyst Engine valuation response (v1)",
+  "type": "object",
+  "additionalProperties": true,
+  "required": [
+    "engine_contract_version",
+    "inflation_model",
+    "inflation_factor",
+    "inflation_raw",
+    "inflation_bounded_by",
+    "total_budget_remaining",
+    "pool_value_remaining",
+    "players_remaining",
+    "valuations",
+    "calculated_at"
+  ],
+  "properties": {
+    "engine_contract_version": {
+      "type": "string"
+    },
+    "inflation_model": {
+      "type": "string",
+      "enum": [
+        "global_v1",
+        "surplus_slots_v1",
+        "replacement_slots_v2"
+      ]
+    },
+    "inflation_factor": {
+      "type": "number"
+    },
+    "inflation_raw": {
+      "type": "number"
+    },
+    "inflation_bounded_by": {
+      "type": "string",
+      "enum": [
+        "none",
+        "cap",
+        "floor"
+      ]
+    },
+    "total_budget_remaining": {
+      "type": "number"
+    },
+    "pool_value_remaining": {
+      "type": "number"
+    },
+    "players_remaining": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "calculated_at": {
+      "type": "string"
+    },
+    "recommended_bid_note": {
+      "type": "string",
+      "description": "recommended_bid blends model marginal value with baseline strength for auction guidance"
+    },
+    "valuations": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/valuedPlayer"
+      }
+    },
+    "user_team_id_used": {
+      "type": "string"
+    },
+    "team_adjusted_value_note": {
+      "type": "string"
+    }
+  },
+  "$defs": {
+    "valuedPlayer": {
+      "type": "object",
+      "required": [
+        "player_id",
+        "name",
+        "position",
+        "team",
+        "adp",
+        "tier",
+        "baseline_value",
+        "adjusted_value",
+        "indicator",
+        "inflation_factor"
+      ],
+      "properties": {
+        "player_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "name": {
+          "type": "string"
+        },
+        "position": {
+          "type": "string"
+        },
+        "team": {
+          "type": "string"
+        },
+        "adp": {
+          "type": "number"
+        },
+        "tier": {
+          "type": "integer"
+        },
+        "baseline_value": {
+          "type": "number"
+        },
+        "adjusted_value": {
+          "type": "number"
+        },
+        "recommended_bid": {
+          "type": "number",
+          "description": "Presentation-layer auction guidance blend of adjusted_value and baseline_value; clamped between them."
+        },
+        "indicator": {
+          "type": "string",
+          "enum": [
+            "Steal",
+            "Reach",
+            "Fair Value"
+          ]
+        },
+        "inflation_factor": {
+          "type": "number"
+        },
+        "team_adjusted_value": {
+          "type": "number",
+          "description": "Team-specific bid signal (adjusted_value scaled by positional need and budget pressure; clamped to 1.5 × baseline_value)."
+        }
+      },
+      "additionalProperties": true
+    }
+  }
+}

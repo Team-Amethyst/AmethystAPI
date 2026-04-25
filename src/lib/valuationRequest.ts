@@ -19,6 +19,12 @@ const budgetByTeamSchema = z.record(z.string(), z.number().nonnegative());
 
 const scoringFormatSchema = z.enum(["5x5", "6x6", "points"]);
 
+const inflationModelSchema = z.enum([
+  "global_v1",
+  "surplus_slots_v1",
+  "replacement_slots_v2",
+]);
+
 const teamBucketSchema = z.object({
   team_id: z.string(),
   players: z.array(draftedPlayerInputSchema),
@@ -69,6 +75,7 @@ const leagueBlockSchema = z.object({
   scoring_format: scoringFormatSchema.optional(),
   hitter_budget_pct: z.number().optional(),
   pos_eligibility_threshold: z.number().optional(),
+  inflation_model: inflationModelSchema.optional(),
 });
 
 const nestedValuationBodySchema = z.object({
@@ -85,6 +92,8 @@ const nestedValuationBodySchema = z.object({
   seed: z.number().finite().optional(),
   player_ids: z.array(z.string().min(1)).optional(),
   budget_by_team_id: budgetByTeamSchema.optional(),
+  user_team_id: z.string().min(1).optional(),
+  inflation_model: inflationModelSchema.optional(),
 });
 
 /** Draft merged body from `buildEngineValuationCalculateBodyFromFixture` (flat, no league wrapper). */
@@ -100,6 +109,7 @@ const flatValuationBodySchema = z.object({
   league_id: z.string().optional(),
   checkpoint: z.string().optional(),
   budget_by_team_id: budgetByTeamSchema.optional(),
+  user_team_id: z.string().min(1).optional(),
   scoring_format: scoringFormatSchema.optional(),
   hitter_budget_pct: z.number().optional(),
   pos_eligibility_threshold: z.number().optional(),
@@ -109,6 +119,7 @@ const flatValuationBodySchema = z.object({
   seed: z.number().finite().optional(),
   player_ids: z.array(z.string().min(1)).optional(),
   pre_draft_rosters: preDraftRostersInputSchema.optional(),
+  inflation_model: inflationModelSchema.optional(),
 });
 
 function isNestedValuationBody(body: Record<string, unknown>): boolean {
@@ -177,6 +188,9 @@ function buildNormalizedFromNested(
     seed: rest.seed,
     player_ids: rest.player_ids,
     budget_by_team_id: rest.budget_by_team_id,
+    user_team_id: rest.user_team_id,
+    inflation_model:
+      rest.inflation_model ?? league.inflation_model ?? "global_v1",
   };
 }
 
@@ -240,6 +254,8 @@ function buildNormalizedFromFlat(
     seed: parsed.seed,
     player_ids: parsed.player_ids,
     budget_by_team_id: parsed.budget_by_team_id,
+    user_team_id: parsed.user_team_id,
+    inflation_model: parsed.inflation_model ?? "global_v1",
   };
 }
 

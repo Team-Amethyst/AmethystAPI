@@ -5,6 +5,7 @@ import type { LeanPlayer, NormalizedValuationInput } from "../src/types/brain";
 vi.mock("../src/services/inflationEngine", () => ({
   calculateInflation: vi.fn(() => ({
     engine_contract_version: ENGINE_CONTRACT_VERSION,
+    inflation_model: "global_v1",
     inflation_factor: Number.NaN,
     inflation_raw: Number.NaN,
     inflation_bounded_by: "none",
@@ -29,6 +30,7 @@ function minimalInput(): NormalizedValuationInput {
     league_scope: "Mixed",
     drafted_players: [],
     deterministic: true,
+    inflation_model: "global_v1",
   };
 }
 

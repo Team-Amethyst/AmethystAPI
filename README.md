@@ -28,7 +28,7 @@ Stateless analytical API for fantasy baseball. Receives draft state and league s
 |---|---|
 | [ENGINE_AGENT_BRIEF.md](ENGINE_AGENT_BRIEF.md) | **Handoff for agents / new contributors** — Draft ↔ Engine HTTP contract, headers, flat valuation body, fixtures, checklist. |
 | [docs/valuation-response-field-audit.md](docs/valuation-response-field-audit.md) | **Response-field semantics & QA** — what each valuation field means, known decomposition gaps, `pnpm run audit:valuation-response`. |
-| [docs/valuation-inflation-semantics.md](docs/valuation-inflation-semantics.md) | **Inflation contract** — full undrafted pool vs `player_ids`, `inflation_raw` / cap-floor, aggregates. |
+| [docs/valuation-inflation-semantics.md](docs/valuation-inflation-semantics.md) | **Inflation contract** — `inflation_model` (`global_v1` vs `surplus_slots_v1`), `player_ids` as output filter, `inflation_raw` / cap-floor, aggregates. |
 | [openapi/openapi.yaml](openapi/openapi.yaml) | **Human-facing API spec** — paths, headers, success/error shapes, budget rules, tracing. |
 | [schemas/valuation-request.v1.schema.json](schemas/valuation-request.v1.schema.json) | **Machine validation** for the flat `POST /valuation/calculate` body (keep in sync with Draft). |
 | [schemas/valuation-request-v1.json](schemas/valuation-request-v1.json) | Nested `{ league, draft_state }` alternate (fixtures / legacy). |
@@ -40,7 +40,8 @@ The Engine accepts the **flat** body Draft builds for server-to-server calls:
 - **`drafted_players`:** auction picks only (keepers on rosters belong in **`pre_draft_rosters`**, not double-listed here, unless you intentionally mirror Draft’s model).
 - **`pre_draft_rosters`:** optional **map** (`team_id` → array of rows) **or** **array** of `{ team_id, players }` (same as Draft checkpoints).
 - **`schema_version` / `schemaVersion`:** both optional; if both are sent, **`schemaVersion` (camelCase) wins**.
-- **`player_ids`:** optional subset of undrafted MLB ids to **return** in `valuations[]`; **inflation** always uses the **full** undrafted pool (see [valuation-inflation-semantics.md](docs/valuation-inflation-semantics.md)).
+- **`inflation_model`:** optional, defaults to **`global_v1`**. Set **`replacement_slots_v2`** for Draftroom-quality slot/position-aware surplus inflation (preferred). **`surplus_slots_v1`** is a lighter single-cutoff surplus model. Remaining-slot math for surplus models uses `roster_slots`, `num_teams`, `drafted_players`, keepers/minors/taxi, and eligibility.
+- **`player_ids`:** optional subset of undrafted MLB ids to **return** in `valuations[]`; does not shrink the inflation basis (see [valuation-inflation-semantics.md](docs/valuation-inflation-semantics.md)).
 - **Responses:** **`engine_contract_version: "1"`** on success; **`X-Request-Id`** echoed when sent.
 - **Errors:** **400** = request validation only, body **`{ errors: [{ field, message }] }`**. **422** = output sanity failure, same `errors` shape, **no** prices.
 

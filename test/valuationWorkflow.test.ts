@@ -37,6 +37,7 @@ function minimalInput(
     league_scope: "Mixed",
     drafted_players: [],
     deterministic: true,
+    inflation_model: "global_v1",
     ...over,
   };
 }
@@ -100,6 +101,9 @@ describe("executeValuationWorkflow", () => {
     expect(res.response.context_v2?.market_summary.players_left).toBe(
       res.response.players_remaining
     );
+    expect(res.response.recommended_bid_note).toBe(
+      "recommended_bid blends model marginal value with baseline strength for auction guidance"
+    );
     const first = res.response.valuations[0];
     expect(first.explain_v2).toBeDefined();
     expect(first.explain_v2?.auction_target).toBe(first.adjusted_value);
@@ -125,6 +129,192 @@ describe("executeValuationWorkflow", () => {
     for (const text of first.why ?? []) {
       expect(text.trim().length).toBeGreaterThan(0);
     }
+    expect(first.recommended_bid).toBeDefined();
+    expect(first.recommended_bid!).toBeGreaterThanOrEqual(
+      Math.min(first.adjusted_value, first.baseline_value)
+    );
+    expect(first.recommended_bid!).toBeLessThanOrEqual(
+      Math.max(first.adjusted_value, first.baseline_value)
+    );
+  });
+
+  it("keeps recommended_bid monotonic for similarly ranked baseline players", () => {
+    const localPlayers: LeanPlayer[] = [
+      {
+        _id: "p1",
+        mlbId: 101,
+        name: "Alpha",
+        team: "NYY",
+        position: "OF",
+        adp: 10,
+        tier: 1,
+        value: 40,
+      },
+      {
+        _id: "p2",
+        mlbId: 102,
+        name: "Bravo",
+        team: "NYY",
+        position: "OF",
+        adp: 11,
+        tier: 1,
+        value: 39,
+      },
+    ];
+    const res = executeValuationWorkflow(localPlayers, minimalInput());
+    expect(res.ok).toBe(true);
+    if (!res.ok) return;
+    const [a, b] = res.response.valuations;
+    expect(a.baseline_value).toBeGreaterThanOrEqual(b.baseline_value);
+    expect(a.recommended_bid!).toBeGreaterThanOrEqual(b.recommended_bid!);
+  });
+
+  it("defaults user_team_id_used to team_1 when omitted", () => {
+    const res = executeValuationWorkflow(players, minimalInput());
+    expect(res.ok).toBe(true);
+    if (!res.ok) return;
+    expect(res.response.user_team_id_used).toBe("team_1");
+    expect(res.response.team_adjusted_value_note).toBe(
+      "team_adjusted_value reflects team-specific need and budget relative to the league"
+    );
+  });
+
+  it("team_adjusted_value applies team multipliers and preserves adjusted/recommended", () => {
+    const localPlayers: LeanPlayer[] = [
+      {
+        _id: "u1",
+        mlbId: 201,
+        name: "NeedOF",
+        team: "NYY",
+        position: "OF",
+        adp: 10,
+        tier: 2,
+        value: 20,
+      },
+      {
+        _id: "u2",
+        mlbId: 202,
+        name: "NoNeedC",
+        team: "BOS",
+        position: "C",
+        adp: 12,
+        tier: 2,
+        value: 20,
+      },
+    ];
+    const input = minimalInput({
+      user_team_id: "team_1",
+      roster_slots: [
+        { position: "C", count: 1 },
+        { position: "OF", count: 1 },
+      ],
+      drafted_players: [
+        {
+          player_id: "999",
+          name: "FilledC",
+          position: "C",
+          team: "NYY",
+          team_id: "team_1",
+          paid: 5,
+        },
+      ],
+      budget_by_team_id: {
+        team_1: 20,
+        team_2: 10,
+      },
+    });
+    const alt = { ...input, user_team_id: "team_2" as const };
+
+    const a = executeValuationWorkflow(localPlayers, input);
+    const b = executeValuationWorkflow(localPlayers, alt);
+    expect(a.ok && b.ok).toBe(true);
+    if (!a.ok || !b.ok) return;
+
+    const needA = a.response.valuations.find((v) => v.player_id === "201")!;
+    const cA = a.response.valuations.find((v) => v.player_id === "202")!;
+    const needB = b.response.valuations.find((v) => v.player_id === "201")!;
+
+    expect(needA.team_adjusted_value!).toBeGreaterThan(cA.team_adjusted_value!);
+    expect(needA.adjusted_value).toBe(needB.adjusted_value);
+    expect(needA.recommended_bid).toBe(needB.recommended_bid);
+    expect(needA.team_adjusted_value).not.toBe(needB.team_adjusted_value);
+    for (const row of a.response.valuations) {
+      expect(row.team_adjusted_value!).toBeGreaterThanOrEqual(0);
+      expect(row.team_adjusted_value!).toBeLessThanOrEqual(row.baseline_value * 1.5);
+    }
+  });
+
+  it("team_adjusted_value stays monotonic for similar players", () => {
+    const localPlayers: LeanPlayer[] = [
+      {
+        _id: "m1",
+        mlbId: 301,
+        name: "OF_A",
+        team: "NYY",
+        position: "OF",
+        adp: 5,
+        tier: 1,
+        value: 30,
+      },
+      {
+        _id: "m2",
+        mlbId: 302,
+        name: "OF_B",
+        team: "NYY",
+        position: "OF",
+        adp: 6,
+        tier: 1,
+        value: 29,
+      },
+    ];
+    const res = executeValuationWorkflow(
+      localPlayers,
+      minimalInput({
+        user_team_id: "team_1",
+        roster_slots: [{ position: "OF", count: 2 }],
+        drafted_players: [],
+      })
+    );
+    expect(res.ok).toBe(true);
+    if (!res.ok) return;
+    const [x, y] = res.response.valuations;
+    expect(x.adjusted_value).toBeGreaterThanOrEqual(y.adjusted_value);
+    expect(x.team_adjusted_value!).toBeGreaterThanOrEqual(y.team_adjusted_value!);
+  });
+
+  it("budget pressure multiplier increases/decreases team_adjusted_value only", () => {
+    const localPlayers: LeanPlayer[] = [
+      {
+        _id: "bp1",
+        mlbId: 401,
+        name: "BudgetOF",
+        team: "NYY",
+        position: "OF",
+        adp: 10,
+        tier: 2,
+        value: 200,
+      },
+    ];
+    const common = minimalInput({
+      user_team_id: "team_1",
+      roster_slots: [{ position: "OF", count: 1 }],
+      drafted_players: [],
+    });
+    const highBudget = executeValuationWorkflow(localPlayers, {
+      ...common,
+      budget_by_team_id: { team_1: 20, team_2: 10, team_3: 10 },
+    });
+    const lowBudget = executeValuationWorkflow(localPlayers, {
+      ...common,
+      budget_by_team_id: { team_1: 8, team_2: 16, team_3: 16 },
+    });
+    expect(highBudget.ok && lowBudget.ok).toBe(true);
+    if (!highBudget.ok || !lowBudget.ok) return;
+    const hi = highBudget.response.valuations[0]!;
+    const lo = lowBudget.response.valuations[0]!;
+    expect(hi.adjusted_value).toBe(lo.adjusted_value);
+    expect(hi.recommended_bid).toBe(lo.recommended_bid);
+    expect(hi.team_adjusted_value!).toBeGreaterThan(lo.team_adjusted_value!);
   });
 
   it("when budget_by_team_id is set, ignores paid on drafted_players", () => {
