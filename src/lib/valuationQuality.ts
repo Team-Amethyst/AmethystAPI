@@ -1,5 +1,12 @@
 import { ENGINE_CONTRACT_VERSION } from "./engineContract";
-import type { ValuationResponse, ValuedPlayer, ValueIndicator } from "../types/brain";
+import type {
+  InflationBoundedBy,
+  ValuationResponse,
+  ValuedPlayer,
+  ValueIndicator,
+} from "../types/brain";
+
+const BOUNDED: Set<InflationBoundedBy> = new Set(["none", "cap", "floor"]);
 
 const INDICATORS: Set<ValueIndicator> = new Set([
   "Steal",
@@ -60,6 +67,12 @@ export function validateValuationResponse(
 
   if (!isFiniteNumber(response.inflation_factor)) {
     issues.push("inflation_factor must be a finite number");
+  }
+  if (!isFiniteNumber(response.inflation_raw)) {
+    issues.push("inflation_raw must be a finite number");
+  }
+  if (!BOUNDED.has(response.inflation_bounded_by)) {
+    issues.push("inflation_bounded_by must be none, cap, or floor");
   }
   if (!isFiniteNumber(response.total_budget_remaining)) {
     issues.push("total_budget_remaining must be a finite number");

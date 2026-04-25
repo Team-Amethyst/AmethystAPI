@@ -110,6 +110,16 @@ Draft’s error handler **forwards that body as-is** for Engine 400s with this s
 
 Draft’s web client allows **`engine_contract_version`** (or similar) on valuation responses when Engine sends it. If you add response versioning, document the field name and bump rules alongside Draft **`schemaVersion`** (e.g. `1.0.0`).
 
+## Valuation aggregates (AmethystDraft — **coordinate UI**)
+
+Engine semantics (see **`docs/valuation-inflation-semantics.md`** in the Engine repo):
+
+- **`pool_value_remaining`** — sum of baseline list dollars on the **full** undrafted inflation pool (not the sum of only `valuations[]` rows).
+- **`players_remaining`** — count of players in that **full** pool. When **`player_ids`** is set, **`valuations.length`** may be smaller; do not equate it with `players_remaining`.
+- **`inflation_raw`** / **`inflation_bounded_by`** — pre-clamp ratio vs cap/floor; use so “+200% market” copy is not shown when the number is **clamp-driven**.
+
+**`GET /api/health`** (no API key) returns **`valuation_build_label`** and optional **`git_sha`** so clients can confirm portal vs API revision after deploy.
+
 ## Reliability note (set expectations)
 
 Valuations depend on Engine uptime, Draft Mongo consistency for live league routes, and catalog/data freshness. There is no claim of universal “bulletproof” behavior without Engine + data in good shape.

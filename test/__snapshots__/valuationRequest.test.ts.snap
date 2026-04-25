@@ -4,7 +4,9 @@ exports[`calculateInflation with normalized fixtures > legacy-empty deterministi
 {
   "calculated_at": "1970-01-01T00:00:00.000Z",
   "engine_contract_version": "1",
+  "inflation_bounded_by": "none",
   "inflation_factor": 60,
+  "inflation_raw": 60,
   "players_remaining": 2,
   "pool_value_remaining": 52,
   "total_budget_remaining": 3120,
@@ -56,7 +58,9 @@ exports[`calculateInflation with normalized fixtures > nested-after-pick applies
 {
   "calculated_at": "1970-01-01T00:00:00.000Z",
   "engine_contract_version": "1",
+  "inflation_bounded_by": "none",
   "inflation_factor": 255.4167,
+  "inflation_raw": 255.416667,
   "players_remaining": 1,
   "pool_value_remaining": 12,
   "total_budget_remaining": 3065,

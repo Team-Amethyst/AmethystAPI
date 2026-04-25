@@ -31,6 +31,7 @@ import { getRedisClient } from "./lib/redis";
 import { logger } from "./lib/logger";
 import { getReadiness, readinessHttpStatus } from "./lib/readiness";
 import { relaxApiKeysCollectionValidation } from "./lib/apiKeyCollection";
+import { getValuationModelVersion } from "./lib/valuationModelVersion";
 
 dotenv.config();
 
@@ -64,6 +65,12 @@ app.get("/api/health", (_req, res) => {
     service: "Amethyst Engine",
     version: "1.0.0",
     timestamp: new Date().toISOString(),
+    valuation_build_label: getValuationModelVersion(),
+    git_sha:
+      process.env.GITHUB_SHA?.trim() ||
+      process.env.GIT_COMMIT?.trim() ||
+      process.env.VERCEL_GIT_COMMIT_SHA?.trim() ||
+      null,
   });
 });
 

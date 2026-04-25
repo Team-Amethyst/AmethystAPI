@@ -80,6 +80,8 @@ function cacheKey(
   const payload = JSON.stringify({
     model: response.valuation_model_version ?? "unknown",
     inflation: response.inflation_factor,
+    inflationRaw: response.inflation_raw,
+    inflationBounded: response.inflation_bounded_by,
     budget: response.total_budget_remaining,
     players: response.players_remaining,
     leagueId: input.league_id ?? null,
@@ -91,17 +93,26 @@ function cacheKey(
   return crypto.createHash("sha1").update(payload).digest("hex");
 }
 
-function buildDriverRows(row: ValuedPlayer, inflationFactor: number) {
+function buildDriverRows(row: ValuedPlayer, response: ValuationResponse) {
+  const inflationFactor = response.inflation_factor;
   const scarcityImpact = rounded(row.scarcity_adjustment ?? 0);
   const inflationImpact = rounded(row.inflation_adjustment ?? 0);
   const delta = rounded(row.adjusted_value - row.baseline_value);
   const otherImpact = rounded(delta - scarcityImpact - inflationImpact);
   const scFac = row.baseline_components?.scarcity_component ?? 0;
+  const raw = response.inflation_raw;
+  const bounded = response.inflation_bounded_by;
+  let leagueReason = `League-wide factor ${inflationFactor.toFixed(2)}× applied to list_value (baseline already includes scoring/roster scarcity).`;
+  if (bounded === "cap") {
+    leagueReason += ` Raw ratio was ${raw.toFixed(2)}× before the workflow cap.`;
+  } else if (bounded === "floor") {
+    leagueReason += ` Raw ratio was ${raw.toFixed(2)}× before the workflow floor.`;
+  }
   const drivers = [
     {
       label: "League inflation",
       impact: inflationImpact,
-      reason: `League-wide factor ${inflationFactor.toFixed(2)}× applied to list_value (baseline already includes scoring/roster scarcity).`,
+      reason: leagueReason,
     },
     {
       label: `Scarcity context (${row.position})`,
@@ -242,6 +253,8 @@ export function attachValuationExplainability(
       market_summary: {
         headline: formatHeadline(response.inflation_factor, top?.position ?? null),
         inflation_factor: rounded(response.inflation_factor),
+        inflation_raw: rounded(response.inflation_raw),
+        inflation_bounded_by: response.inflation_bounded_by,
         inflation_percent_vs_neutral: pctNeutral,
         budget_left: rounded(response.total_budget_remaining),
         players_left: response.players_remaining,
@@ -251,8 +264,14 @@ export function attachValuationExplainability(
       assumptions: [
         "Auction inflation is computed from remaining budget divided by remaining pool value.",
         "The inflation factor may be clamped to a workflow floor/cap when pool list dollars are extreme versus remaining cash.",
+        ...(response.inflation_bounded_by !== "none"
+          ? [
+              `This response used inflation_raw=${response.inflation_raw.toFixed(4)} before clamp; applied factor is ${response.inflation_factor.toFixed(4)} (${response.inflation_bounded_by}).`,
+            ]
+          : []),
         "Scarcity urgency uses remaining elite and mid-tier supply versus league demand.",
         "Draft state is treated as stateless full-context input for every request.",
+        "pool_value_remaining and players_remaining describe the full undrafted inflation pool; valuations.length may be smaller when player_ids filters the response.",
         "pool_value_remaining sums baseline list dollars on undrafted players; real auction accuracy depends on catalog value quality — run `pnpm run audit:valuation-response` for fixture QA.",
       ],
       confidence: {
@@ -308,7 +327,7 @@ export function attachValuationExplainability(
     explain_v2: (() => {
       const { scarcityImpact, inflationImpact, otherImpact, drivers } = buildDriverRows(
         row,
-        response.inflation_factor
+        response
       );
       const indicatorConfidence =
         row.indicator === "Fair Value"

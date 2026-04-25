@@ -91,6 +91,8 @@ describe("POST /valuation/calculate (Draft checkpoint bodies)", () => {
     expect(res.body).toMatchObject({
       engine_contract_version: "1",
       inflation_factor: expect.any(Number),
+      inflation_raw: expect.any(Number),
+      inflation_bounded_by: expect.stringMatching(/^(none|cap|floor)$/),
       total_budget_remaining: expect.any(Number),
       pool_value_remaining: expect.any(Number),
       players_remaining: expect.any(Number),
@@ -104,6 +106,8 @@ describe("POST /valuation/calculate (Draft checkpoint bodies)", () => {
         }),
         market_summary: expect.objectContaining({
           inflation_factor: expect.any(Number),
+          inflation_raw: expect.any(Number),
+          inflation_bounded_by: expect.stringMatching(/^(none|cap|floor)$/),
           inflation_percent_vs_neutral: expect.any(Number),
           budget_left: expect.any(Number),
           players_left: expect.any(Number),
@@ -314,6 +318,8 @@ describe("POST /valuation/calculate — AmethystDraft BFF alignment", () => {
       calculated_at: "1970-01-01T00:00:00.000Z",
       players_remaining: expectedUndrafted,
       inflation_factor: expect.any(Number),
+      inflation_raw: expect.any(Number),
+      inflation_bounded_by: expect.stringMatching(/^(none|cap|floor)$/),
       pool_value_remaining: expect.any(Number),
       total_budget_remaining: expect.any(Number),
     });
@@ -390,6 +396,22 @@ describe("POST /valuation/player", () => {
     ]);
 
     expect(single.body.total_budget_remaining).toBe(calc.body.total_budget_remaining);
+    expect(single.body.inflation_factor).toBeCloseTo(calc.body.inflation_factor, 5);
+    expect(single.body.inflation_raw).toBeCloseTo(calc.body.inflation_raw, 5);
+    expect(single.body.inflation_bounded_by).toBe(calc.body.inflation_bounded_by);
+    expect(single.body.pool_value_remaining).toBeCloseTo(
+      calc.body.pool_value_remaining,
+      2
+    );
+    expect(single.body.players_remaining).toBe(calc.body.players_remaining);
+    const calcRow = calc.body.valuations.find(
+      (r: { player_id: string }) => r.player_id === "1"
+    );
+    expect(calcRow).toBeDefined();
+    expect(single.body.player.adjusted_value).toBeCloseTo(
+      calcRow!.adjusted_value,
+      5
+    );
     expect(single.body.context_v2.market_summary.budget_left).toBe(
       single.body.total_budget_remaining
     );

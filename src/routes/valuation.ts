@@ -63,6 +63,8 @@ async function runValuation(
     reqLog.info(
       {
         inflation_factor: outcome.response.inflation_factor,
+        inflation_raw: outcome.response.inflation_raw,
+        inflation_bounded_by: outcome.response.inflation_bounded_by,
         pool_value_remaining: outcome.response.pool_value_remaining,
         total_budget_remaining: outcome.response.total_budget_remaining,
         players_remaining: outcome.response.players_remaining,

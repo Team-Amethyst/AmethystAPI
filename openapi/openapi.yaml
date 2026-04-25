@@ -105,11 +105,14 @@ components:
       description: |
         Per-player `baseline_value` is list price after the scoring/roster baseline engine
         (not raw Mongo `value`). `adjusted_value = baseline_value * inflation_factor`.
-        `inflation_factor` may hit workflow floor/cap. `valuation_model_version` is a deploy label
-        (`VALUATION_MODEL_VERSION` / git SHA / package name@version).
+        `inflation_factor` may hit workflow floor/cap. `inflation_raw` is the pre-clamp ratio; `inflation_bounded_by`
+        states whether cap or floor was applied. `pool_value_remaining` / `players_remaining` describe the **full**
+        undrafted inflation pool (not `valuations.length` when `player_ids` is set). `valuation_model_version` is a deploy label.
       required:
         - engine_contract_version
         - inflation_factor
+        - inflation_raw
+        - inflation_bounded_by
         - total_budget_remaining
         - pool_value_remaining
         - players_remaining
@@ -121,7 +124,14 @@ components:
           example: "1"
         inflation_factor:
           type: number
-          description: League-wide multiplier; may be workflow floor/capped when pool $ ≫ budget remaining.
+          description: League-wide multiplier after cap/floor (applied).
+        inflation_raw:
+          type: number
+          description: Remaining budget divided by full undrafted pool list dollars, before cap/floor.
+        inflation_bounded_by:
+          type: string
+          enum: [none, cap, floor]
+          description: Whether the applied inflation factor was clamped from raw.
         total_budget_remaining:
           type: number
         pool_value_remaining:
@@ -129,6 +139,7 @@ components:
           description: Sum of undrafted players' baseline list dollars after the baseline engine.
         players_remaining:
           type: integer
+          description: Count of undrafted players in the inflation basis pool (full pool; not filtered by player_ids).
         calculated_at:
           type: string
         valuation_model_version:
@@ -164,6 +175,11 @@ components:
                   type: string
                 inflation_factor:
                   type: number
+                inflation_raw:
+                  type: number
+                inflation_bounded_by:
+                  type: string
+                  enum: [none, cap, floor]
                 inflation_percent_vs_neutral:
                   type: number
                 budget_left:

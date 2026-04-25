@@ -6,6 +6,8 @@ vi.mock("../src/services/inflationEngine", () => ({
   calculateInflation: vi.fn(() => ({
     engine_contract_version: ENGINE_CONTRACT_VERSION,
     inflation_factor: Number.NaN,
+    inflation_raw: Number.NaN,
+    inflation_bounded_by: "none",
     total_budget_remaining: 0,
     pool_value_remaining: 0,
     players_remaining: 0,

@@ -1,9 +1,10 @@
 import { ENGINE_CONTRACT_VERSION } from "../lib/engineContract";
 import { getValuationModelVersion } from "../lib/valuationModelVersion";
 import { filterByScope } from "../lib/leagueScope";
-import {
+import type {
   CalculateInflationOptions,
   DraftedPlayer,
+  InflationBoundedBy,
   LeanPlayer,
   LeagueScope,
   RosterSlot,
@@ -78,6 +79,28 @@ function compareByAdpAsc(
   return getPlayerId(a).localeCompare(getPlayerId(b));
 }
 
+function clampInflation(
+  raw: number,
+  cap: number | undefined,
+  floor: number | undefined
+): {
+  inflation_raw: number;
+  inflation_factor: number;
+  inflation_bounded_by: InflationBoundedBy;
+} {
+  const capV =
+    cap != null && Number.isFinite(cap) && cap > 0 ? cap : Number.POSITIVE_INFINITY;
+  const floorV =
+    floor != null && Number.isFinite(floor) && floor > 0 ? floor : 0.25;
+  const capped = Math.min(capV, raw);
+  const applied = Math.max(floorV, capped);
+  const eps = 1e-5;
+  let inflation_bounded_by: InflationBoundedBy = "none";
+  if (applied > raw + eps) inflation_bounded_by = "floor";
+  else if (applied + eps < raw) inflation_bounded_by = "cap";
+  return { inflation_raw: raw, inflation_factor: applied, inflation_bounded_by };
+}
+
 /**
  * Calculates auction inflation and returns adjusted player valuations.
  *
@@ -87,13 +110,16 @@ function compareByAdpAsc(
  * - Otherwise: `total_budget_remaining` = `total_budget * num_teams` − **sum(`drafted_players[].paid`)**
  *   (missing `paid` treated as 0). **`pre_draft_rosters`, `minors`, and `taxi` do not affect spend in v1.**
  *
- * Inflation Factor = Remaining League Budget / Remaining Player Pool Value
+ * Inflation Factor = Remaining League Budget / **full** undrafted pool list value
  *   > 1.0 → more money chasing remaining talent → prices inflate
  *   < 1.0 → surplus talent relative to budget → prices deflate
  *
+ * **`player_ids`:** does not change the inflation denominator; it only filters
+ * which rows appear in `valuations[]` (same factor applied to each).
+ *
  * Value Indicator:
- *   We rank every undrafted player both by projection value and by ADP.
- *   A rank mismatch between the two reveals market inefficiencies.
+ *   Ranks use the **full** undrafted pool so Steal/Reach stay meaningful when
+ *   `valuations[]` is a subset.
  */
 export function calculateInflation(
   allPlayers: LeanPlayer[],
@@ -110,11 +136,12 @@ export function calculateInflation(
   }
 
   const scoped = filterByScope(allPlayers, leagueScope);
-  let undrafted = scoped.filter((p) => !draftedIds.has(getPlayerId(p)));
+  const undraftedFull = scoped.filter((p) => !draftedIds.has(getPlayerId(p)));
 
+  let undraftedForRows = undraftedFull;
   if (options?.playerIdsFilter && options.playerIdsFilter.length > 0) {
     const allow = new Set(options.playerIdsFilter);
-    undrafted = undrafted.filter((p) => allow.has(getPlayerId(p)));
+    undraftedForRows = undraftedFull.filter((p) => allow.has(getPlayerId(p)));
   }
 
   const totalLeagueBudget = totalBudgetPerTeam * numTeams;
@@ -138,25 +165,35 @@ export function calculateInflation(
     );
   }
 
-  const poolValue = undrafted.reduce((sum, p) => sum + (p.value || 0), 0);
+  const poolValue = undraftedFull.reduce((sum, p) => sum + (p.value || 0), 0);
 
   const rawInflationFactor = poolValue > 0 ? budgetRemaining / poolValue : 1;
-  const cappedInflation = Math.min(
-    options?.inflationCap ?? Number.POSITIVE_INFINITY,
-    rawInflationFactor
+  const clamped = clampInflation(
+    rawInflationFactor,
+    options?.inflationCap,
+    options?.inflationFloor
   );
-  const inflationFactor = Math.max(options?.inflationFloor ?? 0.25, cappedInflation);
+  const inflationFactor = clamped.inflation_factor;
+  const inflationRaw = clamped.inflation_raw;
+  const inflationBoundedBy = clamped.inflation_bounded_by;
 
-  const byValue = [...undrafted].sort((a, b) =>
+  const byValueFull = [...undraftedFull].sort((a, b) =>
     compareByValueDesc(a, b, options)
   );
-  const byAdp = [...undrafted].sort((a, b) => compareByAdpAsc(a, b, options));
+  const byAdpFull = [...undraftedFull].sort((a, b) =>
+    compareByAdpAsc(a, b, options)
+  );
+  const valueRank = new Map(
+    byValueFull.map((p, i) => [getPlayerId(p), i + 1])
+  );
+  const adpRank = new Map(byAdpFull.map((p, i) => [getPlayerId(p), i + 1]));
+  const n = undraftedFull.length;
 
-  const valueRank = new Map(byValue.map((p, i) => [getPlayerId(p), i + 1]));
-  const adpRank = new Map(byAdp.map((p, i) => [getPlayerId(p), i + 1]));
-  const n = undrafted.length;
+  const byValueRows = [...undraftedForRows].sort((a, b) =>
+    compareByValueDesc(a, b, options)
+  );
 
-  const valuations: ValuedPlayer[] = byValue.map((p) => {
+  const valuations: ValuedPlayer[] = byValueRows.map((p) => {
     const pid = getPlayerId(p);
     const baselineValue = p.value || 0;
     const adjustedValue = parseFloat((baselineValue * inflationFactor).toFixed(2));
@@ -210,9 +247,11 @@ export function calculateInflation(
   return {
     engine_contract_version: ENGINE_CONTRACT_VERSION,
     inflation_factor: parseFloat(inflationFactor.toFixed(4)),
+    inflation_raw: parseFloat(inflationRaw.toFixed(6)),
+    inflation_bounded_by: inflationBoundedBy,
     total_budget_remaining: budgetRemaining,
     pool_value_remaining: parseFloat(poolValue.toFixed(2)),
-    players_remaining: undrafted.length,
+    players_remaining: undraftedFull.length,
     valuations,
     calculated_at: calculatedAt,
     valuation_model_version: getValuationModelVersion(),

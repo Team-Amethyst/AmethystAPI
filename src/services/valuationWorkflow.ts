@@ -18,6 +18,7 @@ import { scoringAwareBaselinePlayers } from "./baselineValueEngine";
  *    should carry 3-year stats, age, role, injury signals populated by your analytics/sync
  *    pipeline (not an external valuation API).
  * 3. **Filter drafted / ineligible** — Inside `calculateInflation` (drafted ids + league_scope).
+ *    Optional `player_ids` only limits **returned rows**; inflation uses the **full** undrafted pool.
  * 4. **Choose scoring system** — Branch on `scoring_format`: `points` vs category-style
  *    (`5x5` / `6x6` / default rotisserie-style). **v1:** Baseline auction $ still come from
  *    `LeanPlayer.value` (your model’s output in DB). Per-system stat→dollar conversion is

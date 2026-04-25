@@ -8,8 +8,8 @@ This document tracks **code-path semantics** plus **`pnpm run audit:valuation-re
 
 1. **`parseValuationRequest`** — normalizes Draft/flat/nested bodies to `NormalizedValuationInput` (optional **`league_id`** or nested **`league.id`** for `context_v2`).
 2. **`scoringAwareBaselinePlayers`** (`baselineValueEngine.ts`) — adjusts each catalog row’s **`value`** from Mongo using **`scoring_format`**, **`scoring_categories`**, **`roster_slots`** (projection stats when present, plus a scarcity multiplier). Stashes component hints on `projection.__valuation_meta__`.
-3. **`calculateInflation`** (`inflationEngine.ts`) — removes drafted / off-board ids, computes **one** league-wide **`inflation_factor`** = remaining budget ÷ sum of remaining **baseline** dollars (then cap/floor in the workflow retry loop).
-4. **Per row** — `adjusted_value = baseline_value * inflation_factor` (Steal/Reach from **value rank vs ADP rank** on that baseline-sorted pool).
+3. **`calculateInflation`** (`inflationEngine.ts`) — removes drafted / off-board ids, sums baseline $ on the **full** undrafted pool (ignoring `player_ids` for the denominator), computes **`inflation_raw`** then **`inflation_factor`** with cap/floor (workflow retry loop). **`player_ids`** only filters **`valuations[]`**.
+4. **Per row** — `adjusted_value = baseline_value * inflation_factor` (Steal/Reach from **value rank vs ADP rank** on the **full** undrafted pool).
 5. **`validateValuationResponse`** — structural / finiteness checks (not economic truth).
 6. **`attachValuationExplainability`** — adds `market_notes`, `why`, `explain_v2`, `context_v2` using **`analyzeScarcity`** on the **same baseline-adjusted** catalog passed into attach (aligned with pricing pool).
 
@@ -20,10 +20,12 @@ This document tracks **code-path semantics** plus **`pnpm run audit:valuation-re
 | Field | Intended meaning | Confidence / caveats |
 |-------|-------------------|----------------------|
 | **`engine_contract_version`** | Wire format / drift detector for Draft | **Reliable** — constant from `ENGINE_CONTRACT_VERSION`. |
-| **`inflation_factor`** | “Dollars chasing talent” ratio (budget left ÷ pool list $) | **Economically interpretable** only when **pool_value_remaining** is the sum of meaningful list prices. Capped/floored in workflow retries — **can sit at floor (e.g. 0.25)** when pool ≫ budget; document as clamp behavior, not neutral market. |
+| **`inflation_factor`** | Applied multiplier after workflow cap/floor | Interpret with **`inflation_raw`** / **`inflation_bounded_by`** so UI does not treat a **clamp** as neutral “market temperature.” |
+| **`inflation_raw`** | Budget ÷ full undrafted pool $ (pre clamp) | Best single scalar for “dollars per list-dollar of remaining talent.” |
+| **`inflation_bounded_by`** | `none` / `cap` / `floor` | Which bound affected **`inflation_factor`** relative to **`inflation_raw`**. |
 | **`total_budget_remaining`** | League dollars left | **Reliable** given request semantics: either **`budget_by_team_id`** sum or `total_budget * num_teams - Σ paid` (+ keeper spend rules from workflow). |
-| **`pool_value_remaining`** | Σ `value` on **undrafted** players after baseline step | **Internally consistent** with how `adjusted_value` is computed. **Not** the same as a public “FG $” or DFS salary cap unless Mongo **`value`** is calibrated to that unit. |
-| **`players_remaining`** | Count of undrafted rows in the valuation pool | **Reliable** after filters / `player_ids`. |
+| **`pool_value_remaining`** | Σ baseline `value` on the **full** undrafted inflation pool | Same set used for **`inflation_raw`** / **`inflation_factor`**; **not** re-scaled when `player_ids` limits `valuations[]`. |
+| **`players_remaining`** | Count of that **full** undrafted pool | **Not** `valuations.length` when `player_ids` is present. See [valuation-inflation-semantics.md](valuation-inflation-semantics.md). |
 | **`calculated_at`** | Timestamp | **Reliable**; deterministic fixtures pin to epoch when `deterministic: true`. |
 | **`valuation_model_version`** | Deploy / build label | **`VALUATION_MODEL_VERSION`** env, else **`GITHUB_SHA`** / **`GIT_COMMIT`**, else **`package.json`** `name@version`. Docker CI passes **`BUILD_GIT_SHA`**. |
 | **`valuations[]`** | Per-player rows | See below. |

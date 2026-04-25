@@ -88,7 +88,7 @@ function main(): void {
 
     console.log(`--- ${file} ---`);
     console.log(
-      `  aggregate: inflation=${res.inflation_factor} budget_rem=${res.total_budget_remaining} pool_val=${res.pool_value_remaining} players_rem=${res.players_remaining} model=${res.valuation_model_version}`
+      `  aggregate: inflation=${res.inflation_factor} raw=${res.inflation_raw} bounded=${res.inflation_bounded_by} budget_rem=${res.total_budget_remaining} pool_val=${res.pool_value_remaining} players_rem=${res.players_remaining} model=${res.valuation_model_version}`
     );
     console.log(
       `  context_v2: league_id=${res.context_v2?.scope.league_id} headline_snip=${(res.context_v2?.market_summary.headline ?? "").slice(0, 72)}…`
@@ -117,7 +117,12 @@ function main(): void {
       console.log(JSON.stringify(summarizeRow(r), null, 2));
       console.log("player_id in row (expect 500):", r.player_id);
       console.log("valuations.length:", one.response.valuations.length);
-      console.log("players_remaining:", one.response.players_remaining);
+      console.log(
+        "players_remaining (full pool):",
+        one.response.players_remaining,
+        "inflation_factor:",
+        one.response.inflation_factor
+      );
     } else if (!one.ok) {
       console.log("workflow", one.issues);
     }

@@ -23,6 +23,8 @@ function baseResponse(over: Partial<ValuationResponse> = {}): ValuationResponse 
   return {
     engine_contract_version: ENGINE_CONTRACT_VERSION,
     inflation_factor: 1.1,
+    inflation_raw: 1.1,
+    inflation_bounded_by: "none",
     total_budget_remaining: 100,
     pool_value_remaining: 200,
     players_remaining: 5,
@@ -59,6 +61,22 @@ describe("validateValuationResponse", () => {
     expect(q.ok).toBe(false);
     if (q.ok) return;
     expect(q.issues.some((i) => i.includes("inflation_factor"))).toBe(true);
+  });
+
+  it("rejects non-finite inflation_raw", () => {
+    const q = validateValuationResponse(
+      baseResponse({ inflation_raw: Number.NaN })
+    );
+    expect(q.ok).toBe(false);
+    if (q.ok) return;
+    expect(q.issues.some((i) => i.includes("inflation_raw"))).toBe(true);
+  });
+
+  it("rejects invalid inflation_bounded_by", () => {
+    const q = validateValuationResponse(
+      baseResponse({ inflation_bounded_by: "bogus" as ValuationResponse["inflation_bounded_by"] })
+    );
+    expect(q.ok).toBe(false);
   });
 
   it("rejects negative total_budget_remaining", () => {

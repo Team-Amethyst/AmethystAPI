@@ -198,11 +198,17 @@ export interface ValuedPlayer {
   };
 }
 
+export type InflationBoundedBy = "none" | "cap" | "floor";
+
 export interface ValuationResponse {
   /** Engine HTTP/JSON contract major version (debug drift vs Draft). */
   engine_contract_version: string;
   /** > 1.0 = inflated market; < 1.0 = deflated */
   inflation_factor: number;
+  /** `budget_remaining / pool_value` before workflow cap/floor (same pool as `pool_value_remaining`). */
+  inflation_raw: number;
+  /** Whether `inflation_factor` was raised to floor, lowered to cap, or left as raw. */
+  inflation_bounded_by: InflationBoundedBy;
   total_budget_remaining: number;
   pool_value_remaining: number;
   players_remaining: number;
@@ -223,6 +229,8 @@ export interface ValuationResponse {
     market_summary: {
       headline: string;
       inflation_factor: number;
+      inflation_raw: number;
+      inflation_bounded_by: InflationBoundedBy;
       inflation_percent_vs_neutral: number;
       budget_left: number;
       players_left: number;

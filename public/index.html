@@ -25,9 +25,40 @@
       --radius:     8px;
       /* One column for header, tabs, and all tab bodies (incl. long API keys) */
       --content-max: 1120px;
+      --scrollbar-track:  #12121c;
+      --scrollbar-thumb:  #3a3a52;
+      --scrollbar-thumb-hover: #55556f;
     }
 
     html { scroll-behavior: smooth; }
+
+    /* Scrollbars — thin track, rounded thumb (Firefox + WebKit) */
+    * {
+      scrollbar-width: thin;
+      scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+    }
+    *::-webkit-scrollbar {
+      width: 9px;
+      height: 9px;
+    }
+    *::-webkit-scrollbar-track {
+      background: var(--scrollbar-track);
+      border-radius: 100px;
+    }
+    *::-webkit-scrollbar-thumb {
+      background: var(--scrollbar-thumb);
+      border-radius: 100px;
+      border: 2px solid transparent;
+      background-clip: padding-box;
+    }
+    *::-webkit-scrollbar-thumb:hover {
+      background-color: var(--scrollbar-thumb-hover);
+      border: 2px solid transparent;
+      background-clip: padding-box;
+    }
+    *::-webkit-scrollbar-corner {
+      background: var(--scrollbar-track);
+    }
 
     body {
       background: var(--bg);
@@ -271,17 +302,91 @@
       color: var(--muted);
       cursor: pointer;
       opacity: 0.55;
-      transition: opacity 0.15s, color 0.15s, background 0.15s, border-color 0.15s;
+      transition:
+        opacity 0.2s,
+        color 0.2s,
+        background 0.2s,
+        border-color 0.2s,
+        transform 0.12s ease,
+        box-shadow 0.2s;
     }
     .sandbox-json-copy:hover {
       color: var(--text);
       background: var(--surface-2);
       border-color: var(--muted);
+      opacity: 1;
+    }
+    .sandbox-json-copy.copied:hover {
+      color: var(--green);
+      background: rgba(52, 211, 153, 0.16);
+      border-color: rgba(52, 211, 153, 0.55);
+    }
+    .sandbox-json-copy.copy-fail:hover {
+      color: var(--red);
+      background: rgba(248, 113, 113, 0.14);
+      border-color: rgba(248, 113, 113, 0.55);
+    }
+    .sandbox-json-copy:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 2px;
+      opacity: 1;
+    }
+    .sandbox-json-copy:active:not(.copied):not(.copy-fail) {
+      transform: scale(0.9);
+    }
+    .sandbox-json-copy.copied {
+      opacity: 1;
+      color: var(--green);
+      border-color: rgba(52, 211, 153, 0.45);
+      background: rgba(52, 211, 153, 0.12);
+      box-shadow: 0 0 0 1px rgba(52, 211, 153, 0.2), 0 4px 20px rgba(52, 211, 153, 0.12);
+      animation: sandbox-copy-pop 0.45s cubic-bezier(0.34, 1.4, 0.64, 1);
+    }
+    .sandbox-json-copy.copy-fail {
+      opacity: 1;
+      color: var(--red);
+      border-color: rgba(248, 113, 113, 0.45);
+      background: rgba(248, 113, 113, 0.1);
+      animation: sandbox-copy-shake 0.4s ease;
+    }
+    @keyframes sandbox-copy-pop {
+      0% { transform: scale(1); }
+      40% { transform: scale(1.12); }
+      100% { transform: scale(1); }
+    }
+    @keyframes sandbox-copy-shake {
+      0%, 100% { transform: translateX(0); }
+      20% { transform: translateX(-3px); }
+      40% { transform: translateX(3px); }
+      60% { transform: translateX(-2px); }
+      80% { transform: translateX(2px); }
     }
     .sandbox-json-copy svg {
       width: 16px;
       height: 16px;
       display: block;
+      flex-shrink: 0;
+    }
+    .sandbox-json-copy .sandbox-copy-check {
+      display: none;
+    }
+    .sandbox-json-copy.copied .sandbox-copy-clip {
+      display: none;
+    }
+    .sandbox-json-copy.copied .sandbox-copy-check {
+      display: block;
+    }
+    .sandbox-json-copy.copy-fail .sandbox-copy-clip,
+    .sandbox-json-copy.copy-fail .sandbox-copy-check {
+      display: none;
+    }
+    .sandbox-json-copy.copy-fail .sandbox-copy-warn {
+      display: block;
+    }
+    .sandbox-json-copy .sandbox-copy-warn {
+      display: none;
+      width: 16px;
+      height: 16px;
     }
     .sandbox-context-pre {
       margin: 0;
@@ -1229,7 +1334,7 @@
   }],
   <span class="t-key">"deterministic"</span>:      <span class="t-key">false</span>,       <span class="t-cmt">// optional — stable timestamps for tests</span>
   <span class="t-key">"seed"</span>:                 <span class="t-num">42</span>,            <span class="t-cmt">// optional — with deterministic, stable tie-breaks</span>
-  <span class="t-key">"player_ids"</span>:          [<span class="t-str">"660271"</span>],   <span class="t-cmt">// optional — subset of undrafted ids</span>
+  <span class="t-key">"player_ids"</span>:          [<span class="t-str">"660271"</span>],   <span class="t-cmt">// optional — limit valuations[]; inflation uses full pool</span>
   <span class="t-key">"budget_by_team_id"</span>:  { <span class="t-str">"team_1"</span>: <span class="t-num">200</span> }, <span class="t-cmt">// optional — per-team $ remaining</span>
   <span class="t-key">"minors"</span>:              [],              <span class="t-cmt">// optional — [{ team_id, players[] }]</span>
   <span class="t-key">"taxi"</span>:                []               <span class="t-cmt">// optional</span>
@@ -1848,9 +1953,16 @@ player_id: player._id          <span class="t-cmt">// MongoDB ObjectId — not r
         <p class="portal-hint" style="margin-top:4px;margin-bottom:10px">Hover the panel and use the clipboard control to copy this checkpoint JSON exactly as stored.</p>
         <div class="sandbox-context-shell">
           <button type="button" class="sandbox-json-copy" id="sandboxCopyContextBtn" onclick="sandboxCopyActiveFixture()" title="Copy league context JSON" aria-label="Copy league context JSON">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <svg class="sandbox-copy-clip" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
               <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+            </svg>
+            <svg class="sandbox-copy-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M20 6L9 17l-5-5"/>
+            </svg>
+            <svg class="sandbox-copy-warn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <circle cx="12" cy="12" r="10"/>
+              <path d="M12 8v4M12 16h.01"/>
             </svg>
           </button>
           <pre class="sandbox-context-pre" id="sandboxContextPre"></pre>
@@ -2138,11 +2250,28 @@ player_id: player._id          <span class="t-cmt">// MongoDB ObjectId — not r
     const raw = sandboxFixtureRaw[sandboxActiveFile];
     if (!raw) return;
     const btn = document.getElementById('sandboxCopyContextBtn');
+    const defaultTitle = 'Copy league context JSON';
+    const defaultLabel = 'Copy league context JSON';
+    function resetCopyUi() {
+      btn.classList.remove('copied', 'copy-fail');
+      btn.title = defaultTitle;
+      btn.setAttribute('aria-label', defaultLabel);
+      if (btn._sandboxCopyTimer) {
+        clearTimeout(btn._sandboxCopyTimer);
+        btn._sandboxCopyTimer = null;
+      }
+    }
+    resetCopyUi();
     navigator.clipboard.writeText(raw).then(() => {
-      btn.title = 'Copied!';
-      setTimeout(() => {
-        btn.title = 'Copy league context JSON';
-      }, 2000);
+      btn.classList.add('copied');
+      btn.title = 'Copied to clipboard';
+      btn.setAttribute('aria-label', 'Copied to clipboard');
+      btn._sandboxCopyTimer = setTimeout(resetCopyUi, 2000);
+    }).catch(() => {
+      btn.classList.add('copy-fail');
+      btn.title = 'Could not copy — check permissions';
+      btn.setAttribute('aria-label', 'Copy failed');
+      btn._sandboxCopyTimer = setTimeout(resetCopyUi, 2200);
     });
   }
 

@@ -109,6 +109,46 @@ describe("inflation engine properties", () => {
       res.total_budget_remaining + 0.01
     );
   });
+
+  it("does not let player_ids shrink the inflation pool (subset rows only)", () => {
+    const players = [mkPlayer(1, 30, 2), mkPlayer(2, 40, 3), mkPlayer(3, 25, 4)];
+    const opts = {
+      deterministic: true,
+      seed: 9,
+      inflationCap: 100,
+      inflationFloor: 0.05,
+    } as const;
+    const full = calculateInflation(
+      players,
+      [],
+      50,
+      4,
+      roster,
+      "Mixed",
+      opts
+    );
+    const subset = calculateInflation(
+      players,
+      [],
+      50,
+      4,
+      roster,
+      "Mixed",
+      { ...opts, playerIdsFilter: ["1"] }
+    );
+    expect(subset.valuations).toHaveLength(1);
+    expect(subset.players_remaining).toBe(full.players_remaining);
+    expect(subset.pool_value_remaining).toBeCloseTo(full.pool_value_remaining, 5);
+    expect(subset.inflation_factor).toBeCloseTo(full.inflation_factor, 7);
+    expect(subset.inflation_raw).toBeCloseTo(full.inflation_raw, 7);
+    expect(subset.inflation_bounded_by).toBe(full.inflation_bounded_by);
+    const fullRow = full.valuations.find((v) => v.player_id === "1");
+    expect(fullRow).toBeDefined();
+    expect(subset.valuations[0].adjusted_value).toBeCloseTo(
+      fullRow!.adjusted_value,
+      5
+    );
+  });
 });
 
 describe("scarcity engine properties", () => {
