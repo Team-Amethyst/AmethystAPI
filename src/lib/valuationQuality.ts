@@ -1,5 +1,6 @@
 import { ENGINE_CONTRACT_VERSION } from "./engineContract";
 import type {
+  DraftPhaseIndicator,
   InflationBoundedBy,
   InflationModel,
   ValuationResponse,
@@ -20,6 +21,8 @@ const INDICATORS: Set<ValueIndicator> = new Set([
   "Reach",
   "Fair Value",
 ]);
+
+const PHASES: Set<DraftPhaseIndicator> = new Set(["early", "mid", "late"]);
 
 function isFiniteNumber(n: unknown): n is number {
   return typeof n === "number" && Number.isFinite(n);
@@ -44,14 +47,10 @@ function rowIssues(row: ValuedPlayer, index: number): string[] {
   if (row.recommended_bid != null) {
     if (!isFiniteNumber(row.recommended_bid)) {
       out.push(`${p}.recommended_bid must be a finite number when present`);
-    } else {
-      const lo = Math.min(row.adjusted_value, row.baseline_value);
-      const hi = Math.max(row.adjusted_value, row.baseline_value);
-      if (row.recommended_bid + 1e-9 < lo || row.recommended_bid - 1e-9 > hi) {
-        out.push(
-          `${p}.recommended_bid must be between adjusted_value and baseline_value`
-        );
-      }
+    } else if (row.recommended_bid < 1) {
+      out.push(`${p}.recommended_bid must be >= 1 (min bid)`);
+    } else if (row.recommended_bid > 20000) {
+      out.push(`${p}.recommended_bid exceeds sanity ceiling`);
     }
   }
   if (row.team_adjusted_value != null) {
@@ -59,11 +58,24 @@ function rowIssues(row: ValuedPlayer, index: number): string[] {
       out.push(`${p}.team_adjusted_value must be a finite number when present`);
     } else if (row.team_adjusted_value < 0) {
       out.push(`${p}.team_adjusted_value should not be negative`);
-    } else {
-      const cap = Math.max(0, row.baseline_value * 1.5);
-      if (row.team_adjusted_value - cap > 1e-9) {
-        out.push(`${p}.team_adjusted_value must be <= 1.5 × baseline_value`);
-      }
+    } else if (row.team_adjusted_value > 25000) {
+      out.push(`${p}.team_adjusted_value exceeds sanity ceiling`);
+    }
+  }
+  if (row.edge != null) {
+    if (!isFiniteNumber(row.edge)) {
+      out.push(`${p}.edge must be a finite number when present`);
+    } else if (
+      row.team_adjusted_value != null &&
+      row.recommended_bid != null &&
+      Math.abs(
+        row.edge -
+          ((row.team_adjusted_value as number) - (row.recommended_bid as number))
+      ) > 0.02
+    ) {
+      out.push(
+        `${p}.edge must equal team_adjusted_value − recommended_bid (within rounding)`
+      );
     }
   }
   if (!isFiniteNumber(row.inflation_factor)) {
@@ -164,6 +176,13 @@ export function validateValuationResponse(
     ) {
       issues.push("fallback_reason must be a string or null when present");
     }
+  }
+
+  if (
+    response.phase_indicator != null &&
+    !PHASES.has(response.phase_indicator)
+  ) {
+    issues.push("phase_indicator must be early, mid, or late when present");
   }
 
   if (!isFiniteNumber(response.inflation_factor)) {

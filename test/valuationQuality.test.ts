@@ -13,8 +13,9 @@ function baseRow(over: Partial<ValuedPlayer> = {}): ValuedPlayer {
     tier: 1,
     baseline_value: 10,
     adjusted_value: 11,
-    recommended_bid: 10.65,
-    team_adjusted_value: 10.12,
+    recommended_bid: 10,
+    team_adjusted_value: 11,
+    edge: 1,
     indicator: "Fair Value",
     inflation_factor: 1.1,
     ...over,
@@ -142,22 +143,37 @@ describe("validateValuationResponse", () => {
     expect(q.ok).toBe(false);
   });
 
-  it("rejects recommended_bid outside [adjusted_value, baseline_value]", () => {
+  it("rejects recommended_bid below min bid", () => {
     const q = validateValuationResponse(
-      baseResponse({ valuations: [baseRow({ recommended_bid: 50 })] })
+      baseResponse({ valuations: [baseRow({ recommended_bid: 0.5, edge: 10.5 })] })
     );
     expect(q.ok).toBe(false);
     if (q.ok) return;
     expect(q.issues.some((i) => i.includes("recommended_bid"))).toBe(true);
   });
 
-  it("rejects team_adjusted_value above 1.5x baseline", () => {
+  it("rejects team_adjusted_value above sanity ceiling", () => {
     const q = validateValuationResponse(
-      baseResponse({ valuations: [baseRow({ team_adjusted_value: 20 })] })
+      baseResponse({
+        valuations: [baseRow({ team_adjusted_value: 30000, edge: 29990 })],
+      })
     );
     expect(q.ok).toBe(false);
     if (q.ok) return;
     expect(q.issues.some((i) => i.includes("team_adjusted_value"))).toBe(true);
+  });
+
+  it("rejects edge inconsistent with team_adjusted_value and recommended_bid", () => {
+    const q = validateValuationResponse(
+      baseResponse({
+        valuations: [
+          baseRow({ team_adjusted_value: 20, recommended_bid: 10, edge: 5 }),
+        ],
+      })
+    );
+    expect(q.ok).toBe(false);
+    if (!q.ok) return;
+    expect(q.issues.some((i) => i.includes("edge"))).toBe(true);
   });
 
   it("rejects invalid indicator", () => {

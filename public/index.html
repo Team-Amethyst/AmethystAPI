@@ -1351,8 +1351,9 @@
   <span class="t-key">"total_budget_remaining"</span>: <span class="t-num">2184</span>,
   <span class="t-key">"pool_value_remaining"</span>:   <span class="t-num">1948</span>,
   <span class="t-key">"players_remaining"</span>:      <span class="t-num">496</span>,
-  <span class="t-key">"recommended_bid_note"</span>: <span class="t-str">"recommended_bid blends model marginal value with baseline strength for auction guidance"</span>,
-  <span class="t-key">"team_adjusted_value_note"</span>: <span class="t-str">"team_adjusted_value reflects team-specific need and budget relative to the league"</span>,
+  <span class="t-key">"recommended_bid_note"</span>: <span class="t-str">"recommended_bid is a phase-aware expected clearing price (early premium for stars, late depth compression toward $1–$3)"</span>,
+  <span class="t-key">"team_adjusted_value_note"</span>: <span class="t-str">"team_adjusted_value scales adjusted_value by roster need, dollars per open slot vs league peers, remaining-slot scarcity, and replacement drop-off for eligible slots"</span>,
+  <span class="t-key">"phase_indicator"</span>: <span class="t-str">"early"</span>,
   <span class="t-key">"user_team_id_used"</span>: <span class="t-str">"team_1"</span>,
   <span class="t-key">"valuations"</span>: [{
     <span class="t-key">"player_id"</span>:      <span class="t-str">"660271"</span>,
@@ -1361,8 +1362,9 @@
     <span class="t-key">"tier"</span>:           <span class="t-num">1</span>,
     <span class="t-key">"baseline_value"</span>: <span class="t-num">58</span>,
     <span class="t-key">"adjusted_value"</span>: <span class="t-num">65</span>,        <span class="t-cmt">// market marginal value</span>
-    <span class="t-key">"recommended_bid"</span>: <span class="t-num">71.1</span>,      <span class="t-cmt">// presentation blend: adjusted + baseline strength</span>
-    <span class="t-key">"team_adjusted_value"</span>: <span class="t-num">74.66</span>, <span class="t-cmt">// user-team signal (need + budget multipliers)</span>
+    <span class="t-key">"recommended_bid"</span>: <span class="t-num">72.5</span>,      <span class="t-cmt">// phase-aware clearing estimate</span>
+    <span class="t-key">"team_adjusted_value"</span>: <span class="t-num">78.2</span>, <span class="t-cmt">// need + $/slot vs league + replacement drop-off</span>
+    <span class="t-key">"edge"</span>: <span class="t-num">5.7</span>,               <span class="t-cmt">// team_adjusted_value − recommended_bid</span>
     <span class="t-key">"indicator"</span>:      <span class="t-str">"Steal"</span>,    <span class="t-cmt">// "Steal" | "Reach" | "Fair Value"</span>
     <span class="t-key">"baseline_components"</span>: {
       <span class="t-key">"scoring_format"</span>: <span class="t-str">"5x5"</span>,
@@ -1414,8 +1416,9 @@
     <span class="t-key">"name"</span>: <span class="t-str">"Shohei Ohtani"</span>,
     <span class="t-key">"baseline_value"</span>: <span class="t-num">58</span>,
     <span class="t-key">"adjusted_value"</span>: <span class="t-num">65</span>,
-    <span class="t-key">"recommended_bid"</span>: <span class="t-num">71.1</span>,
-    <span class="t-key">"team_adjusted_value"</span>: <span class="t-num">74.66</span>,
+    <span class="t-key">"recommended_bid"</span>: <span class="t-num">72.5</span>,
+    <span class="t-key">"team_adjusted_value"</span>: <span class="t-num">78.2</span>,
+    <span class="t-key">"edge"</span>: <span class="t-num">5.7</span>,
     <span class="t-key">"indicator"</span>: <span class="t-str">"Steal"</span>
   }
 }</pre>

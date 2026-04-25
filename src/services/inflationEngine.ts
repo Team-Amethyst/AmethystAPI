@@ -3,13 +3,16 @@ import { getValuationModelVersion } from "../lib/valuationModelVersion";
 import { filterByScope } from "../lib/leagueScope";
 import { computeReplacementSlotsV2 } from "./replacementSlotsV2";
 import {
+  buildLeagueSlotDemand,
   fitsRosterSlot,
   playerTokensFromDrafted,
   playerTokensFromLean,
+  sumDemand,
 } from "../lib/fantasyRosterSlots";
 import type {
   CalculateInflationOptions,
   DraftedPlayer,
+  DraftPhaseIndicator,
   InflationBoundedBy,
   InflationModel,
   LeanPlayer,
@@ -32,13 +35,10 @@ const DETERMINISTIC_CALCULATED_AT = "1970-01-01T00:00:00.000Z";
 
 /** Minimum auction bid reserved per empty roster slot (surplus model). */
 const MIN_AUCTION_BID = 1;
-const RECOMMENDED_BID_LAMBDA_DEFAULT = 0.35;
-const RECOMMENDED_BID_LAMBDA_TOP_TIER = 0.45;
-const RECOMMENDED_BID_TOP_N = 24;
 const RECOMMENDED_BID_NOTE =
-  "recommended_bid blends model marginal value with baseline strength for auction guidance";
+  "recommended_bid is a phase-aware expected clearing price (early premium for stars, late depth compression toward $1–$3)";
 const TEAM_ADJUSTED_NOTE =
-  "team_adjusted_value reflects team-specific need and budget relative to the league";
+  "team_adjusted_value scales adjusted_value by roster need, dollars per open slot vs league peers, remaining-slot scarcity, and replacement drop-off for eligible slots";
 const DEFAULT_USER_TEAM_ID = "team_1";
 
 const FLEX_SLOTS = new Set(["UTIL", "CI", "MI", "P"]);
@@ -232,6 +232,103 @@ function budgetPressureMultiplier(
   if (userRemaining > 1.25 * leagueAvgRemaining) return 1.15;
   if (userRemaining < 0.75 * leagueAvgRemaining) return 0.85;
   return 1.0;
+}
+
+function userBudgetRemaining(
+  draftedPlayers: DraftedPlayer[],
+  totalBudgetPerTeam: number,
+  budgetByTeamId: Record<string, number> | undefined,
+  userTeamId: string
+): number {
+  if (budgetByTeamId && Object.keys(budgetByTeamId).length > 0) {
+    return budgetByTeamId[userTeamId] ?? totalBudgetPerTeam;
+  }
+  let spent = 0;
+  for (const dp of draftedPlayers) {
+    if (dp.team_id !== userTeamId) continue;
+    spent += dp.paid ?? 0;
+  }
+  return Math.max(0, totalBudgetPerTeam - spent);
+}
+
+function leagueSlotCapacity(rosterSlots: RosterSlot[], numTeams: number): number {
+  return sumDemand(buildLeagueSlotDemand(rosterSlots, numTeams));
+}
+
+function userTeamStartingSlots(rosterSlots: RosterSlot[]): number {
+  let s = 0;
+  for (const rs of rosterSlots) {
+    const u = rs.position.toUpperCase().trim();
+    if (!u || u === "BN") continue;
+    s += Math.max(0, Math.floor(rs.count ?? 0));
+  }
+  return s;
+}
+
+function resolveDraftPhase(params: {
+  rosterSlots: RosterSlot[];
+  numTeams: number;
+  remainingSlotsLeague: number;
+  draftedCount: number;
+}): DraftPhaseIndicator {
+  const cap = leagueSlotCapacity(params.rosterSlots, params.numTeams);
+  let fill = 0;
+  if (cap > 0 && Number.isFinite(params.remainingSlotsLeague)) {
+    fill = (cap - params.remainingSlotsLeague) / cap;
+  } else if (cap > 0) {
+    fill = Math.min(1, params.draftedCount / cap);
+  }
+  fill = Math.max(0, Math.min(1, fill));
+  if (fill < 0.33) return "early";
+  if (fill < 0.67) return "mid";
+  return "late";
+}
+
+function lambdaClearingPrice(
+  phase: DraftPhaseIndicator,
+  depthFrac: number
+): number {
+  const t = Math.max(0, Math.min(1, depthFrac));
+  const elite = 1 - t;
+  switch (phase) {
+    case "early":
+      return 0.34 + 0.26 * elite ** 1.35;
+    case "mid":
+      return 0.28 + 0.22 * elite ** 1.2;
+    case "late":
+      return 0.12 + 0.24 * elite ** 1.35;
+    default:
+      return 0.3;
+  }
+}
+
+function maxReplacementDropoff(
+  baseline: number,
+  tokens: readonly string[],
+  repl: Record<string, number>,
+  slotKeys: ReadonlySet<string>
+): number {
+  let best = 0;
+  for (const slot of slotKeys) {
+    if (!fitsRosterSlot(slot, tokens)) continue;
+    best = Math.max(best, baseline - (repl[slot] ?? 0));
+  }
+  return Math.max(0, best);
+}
+
+function dollarsPerSlotPeerRatio(params: {
+  userRemaining: number;
+  openSeatTotal: number;
+  budgetRemainingLeague: number;
+  numTeams: number;
+  remainingSlotsLeague: number;
+}): number {
+  const dpsUser = params.userRemaining / Math.max(1, params.openSeatTotal);
+  const peerOpen = Math.max(1, params.remainingSlotsLeague / params.numTeams);
+  const peerBudget = params.budgetRemainingLeague / Math.max(1, params.numTeams);
+  const dpsPeer = peerBudget / peerOpen;
+  if (!Number.isFinite(dpsPeer) || dpsPeer <= 0) return 1;
+  return dpsUser / dpsPeer;
 }
 
 type SurplusPlan = {
@@ -518,20 +615,65 @@ export function calculateInflation(
     };
   });
 
-  // Presentation-only blend; valuation math (baseline/adjusted/inflation) stays unchanged.
-  const topTierIds = new Set(
-    byValueRows.slice(0, RECOMMENDED_BID_TOP_N).map((p) => getPlayerId(p))
+  const leagueCap = leagueSlotCapacity(rosterSlots, numTeams);
+  const remainingSlotsLeague =
+    v2Meta.remaining_slots ?? Math.max(0, leagueCap - draftedPlayers.length);
+  const draftPhase = resolveDraftPhase({
+    rosterSlots,
+    numTeams,
+    remainingSlotsLeague,
+    draftedCount: draftedPlayers.length,
+  });
+
+  const baselineOrderForDepth = [...byValueRows].sort(
+    (a, b) => (b.value || 0) - (a.value || 0)
   );
+  const depthFracById = new Map<string, number>();
+  const depthN = baselineOrderForDepth.length;
+  baselineOrderForDepth.forEach((p, i) => {
+    depthFracById.set(getPlayerId(p), depthN > 1 ? i / (depthN - 1) : 0);
+  });
+
+  const rosterDemandMap = buildLeagueSlotDemand(rosterSlots, numTeams);
+  const rosterSlotKeysForFit = new Set(rosterDemandMap.keys());
+  const replForTeam: Record<string, number> =
+    inflationModelEffective === "replacement_slots_v2" && v2Result
+      ? v2Result.replacement_values_by_slot_or_position
+      : {};
+
   for (const row of valuations) {
-    const lambda = topTierIds.has(row.player_id)
-      ? RECOMMENDED_BID_LAMBDA_TOP_TIER
-      : RECOMMENDED_BID_LAMBDA_DEFAULT;
-    const raw =
-      row.adjusted_value + lambda * (row.baseline_value - row.adjusted_value);
-    const lo = Math.min(row.adjusted_value, row.baseline_value);
-    const hi = Math.max(row.adjusted_value, row.baseline_value);
-    const clamped = Math.max(lo, Math.min(hi, raw));
-    row.recommended_bid = parseFloat(clamped.toFixed(2));
+    const depthFrac = depthFracById.get(row.player_id) ?? 0.5;
+    const a = row.adjusted_value;
+    const r = row.baseline_value;
+    const L = lambdaClearingPrice(draftPhase, depthFrac);
+    let clearing = a + L * (r - a);
+    if (draftPhase === "early" && depthFrac < 0.06) {
+      clearing += 0.045 * (r - a);
+    }
+    if (draftPhase === "late") {
+      const squeeze = 0.5 + 0.5 * (1 - depthFrac);
+      clearing =
+        MIN_AUCTION_BID + (clearing - MIN_AUCTION_BID) * Math.max(0.35, squeeze);
+    }
+    if (depthFrac < 0.12) {
+      clearing = Math.max(clearing, a * 0.93);
+    }
+    const hiSoft = Math.max(r, a) * 1.15 + 8;
+    clearing = Math.max(MIN_AUCTION_BID, Math.min(clearing, hiSoft));
+    row.recommended_bid = parseFloat(clearing.toFixed(2));
+  }
+
+  const ordDesc = [...valuations].sort(
+    (a, b) => b.baseline_value - a.baseline_value
+  );
+  for (let k = 1; k < ordDesc.length; k++) {
+    const prev = ordDesc[k - 1].recommended_bid ?? MIN_AUCTION_BID;
+    const cur = ordDesc[k].recommended_bid ?? MIN_AUCTION_BID;
+    if (cur > prev + 1e-6) {
+      ordDesc[k].recommended_bid = parseFloat(
+        Math.max(MIN_AUCTION_BID, prev - 0.01).toFixed(2)
+      );
+    }
   }
 
   const userTeamId = options?.userTeamId?.trim() || DEFAULT_USER_TEAM_ID;
@@ -548,16 +690,78 @@ export function calculateInflation(
     userTeamId,
     budgetRemaining
   );
+  const userRemaining = userBudgetRemaining(
+    draftedPlayers,
+    totalBudgetPerTeam,
+    options?.budgetByTeamId,
+    userTeamId
+  );
+  const openSeatTotal = [...openSlots.values()].reduce((s, v) => s + v, 0);
+  const userCap = userTeamStartingSlots(rosterSlots);
+  const slotFillRatio =
+    userCap > 0 ? Math.max(0, Math.min(1, openSeatTotal / userCap)) : 1;
+  const slotScarcityMult = 1 + 0.22 * (1 - slotFillRatio);
+  const dpsRatio = dollarsPerSlotPeerRatio({
+    userRemaining,
+    openSeatTotal,
+    budgetRemainingLeague: budgetRemaining,
+    numTeams,
+    remainingSlotsLeague: Math.max(1, remainingSlotsLeague),
+  });
+  let dpsMult = 1;
+  if (dpsRatio > 1.18) {
+    dpsMult += 0.14 * Math.min(2.2, dpsRatio - 1.18);
+  } else if (dpsRatio < 0.82) {
+    dpsMult -= 0.11 * Math.min(1.2, 0.82 - dpsRatio);
+  }
+
   const byRowPlayerId = new Map(byValueRows.map((p) => [getPlayerId(p), p]));
   for (const row of valuations) {
     const lp = byRowPlayerId.get(row.player_id);
     if (!lp) continue;
     const needMult = positionalNeedMultiplier(lp, openSlots);
-    const rawTeamAdjusted = row.adjusted_value * needMult * budgetMult;
-    const cap = Math.max(0, row.baseline_value * 1.5);
-    const clamped = Math.max(0, Math.min(cap, rawTeamAdjusted));
-    row.team_adjusted_value = parseFloat(clamped.toFixed(2));
+    const tokens = playerTokensFromLean(lp);
+    const drop = maxReplacementDropoff(
+      row.baseline_value,
+      tokens,
+      replForTeam,
+      rosterSlotKeysForFit
+    );
+    const dropMult =
+      Object.keys(replForTeam).length > 0
+        ? 1 + 0.22 * Math.min(1.25, drop / Math.max(8, row.baseline_value))
+        : 1;
+    const rawTeam =
+      row.adjusted_value *
+      needMult *
+      budgetMult *
+      dpsMult *
+      slotScarcityMult *
+      dropMult;
+    const saneCap = Math.min(
+      8000,
+      Math.max(
+        row.adjusted_value * 6,
+        row.baseline_value * 4 + row.adjusted_value
+      )
+    );
+    row.team_adjusted_value = parseFloat(
+      Math.max(0, Math.min(saneCap, rawTeam)).toFixed(2)
+    );
   }
+
+  for (const row of valuations) {
+    const rb = row.recommended_bid ?? MIN_AUCTION_BID;
+    const ta = row.team_adjusted_value ?? row.adjusted_value;
+    row.edge = parseFloat((ta - rb).toFixed(2));
+  }
+
+  const slotMeta: Partial<ValuationResponse> = {
+    ...v2Meta,
+    ...(v2Meta.remaining_slots == null
+      ? { remaining_slots: Math.max(0, leagueCap - draftedPlayers.length) }
+      : {}),
+  };
 
   const calculatedAt = options?.deterministic
     ? DETERMINISTIC_CALCULATED_AT
@@ -576,8 +780,9 @@ export function calculateInflation(
     recommended_bid_note: RECOMMENDED_BID_NOTE,
     user_team_id_used: userTeamId,
     team_adjusted_value_note: TEAM_ADJUSTED_NOTE,
+    phase_indicator: draftPhase,
     calculated_at: calculatedAt,
     valuation_model_version: getValuationModelVersion(),
-    ...v2Meta,
+    ...slotMeta,
   };
 }

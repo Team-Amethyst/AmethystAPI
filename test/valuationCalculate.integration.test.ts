@@ -109,7 +109,8 @@ describe("POST /valuation/calculate (Draft checkpoint bodies)", () => {
       market_notes: expect.any(Array),
       user_team_id_used: expect.any(String),
       team_adjusted_value_note:
-        "team_adjusted_value reflects team-specific need and budget relative to the league",
+        "team_adjusted_value scales adjusted_value by roster need, dollars per open slot vs league peers, remaining-slot scarcity, and replacement drop-off for eligible slots",
+      phase_indicator: expect.stringMatching(/^(early|mid|late)$/),
       context_v2: expect.objectContaining({
         schema_version: "2",
         calculated_at: expect.any(String),
@@ -138,6 +139,7 @@ describe("POST /valuation/calculate (Draft checkpoint bodies)", () => {
         adjusted_value: expect.any(Number),
         recommended_bid: expect.any(Number),
         team_adjusted_value: expect.any(Number),
+        edge: expect.any(Number),
         indicator: expect.stringMatching(/^(Steal|Reach|Fair Value)$/),
         explain_v2: expect.objectContaining({
           indicator: expect.stringMatching(/^(Steal|Reach|Fair Value)$/),
@@ -148,21 +150,12 @@ describe("POST /valuation/calculate (Draft checkpoint bodies)", () => {
           confidence: expect.any(Number),
         }),
       });
-      expect(res.body.valuations[0].recommended_bid).toBeGreaterThanOrEqual(
-        Math.min(
-          res.body.valuations[0].adjusted_value,
-          res.body.valuations[0].baseline_value
-        )
-      );
-      expect(res.body.valuations[0].recommended_bid).toBeLessThanOrEqual(
-        Math.max(
-          res.body.valuations[0].adjusted_value,
-          res.body.valuations[0].baseline_value
-        )
-      );
+      expect(res.body.valuations[0].recommended_bid).toBeGreaterThanOrEqual(1);
       expect(res.body.valuations[0].team_adjusted_value).toBeGreaterThanOrEqual(0);
-      expect(res.body.valuations[0].team_adjusted_value).toBeLessThanOrEqual(
-        res.body.valuations[0].baseline_value * 1.5
+      expect(res.body.valuations[0].edge).toBeCloseTo(
+        res.body.valuations[0].team_adjusted_value -
+          res.body.valuations[0].recommended_bid,
+        1
       );
     }
   });
@@ -255,7 +248,7 @@ describe("POST /valuation/calculate — AmethystDraft BFF alignment", () => {
 
     expect(res.body.engine_contract_version).toBe("1");
     expect(res.body.recommended_bid_note).toBe(
-      "recommended_bid blends model marginal value with baseline strength for auction guidance"
+      "recommended_bid is a phase-aware expected clearing price (early premium for stars, late depth compression toward $1–$3)"
     );
     expect(res.body.valuations).toHaveLength(3);
     expect(res.body.valuations.map((r: { player_id: string }) => r.player_id).sort()).toEqual([
@@ -359,9 +352,10 @@ describe("POST /valuation/calculate — AmethystDraft BFF alignment", () => {
       pool_value_remaining: expect.any(Number),
       total_budget_remaining: expect.any(Number),
       recommended_bid_note:
-        "recommended_bid blends model marginal value with baseline strength for auction guidance",
+        "recommended_bid is a phase-aware expected clearing price (early premium for stars, late depth compression toward $1–$3)",
       team_adjusted_value_note:
-        "team_adjusted_value reflects team-specific need and budget relative to the league",
+        "team_adjusted_value scales adjusted_value by roster need, dollars per open slot vs league peers, remaining-slot scarcity, and replacement drop-off for eligible slots",
+      phase_indicator: expect.stringMatching(/^(early|mid|late)$/),
       user_team_id_used: expect.any(String),
     });
     expect(aggregateRest.inflation_factor).toBeGreaterThanOrEqual(0.25);
@@ -376,6 +370,7 @@ describe("POST /valuation/calculate — AmethystDraft BFF alignment", () => {
       adjusted_value: expect.any(Number),
       recommended_bid: expect.any(Number),
       team_adjusted_value: expect.any(Number),
+      edge: expect.any(Number),
       indicator: expect.stringMatching(/^(Steal|Reach|Fair Value)$/),
       baseline_components: expect.objectContaining({
         scoring_format: expect.any(String),

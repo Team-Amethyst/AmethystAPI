@@ -102,8 +102,9 @@ describe("executeValuationWorkflow", () => {
       res.response.players_remaining
     );
     expect(res.response.recommended_bid_note).toBe(
-      "recommended_bid blends model marginal value with baseline strength for auction guidance"
+      "recommended_bid is a phase-aware expected clearing price (early premium for stars, late depth compression toward $1–$3)"
     );
+    expect(res.response.phase_indicator).toMatch(/^(early|mid|late)$/);
     const first = res.response.valuations[0];
     expect(first.explain_v2).toBeDefined();
     expect(first.explain_v2?.auction_target).toBe(first.adjusted_value);
@@ -130,11 +131,11 @@ describe("executeValuationWorkflow", () => {
       expect(text.trim().length).toBeGreaterThan(0);
     }
     expect(first.recommended_bid).toBeDefined();
-    expect(first.recommended_bid!).toBeGreaterThanOrEqual(
-      Math.min(first.adjusted_value, first.baseline_value)
-    );
-    expect(first.recommended_bid!).toBeLessThanOrEqual(
-      Math.max(first.adjusted_value, first.baseline_value)
+    expect(first.recommended_bid!).toBeGreaterThanOrEqual(1);
+    expect(first.edge).toBeDefined();
+    expect(first.edge!).toBeCloseTo(
+      (first.team_adjusted_value ?? 0) - (first.recommended_bid ?? 0),
+      1
     );
   });
 
@@ -175,7 +176,7 @@ describe("executeValuationWorkflow", () => {
     if (!res.ok) return;
     expect(res.response.user_team_id_used).toBe("team_1");
     expect(res.response.team_adjusted_value_note).toBe(
-      "team_adjusted_value reflects team-specific need and budget relative to the league"
+      "team_adjusted_value scales adjusted_value by roster need, dollars per open slot vs league peers, remaining-slot scarcity, and replacement drop-off for eligible slots"
     );
   });
 
@@ -240,7 +241,6 @@ describe("executeValuationWorkflow", () => {
     expect(needA.team_adjusted_value).not.toBe(needB.team_adjusted_value);
     for (const row of a.response.valuations) {
       expect(row.team_adjusted_value!).toBeGreaterThanOrEqual(0);
-      expect(row.team_adjusted_value!).toBeLessThanOrEqual(row.baseline_value * 1.5);
     }
   });
 

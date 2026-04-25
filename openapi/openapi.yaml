@@ -191,13 +191,17 @@ components:
             type: string
         recommended_bid_note:
           type: string
-          description: Presentation-only guidance text for how `recommended_bid` is derived.
+          description: How `recommended_bid` is derived (phase-aware clearing price).
         user_team_id_used:
           type: string
           description: Team context used for team_adjusted_value (defaults to team_1).
         team_adjusted_value_note:
           type: string
-          description: Presentation-only guidance text for how `team_adjusted_value` is derived.
+          description: How `team_adjusted_value` is derived from roster economics.
+        phase_indicator:
+          type: string
+          enum: [early, mid, late]
+          description: Draft phase from league-wide slot fill vs remaining empty slots (server-derived).
         context_v2:
           type: object
           description: Structured valuation context for UI clarity and machine consumption.
@@ -294,10 +298,13 @@ components:
           description: baseline_value × league inflation_factor (same factor on every row).
         recommended_bid:
           type: number
-          description: Presentation-layer auction guidance blend of adjusted_value and baseline_value; clamped between them.
+          description: Phase-aware expected clearing price (may lie outside adjusted_value/baseline_value band).
         team_adjusted_value:
           type: number
-          description: Team-specific bid signal (adjusted_value scaled by positional need and budget pressure; clamped to 1.5 × baseline_value).
+          description: Team-specific marginal value (adjusted_value scaled by need, dollars per open slot vs league, slot scarcity, replacement drop-off; not capped to max bid).
+        edge:
+          type: number
+          description: team_adjusted_value minus recommended_bid.
         indicator:
           type: string
           enum: [Steal, Reach, Fair Value]

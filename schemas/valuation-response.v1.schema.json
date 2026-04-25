@@ -57,7 +57,11 @@
     },
     "recommended_bid_note": {
       "type": "string",
-      "description": "recommended_bid blends model marginal value with baseline strength for auction guidance"
+      "description": "How recommended_bid is derived (phase-aware clearing price)."
+    },
+    "phase_indicator": {
+      "type": "string",
+      "enum": ["early", "mid", "late"]
     },
     "valuations": {
       "type": "array",
@@ -115,7 +119,7 @@
         },
         "recommended_bid": {
           "type": "number",
-          "description": "Presentation-layer auction guidance blend of adjusted_value and baseline_value; clamped between them."
+          "description": "Phase-aware expected clearing price."
         },
         "indicator": {
           "type": "string",
@@ -130,7 +134,11 @@
         },
         "team_adjusted_value": {
           "type": "number",
-          "description": "Team-specific bid signal (adjusted_value scaled by positional need and budget pressure; clamped to 1.5 × baseline_value)."
+          "description": "Team-specific marginal value from need, dollars per open slot vs league, slot scarcity, and replacement drop-off."
+        },
+        "edge": {
+          "type": "number",
+          "description": "team_adjusted_value minus recommended_bid."
         }
       },
       "additionalProperties": true

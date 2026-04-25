@@ -186,6 +186,9 @@ export interface CalculateInflationOptions {
 
 export type ValueIndicator = "Steal" | "Reach" | "Fair Value";
 
+/** Draft fill phase derived from league slot fill and remaining demand (server-side). */
+export type DraftPhaseIndicator = "early" | "mid" | "late";
+
 export interface ValuedPlayer {
   player_id: string;
   name: string;
@@ -196,12 +199,17 @@ export interface ValuedPlayer {
   baseline_value: number;
   adjusted_value: number;
   /**
-   * Presentation-layer bid guidance: blends marginal auction value (`adjusted_value`)
-   * with baseline list strength (`baseline_value`) without changing valuation math.
+   * Expected auction clearing price: phase-aware blend of marginal value (`adjusted_value`)
+   * and list strength (`baseline_value`), calibrated for realism without changing core inflation.
    */
   recommended_bid?: number;
-  /** Team-specific bid signal for Draftroom decisions (additive presentation layer). */
+  /**
+   * Team-specific marginal value depth: need, dollars per open slot vs league peers,
+   * slot scarcity, and replacement drop-off for eligible slots (not capped to max bid).
+   */
   team_adjusted_value?: number;
+  /** team_adjusted_value minus recommended_bid (personal edge vs clearing estimate). */
+  edge?: number;
   indicator: ValueIndicator;
   inflation_factor: number;
   baseline_components?: {
@@ -275,12 +283,14 @@ export interface ValuationResponse {
   replacement_values_by_slot_or_position?: Record<string, number>;
   /** Why v2 used a non-standard price path (never falls back to `global_v1`). */
   fallback_reason?: string | null;
-  /** Product copy for `recommended_bid` semantics (presentation layer guidance). */
+  /** Describes how `recommended_bid` is derived (clearing-price semantics). */
   recommended_bid_note?: string;
   /** Team context used to compute team_adjusted_value (defaults to team_1). */
   user_team_id_used?: string;
-  /** Product copy for `team_adjusted_value` semantics (presentation layer guidance). */
+  /** Describes how `team_adjusted_value` is derived (roster economics depth). */
   team_adjusted_value_note?: string;
+  /** Draft phase from league-wide slot fill vs remaining empty slots. */
+  phase_indicator?: DraftPhaseIndicator;
   context_v2?: {
     schema_version: "2";
     calculated_at: string;
