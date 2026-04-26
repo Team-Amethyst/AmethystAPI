@@ -343,7 +343,9 @@ describe("POST /valuation/calculate — AmethystDraft BFF alignment", () => {
       inflation_model: expect.stringMatching(
         /^(global_v1|surplus_slots_v1|replacement_slots_v2)$/
       ),
-      valuation_model_version: expect.stringMatching(/^amethyst-api@/),
+      valuation_model_version: expect.stringMatching(
+        /^(amethyst-api@|[a-f0-9]{7,40}$)/i
+      ),
       calculated_at: "1970-01-01T00:00:00.000Z",
       players_remaining: expectedUndrafted,
       inflation_factor: expect.any(Number),

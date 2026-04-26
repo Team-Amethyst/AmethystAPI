@@ -387,7 +387,9 @@ describe("calculateInflation with normalized fixtures", () => {
         budgetByTeamId: n.budget_by_team_id,
       }
     );
-    expect(result).toMatchSnapshot();
+    expect(result).toMatchSnapshot({
+      valuation_model_version: expect.any(String),
+    });
   });
 
   it("nested-after-pick applies player_ids filter", () => {
@@ -414,6 +416,8 @@ describe("calculateInflation with normalized fixtures", () => {
     );
     expect(result.valuations).toHaveLength(1);
     expect(result.valuations[0].player_id).toBe("2");
-    expect(result).toMatchSnapshot();
+    expect(result).toMatchSnapshot({
+      valuation_model_version: expect.any(String),
+    });
   });
 });

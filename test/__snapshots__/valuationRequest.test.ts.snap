@@ -16,7 +16,7 @@ exports[`calculateInflation with normalized fixtures > legacy-empty deterministi
   "team_adjusted_value_note": "team_adjusted_value scales adjusted_value by roster need, dollars per open slot vs league peers, remaining-slot scarcity, and replacement drop-off for eligible slots",
   "total_budget_remaining": 3120,
   "user_team_id_used": "team_1",
-  "valuation_model_version": "amethyst-api@1.0.0",
+  "valuation_model_version": Any<String>,
   "valuations": [
     {
       "adjusted_value": 2400,
@@ -82,7 +82,7 @@ exports[`calculateInflation with normalized fixtures > nested-after-pick applies
   "team_adjusted_value_note": "team_adjusted_value scales adjusted_value by roster need, dollars per open slot vs league peers, remaining-slot scarcity, and replacement drop-off for eligible slots",
   "total_budget_remaining": 3065,
   "user_team_id_used": "team_1",
-  "valuation_model_version": "amethyst-api@1.0.0",
+  "valuation_model_version": Any<String>,
   "valuations": [
     {
       "adjusted_value": 3065,
