@@ -1,9 +1,5 @@
 import type { DraftedPlayer, LeanPlayer, RosterSlot } from "../types/brain";
 
-function leanPlayerId(p: LeanPlayer): string {
-  return p.mlbId != null ? String(p.mlbId) : String(p._id);
-}
-
 /** More specific roster slots win tie-breaks when surplus vs empty slot is equal. */
 export const SLOT_SPECIFICITY_ORDER: readonly string[] = [
   "C",
