@@ -723,6 +723,32 @@ export function calculateInflation(
     if (depthFrac < 0.12) {
       clearing = Math.max(clearing, a * 0.93);
     }
+    // Late: star hitter with huge baseline but surplus-crushed adjusted — cap anchor drag (paid replay).
+    if (
+      !isPitcherPosition(row.position) &&
+      draftPhase === "late" &&
+      depthFrac > 0.52 &&
+      r > 32 &&
+      a > 0 &&
+      a < r * 0.45
+    ) {
+      clearing = Math.min(clearing, a + (r - a) * 0.22);
+    }
+    // Mid/early: ace-tier SP with tiny adjusted — lift clearing off the $1 floor toward hybrid anchor.
+    if (
+      isPitcherPosition(row.position) &&
+      draftPhase !== "late" &&
+      depthFrac < 0.5 &&
+      r > 26 &&
+      a > 0 &&
+      a < 18
+    ) {
+      clearing = Math.max(
+        clearing,
+        Math.min(r * 0.42, a * 2.55 + 10),
+        a + 3
+      );
+    }
     const hiSoft = Math.max(r, a) * 1.15 + 8;
     clearing = Math.max(MIN_AUCTION_BID, Math.min(clearing, hiSoft));
     row.recommended_bid = parseFloat(clearing.toFixed(2));

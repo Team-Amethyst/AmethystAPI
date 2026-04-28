@@ -433,6 +433,21 @@ function distinctTeamIds(
   return [...s].sort();
 }
 
+/** IDs already on keeper / minors / taxi rosters — must not appear again as auction picks. */
+function rosteredPlayerIdSet(
+  preBuckets: TeamBucket[],
+  minorBuckets: TeamBucket[],
+  taxiBuckets: TeamBucket[]
+): Set<string> {
+  const s = new Set<string>();
+  for (const b of [...preBuckets, ...minorBuckets, ...taxiBuckets]) {
+    for (const p of b.players) {
+      if (p.player_id) s.add(p.player_id);
+    }
+  }
+  return s;
+}
+
 async function main(): Promise<void> {
   const argv = process.argv.slice(2).filter((a) => a !== "--");
   const skipMlbSearch = argv.includes("--skip-mlb-search");
@@ -539,7 +554,9 @@ async function main(): Promise<void> {
               : "after_pick_130";
 
     const slice = nPicks === 0 ? [] : picks.filter((p) => p.pick <= nPicks);
-    const drafted: Drafted[] = slice.map((p) => {
+    const taxiBuckets: TeamBucket[] = [];
+    const rosteredIds = rosteredPlayerIdSet(preBuckets, minorBuckets, taxiBuckets);
+    let drafted: Drafted[] = slice.map((p) => {
       const player_id = idByIdentity.get(rosterIdentityKey(p.player));
       if (!player_id) throw new Error(`Missing id for draft pick ${p.pick} ${p.player}`);
       return {
@@ -552,11 +569,20 @@ async function main(): Promise<void> {
         pick_number: p.pick,
       };
     });
+    drafted = drafted.filter((d) => {
+      if (rosteredIds.has(d.player_id)) {
+        allWarnings.push(
+          `DROPPED_AUCTION_ALREADY_ROSTERED|pick=${d.pick_number}|player_id=${d.player_id}|name=${d.name}`
+        );
+        return false;
+      }
+      return true;
+    });
 
     const spendByTeam = new Map<string, number>();
     for (const tid of teamIds) spendByTeam.set(tid, 0);
-    for (const p of slice) {
-      spendByTeam.set(p.wonTeamId, (spendByTeam.get(p.wonTeamId) ?? 0) + p.salary);
+    for (const d of drafted) {
+      spendByTeam.set(d.team_id, (spendByTeam.get(d.team_id) ?? 0) + (d.paid ?? 0));
     }
     const budget_by_team_id: Record<string, number> = {};
     for (const tid of teamIds) {

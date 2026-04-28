@@ -4,7 +4,11 @@ on:
   push:
     paths:
       - "scripts/replay-evaluator.ts"
+      - "scripts/replay-per-pick-draft.ts"
+      - "scripts/dedupe-fixture-auction-picks.ts"
+      - "scripts/check-fixture-catalog-ids.ts"
       - "test-fixtures/replay-evaluator/**"
+      - "test-fixtures/player-api/checkpoints/**"
       - "src/services/valuationWorkflow.ts"
       - "src/services/inflationEngine.ts"
       - "src/lib/valuationRequest.ts"

@@ -182,15 +182,6 @@
       "pick_number": 10
     },
     {
-      "player_id": "663586",
-      "name": "Austin Riley",
-      "position": "3B",
-      "team": "ATL",
-      "team_id": "team_g",
-      "paid": 31,
-      "pick_number": 11
-    },
-    {
       "player_id": "500743",
       "name": "Miguel Rojas",
       "position": "2B",
@@ -1784,7 +1775,7 @@
     "team_d": 41,
     "team_e": 73,
     "team_f": 139,
-    "team_g": 119,
+    "team_g": 150,
     "team_h": 164,
     "team_i": 197
   },

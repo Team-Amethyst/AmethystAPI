@@ -20,7 +20,9 @@
     "audit:valuation-response": "ts-node --project tsconfig.scripts.json scripts/valuation-response-audit.ts",
     "replay-four-values": "ts-node --project tsconfig.scripts.json scripts/replay-four-values-eval.ts",
     "replay-per-team-pick": "ts-node --project tsconfig.scripts.json scripts/replay-per-team-pick.ts",
-    "replay-per-pick-draft": "ts-node --project tsconfig.scripts.json scripts/replay-per-pick-draft.ts"
+    "replay-per-pick-draft": "ts-node --project tsconfig.scripts.json scripts/replay-per-pick-draft.ts",
+    "dedupe-fixtures": "ts-node --project tsconfig.scripts.json scripts/dedupe-fixture-auction-picks.ts",
+    "check-fixture-catalog": "ts-node --project tsconfig.scripts.json scripts/check-fixture-catalog-ids.ts"
   },
   "keywords": [
     "api",

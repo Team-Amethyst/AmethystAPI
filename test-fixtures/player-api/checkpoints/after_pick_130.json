@@ -182,15 +182,6 @@
       "pick_number": 10
     },
     {
-      "player_id": "663586",
-      "name": "Austin Riley",
-      "position": "3B",
-      "team": "ATL",
-      "team_id": "team_g",
-      "paid": 31,
-      "pick_number": 11
-    },
-    {
       "player_id": "500743",
       "name": "Miguel Rojas",
       "position": "2B",
@@ -1080,15 +1071,6 @@
       "team_id": "team_g",
       "paid": 1,
       "pick_number": 110
-    },
-    {
-      "player_id": "9000003",
-      "name": "Joseph Ortiz",
-      "position": "UTIL",
-      "team": "UNK",
-      "team_id": "team_b",
-      "paid": 3,
-      "pick_number": 111
     },
     {
       "player_id": "691781",
@@ -2499,12 +2481,12 @@
   "taxi": [],
   "budget_by_team_id": {
     "team_a": 0,
-    "team_b": 0,
+    "team_b": 3,
     "team_c": 3,
     "team_d": 1,
     "team_e": 3,
     "team_f": 82,
-    "team_g": 63,
+    "team_g": 94,
     "team_h": 94,
     "team_i": 157
   },
