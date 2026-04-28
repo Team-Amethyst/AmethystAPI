@@ -19,7 +19,8 @@
     "convert-2026-draft": "ts-node --project tsconfig.scripts.json scripts/convert-2026-draft-xlsx.ts",
     "audit:valuation-response": "ts-node --project tsconfig.scripts.json scripts/valuation-response-audit.ts",
     "replay-four-values": "ts-node --project tsconfig.scripts.json scripts/replay-four-values-eval.ts",
-    "replay-per-team-pick": "ts-node --project tsconfig.scripts.json scripts/replay-per-team-pick.ts"
+    "replay-per-team-pick": "ts-node --project tsconfig.scripts.json scripts/replay-per-team-pick.ts",
+    "replay-per-pick-draft": "ts-node --project tsconfig.scripts.json scripts/replay-per-pick-draft.ts"
   },
   "keywords": [
     "api",

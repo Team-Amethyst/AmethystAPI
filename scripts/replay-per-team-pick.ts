@@ -4,7 +4,8 @@
  * useful market vs personal lines would have been vs realized paid.
  *
  * Note: manifest steps jump by many picks (e.g. 10→50); all new picks in a batch share
- * the same prior board — same limitation as replay-four-values-eval.
+ * the same prior board — same limitation as replay-four-values-eval. For true per-pick
+ * boards and budgets, use `pnpm replay-per-pick-draft` (full draft + pre_draft JSON).
  *
  * Requires MONGO_URI. Run: pnpm replay-per-team-pick
  */
