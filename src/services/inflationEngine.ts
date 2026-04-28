@@ -302,6 +302,11 @@ function lambdaClearingPrice(
   }
 }
 
+function isPitcherPosition(pos: string): boolean {
+  const toks = pos.toUpperCase().split(/[,/ ]+/).filter(Boolean);
+  return toks.some((t) => t === "SP" || t === "RP" || t === "P");
+}
+
 function maxReplacementDropoff(
   baseline: number,
   tokens: readonly string[],
@@ -645,7 +650,13 @@ export function calculateInflation(
     const depthFrac = depthFracById.get(row.player_id) ?? 0.5;
     const a = row.adjusted_value;
     const r = row.baseline_value;
-    const L = lambdaClearingPrice(draftPhase, depthFrac);
+    let L = lambdaClearingPrice(draftPhase, depthFrac);
+    // Pitcher markets in our replay clear closer to marginal (adjusted_value) than list anchor.
+    if (isPitcherPosition(row.position)) {
+      const damp =
+        draftPhase === "early" ? 0.82 : draftPhase === "mid" ? 0.72 : 0.62;
+      L *= damp;
+    }
     let clearing = a + L * (r - a);
     if (draftPhase === "early" && depthFrac < 0.06) {
       clearing += 0.045 * (r - a);

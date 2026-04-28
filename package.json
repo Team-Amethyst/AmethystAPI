@@ -16,7 +16,8 @@
     "replay-eval": "ts-node --project tsconfig.scripts.json scripts/replay-evaluator.ts",
     "replay-2026-v2": "ts-node --project tsconfig.scripts.json scripts/replay-2026-v2-validation.ts",
     "convert-2026-draft": "ts-node --project tsconfig.scripts.json scripts/convert-2026-draft-xlsx.ts",
-    "audit:valuation-response": "ts-node --project tsconfig.scripts.json scripts/valuation-response-audit.ts"
+    "audit:valuation-response": "ts-node --project tsconfig.scripts.json scripts/valuation-response-audit.ts",
+    "replay-four-values": "ts-node --project tsconfig.scripts.json scripts/replay-four-values-eval.ts"
   },
   "keywords": [
     "api",

@@ -6,6 +6,7 @@ import type {
 } from "../types/brain";
 
 type ProjectionNode = Record<string, number | string | undefined>;
+type CategoryDirection = "higher" | "lower";
 
 function toNum(v: unknown, fallback = 0): number {
   const n = typeof v === "number" ? v : Number(v);
@@ -36,6 +37,115 @@ function categoryWeight(name: string): number {
   return 0.8;
 }
 
+function statFieldForCategory(name: string): string | null {
+  const key = name.toUpperCase();
+  if (key === "HR") return "hr";
+  if (key === "RBI") return "rbi";
+  if (key === "R") return "runs";
+  if (key === "SB") return "sb";
+  if (key === "AVG") return "avg";
+  if (key === "OBP") return "obp";
+  if (key === "K") return "strikeouts";
+  if (key === "W") return "wins";
+  if (key === "SV") return "saves";
+  if (key === "ERA") return "era";
+  if (key === "WHIP") return "whip";
+  if (key === "QS") return "qualityStarts";
+  return null;
+}
+
+function categoryDirection(name: string): CategoryDirection {
+  const key = name.toUpperCase();
+  return key === "ERA" || key === "WHIP" ? "lower" : "higher";
+}
+
+function categoryRawValue(section: ProjectionNode, name: string): number {
+  const field = statFieldForCategory(name);
+  if (!field) return 0;
+  const raw = toNum(section[field as keyof ProjectionNode]);
+  const key = name.toUpperCase();
+  if (key === "AVG" || key === "OBP") return raw * 1000;
+  return raw;
+}
+
+function mean(vals: number[]): number {
+  if (vals.length === 0) return 0;
+  return vals.reduce((s, v) => s + v, 0) / vals.length;
+}
+
+function stdDev(vals: number[]): number {
+  if (vals.length <= 1) return 0;
+  const m = mean(vals);
+  const variance =
+    vals.reduce((s, v) => s + (v - m) * (v - m), 0) / (vals.length - 1);
+  return Math.sqrt(Math.max(0, variance));
+}
+
+type BaselineComponents = {
+  value: number;
+  projectionComponent: number;
+  scarcityComponent: number;
+};
+
+function rotoBaselineForGroup(
+  group: LeanPlayer[],
+  categories: ScoringCategory[],
+  rosterSlots: RosterSlot[]
+): Map<string, BaselineComponents> {
+  const out = new Map<string, BaselineComponents>();
+  if (group.length === 0) return out;
+  if (categories.length === 0) {
+    for (const p of group) {
+      const scarcityComponent = scarcityMultiplierForPosition(p, rosterSlots) - 1;
+      const scarcityAdjusted = Math.max(1, (p.value || 0) * (1 + scarcityComponent));
+      out.set(String(p._id), {
+        value: Number(scarcityAdjusted.toFixed(2)),
+        projectionComponent: 0,
+        scarcityComponent,
+      });
+    }
+    return out;
+  }
+
+  const catStats = categories.map((cat) => {
+    const vals = group.map((p) =>
+      categoryRawValue(
+        getProjectionSection(p, isPitcher(p) ? "pitching" : "batting"),
+        cat.name
+      )
+    );
+    return {
+      cat,
+      avg: mean(vals),
+      stdev: stdDev(vals),
+    };
+  });
+
+  for (const p of group) {
+    const section = getProjectionSection(p, isPitcher(p) ? "pitching" : "batting");
+    let zWeighted = 0;
+    for (const c of catStats) {
+      const raw = categoryRawValue(section, c.cat.name);
+      if (c.stdev <= 1e-9) continue;
+      let z = (raw - c.avg) / c.stdev;
+      if (categoryDirection(c.cat.name) === "lower") z = -z;
+      zWeighted += z * categoryWeight(c.cat.name);
+    }
+
+    // Keep league-specific stat impact meaningful but bounded.
+    const projectionMult = Math.max(0.55, Math.min(1.7, 1 + zWeighted * 0.08));
+    const scarcityComponent = scarcityMultiplierForPosition(p, rosterSlots) - 1;
+    const scarcityAdjusted = Math.max(1, (p.value || 0) * (1 + scarcityComponent));
+    const value = Math.max(1, scarcityAdjusted * projectionMult);
+    out.set(String(p._id), {
+      value: Number(value.toFixed(2)),
+      projectionComponent: Number((value - scarcityAdjusted).toFixed(2)),
+      scarcityComponent,
+    });
+  }
+  return out;
+}
+
 function scarcityMultiplierForPosition(
   p: LeanPlayer,
   rosterSlots: RosterSlot[]
@@ -61,37 +171,13 @@ function rotisserieBaseline(
   scoringCategories: ScoringCategory[],
   rosterSlots: RosterSlot[]
 ): { value: number; projectionComponent: number; scarcityComponent: number } {
-  const batting = getProjectionSection(p, "batting");
-  const pitching = getProjectionSection(p, "pitching");
-  const section = isPitcher(p) ? pitching : batting;
-  const categories = scoringCategories.length > 0 ? scoringCategories : [];
-
-  let projectionScore = 0;
-  for (const cat of categories) {
-    const key = cat.name.toUpperCase();
-    let statVal = 0;
-    if (key === "HR") statVal = toNum(section.hr);
-    else if (key === "RBI") statVal = toNum(section.rbi);
-    else if (key === "R") statVal = toNum(section.runs);
-    else if (key === "SB") statVal = toNum(section.sb);
-    else if (key === "AVG") statVal = toNum(section.avg) * 1000;
-    else if (key === "OBP") statVal = toNum(section.obp) * 1000;
-    else if (key === "K") statVal = toNum(section.strikeouts);
-    else if (key === "W") statVal = toNum(section.wins);
-    else if (key === "SV") statVal = toNum(section.saves);
-    else if (key === "ERA") statVal = Math.max(0, 5 - toNum(section.era));
-    else if (key === "WHIP") statVal = Math.max(0, 2 - toNum(section.whip));
-    else if (key === "QS") statVal = toNum(section.qualityStarts);
-    projectionScore += statVal * categoryWeight(key);
-  }
-
-  const projectionComponent = Math.max(0, projectionScore * 0.02);
   const scarcityComponent = scarcityMultiplierForPosition(p, rosterSlots) - 1;
-  const value = Math.max(
-    1,
-    (p.value || 0) * (1 + scarcityComponent) + projectionComponent
-  );
-  return { value, projectionComponent, scarcityComponent };
+  const scarcityAdjusted = Math.max(1, (p.value || 0) * (1 + scarcityComponent));
+  return {
+    value: Number(scarcityAdjusted.toFixed(2)),
+    projectionComponent: 0,
+    scarcityComponent,
+  };
 }
 
 function pointsBaseline(
@@ -133,11 +219,22 @@ export function scoringAwareBaselinePlayers(
   rosterSlots: RosterSlot[]
 ): LeanPlayer[] {
   const fmt = scoringFormat ?? "5x5";
+  let rotoMap = new Map<string, BaselineComponents>();
+  if (fmt !== "points") {
+    const hitterCats = scoringCategories.filter((c) => c.type === "batting");
+    const pitcherCats = scoringCategories.filter((c) => c.type === "pitching");
+    const hitters = players.filter((p) => !isPitcher(p));
+    const pitchers = players.filter((p) => isPitcher(p));
+    const hitterMap = rotoBaselineForGroup(hitters, hitterCats, rosterSlots);
+    const pitcherMap = rotoBaselineForGroup(pitchers, pitcherCats, rosterSlots);
+    rotoMap = new Map([...hitterMap, ...pitcherMap]);
+  }
   return players.map((p) => {
     const derived =
       fmt === "points"
         ? pointsBaseline(p, rosterSlots)
-        : rotisserieBaseline(p, scoringCategories, rosterSlots);
+        : rotoMap.get(String(p._id)) ??
+          rotisserieBaseline(p, scoringCategories, rosterSlots);
     const baselineComponents = {
       scoring_format: fmt,
       projection_component: Number(derived.projectionComponent.toFixed(2)),
