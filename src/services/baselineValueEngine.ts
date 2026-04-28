@@ -87,10 +87,29 @@ type BaselineComponents = {
   scarcityComponent: number;
 };
 
+type RotoGroupKind = "hitter" | "pitcher";
+
+/**
+ * When catalog dollars are tiny but ADP/tier still show real draft interest,
+ * lift baseline slightly so late picks and spec arms are not all $1 anchors.
+ */
+function speculativePriorBaselineFloor(p: LeanPlayer): number | null {
+  const catalog = p.value ?? 0;
+  if (catalog >= 4) return null;
+  const adp = typeof p.adp === "number" && Number.isFinite(p.adp) && p.adp > 0 ? p.adp : null;
+  const tier = typeof p.tier === "number" && Number.isFinite(p.tier) ? p.tier : null;
+  if (adp == null || adp > 200) return null;
+  if (tier == null || tier > 4) return null;
+  const fromAdp = 2.4 + (200 - adp) * 0.034;
+  const fromTier = (5 - tier) * 0.85;
+  return Math.min(15, fromAdp + fromTier);
+}
+
 function rotoBaselineForGroup(
   group: LeanPlayer[],
   categories: ScoringCategory[],
-  rosterSlots: RosterSlot[]
+  rosterSlots: RosterSlot[],
+  groupKind: RotoGroupKind
 ): Map<string, BaselineComponents> {
   const out = new Map<string, BaselineComponents>();
   if (group.length === 0) return out;
@@ -98,8 +117,13 @@ function rotoBaselineForGroup(
     for (const p of group) {
       const scarcityComponent = scarcityMultiplierForPosition(p, rosterSlots) - 1;
       const scarcityAdjusted = Math.max(1, (p.value || 0) * (1 + scarcityComponent));
+      const priorFloor = speculativePriorBaselineFloor(p);
+      const value = Math.max(
+        1,
+        priorFloor != null ? Math.max(scarcityAdjusted, priorFloor) : scarcityAdjusted
+      );
       out.set(String(p._id), {
-        value: Number(scarcityAdjusted.toFixed(2)),
+        value: Number(value.toFixed(2)),
         projectionComponent: 0,
         scarcityComponent,
       });
@@ -132,11 +156,16 @@ function rotoBaselineForGroup(
       zWeighted += z * categoryWeight(c.cat.name);
     }
 
-    // Keep league-specific stat impact meaningful but bounded.
-    const projectionMult = Math.max(0.55, Math.min(1.7, 1 + zWeighted * 0.08));
+    // Pitchers: ERA/WHIP/K variance is sharper in-category; allow a slightly wider $ swing.
+    const zScale = groupKind === "pitcher" ? 0.092 : 0.08;
+    const zLo = groupKind === "pitcher" ? 0.48 : 0.55;
+    const zHi = groupKind === "pitcher" ? 1.92 : 1.7;
+    const projectionMult = Math.max(zLo, Math.min(zHi, 1 + zWeighted * zScale));
     const scarcityComponent = scarcityMultiplierForPosition(p, rosterSlots) - 1;
     const scarcityAdjusted = Math.max(1, (p.value || 0) * (1 + scarcityComponent));
-    const value = Math.max(1, scarcityAdjusted * projectionMult);
+    let value = Math.max(1, scarcityAdjusted * projectionMult);
+    const priorFloor = speculativePriorBaselineFloor(p);
+    if (priorFloor != null) value = Math.max(value, priorFloor);
     out.set(String(p._id), {
       value: Number(value.toFixed(2)),
       projectionComponent: Number((value - scarcityAdjusted).toFixed(2)),
@@ -205,10 +234,12 @@ function pointsBaseline(
       toNum(batting.avg) * 120;
   }
   const projectionComponent = Math.max(0, points * 0.03);
-  const value = Math.max(
+  let value = Math.max(
     1,
     (p.value || 0) * (1 + scarcityComponent) + projectionComponent
   );
+  const priorFloor = speculativePriorBaselineFloor(p);
+  if (priorFloor != null) value = Math.max(value, priorFloor);
   return { value, projectionComponent, scarcityComponent };
 }
 
@@ -225,8 +256,13 @@ export function scoringAwareBaselinePlayers(
     const pitcherCats = scoringCategories.filter((c) => c.type === "pitching");
     const hitters = players.filter((p) => !isPitcher(p));
     const pitchers = players.filter((p) => isPitcher(p));
-    const hitterMap = rotoBaselineForGroup(hitters, hitterCats, rosterSlots);
-    const pitcherMap = rotoBaselineForGroup(pitchers, pitcherCats, rosterSlots);
+    const hitterMap = rotoBaselineForGroup(hitters, hitterCats, rosterSlots, "hitter");
+    const pitcherMap = rotoBaselineForGroup(
+      pitchers,
+      pitcherCats,
+      rosterSlots,
+      "pitcher"
+    );
     rotoMap = new Map([...hitterMap, ...pitcherMap]);
   }
   return players.map((p) => {

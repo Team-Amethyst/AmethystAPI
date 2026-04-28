@@ -138,4 +138,97 @@ describe("scoringAwareBaselinePlayers", () => {
     );
     expect(out[0].value).toBeGreaterThan(out[1].value);
   });
+
+  it("applies wider pitcher roto projection swing than hitters for same z spread", () => {
+    const hitterHi: LeanPlayer = {
+      ...players[0],
+      _id: "h1",
+      mlbId: 101,
+      value: 20,
+      projection: { batting: { hr: 40, rbi: 100, runs: 100, sb: 10, avg: 0.3 } },
+    };
+    const hitterLo: LeanPlayer = {
+      ...players[0],
+      _id: "h2",
+      mlbId: 102,
+      value: 20,
+      projection: { batting: { hr: 8, rbi: 40, runs: 50, sb: 2, avg: 0.22 } },
+    };
+    const pitchHi: LeanPlayer = {
+      ...players[1],
+      _id: "p1",
+      mlbId: 201,
+      value: 20,
+      projection: {
+        pitching: { strikeouts: 220, wins: 15, saves: 0, era: 2.6, whip: 0.95 },
+      },
+    };
+    const pitchLo: LeanPlayer = {
+      ...players[1],
+      _id: "p2",
+      mlbId: 202,
+      value: 20,
+      projection: {
+        pitching: { strikeouts: 140, wins: 8, saves: 0, era: 4.5, whip: 1.35 },
+      },
+    };
+    const cats = [
+      { name: "HR", type: "batting" as const },
+      { name: "ERA", type: "pitching" as const },
+      { name: "WHIP", type: "pitching" as const },
+    ];
+    const hOut = scoringAwareBaselinePlayers(
+      [hitterHi, hitterLo],
+      "5x5",
+      cats,
+      [{ position: "OF", count: 3 }, { position: "P", count: 9 }]
+    );
+    const pOut = scoringAwareBaselinePlayers(
+      [pitchHi, pitchLo],
+      "5x5",
+      cats,
+      [{ position: "OF", count: 3 }, { position: "P", count: 9 }]
+    );
+    const hSpread = Math.abs(
+      (hOut.find((x) => x._id === "h1")?.value ?? 0) -
+        (hOut.find((x) => x._id === "h2")?.value ?? 0)
+    );
+    const pSpread = Math.abs(
+      (pOut.find((x) => x._id === "p1")?.value ?? 0) -
+        (pOut.find((x) => x._id === "p2")?.value ?? 0)
+    );
+    expect(pSpread).toBeGreaterThan(hSpread * 0.85);
+  });
+
+  it("lifts very low catalog value when ADP and tier show real draft interest", () => {
+    const spec: LeanPlayer = {
+      _id: "s1",
+      mlbId: 501,
+      name: "Spec",
+      team: "SEA",
+      position: "OF",
+      adp: 90,
+      tier: 2,
+      value: 1,
+      projection: { batting: { hr: 12, rbi: 35, runs: 40, sb: 8, avg: 0.24 } },
+    };
+    const flat: LeanPlayer = {
+      ...spec,
+      _id: "s2",
+      mlbId: 502,
+      adp: 250,
+      tier: 2,
+      value: 1,
+    };
+    const out = scoringAwareBaselinePlayers(
+      [spec, flat],
+      "5x5",
+      [{ name: "HR", type: "batting" }],
+      [{ position: "OF", count: 3 }]
+    );
+    const vSpec = out.find((x) => x._id === "s1")!.value;
+    const vFlat = out.find((x) => x._id === "s2")!.value;
+    expect(vSpec).toBeGreaterThan(vFlat);
+    expect(vSpec).toBeGreaterThan(3);
+  });
 });
