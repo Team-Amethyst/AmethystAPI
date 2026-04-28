@@ -50,7 +50,48 @@ export function tokenizeFantasyPositions(
 }
 
 export function playerTokensFromLean(p: LeanPlayer): string[] {
-  return tokenizeFantasyPositions(p.position, undefined);
+  const base = tokenizeFantasyPositions(p.position, undefined);
+  if (base.includes("P") && !base.includes("SP") && !base.includes("RP")) {
+    const pitching = (p.projection as Record<string, unknown> | undefined)
+      ?.pitching as Record<string, unknown> | undefined;
+    const asNum = (v: unknown): number => {
+      if (typeof v === "number") return v;
+      if (typeof v === "string") return Number(v);
+      return NaN;
+    };
+    const saves = asNum(pitching?.saves);
+    const starts = asNum(
+      pitching?.games_started ??
+        pitching?.gamesStarted ??
+        pitching?.starts ??
+        pitching?.gs
+    );
+    const innings = asNum(
+      pitching?.innings_pitched ??
+        pitching?.inningsPitched ??
+        pitching?.ip
+    );
+
+    const rpLike = Number.isFinite(saves) && saves >= 10;
+    const spLike =
+      (Number.isFinite(starts) && starts >= 8) ||
+      (Number.isFinite(innings) && innings >= 80);
+    const hybridLike =
+      Number.isFinite(saves) &&
+      Number.isFinite(starts) &&
+      saves >= 4 &&
+      starts >= 4;
+
+    if (hybridLike) {
+      base.push("SP", "RP");
+    } else if (rpLike && !spLike) {
+      base.push("RP");
+    } else {
+      // Default to SP to avoid collapsing generic P into no-fit in split-slot leagues.
+      base.push("SP");
+    }
+  }
+  return [...new Set(base)];
 }
 
 export function playerTokensFromDrafted(dp: DraftedPlayer): string[] {
@@ -84,8 +125,9 @@ export function fitsRosterSlot(slotKey: string, tokens: readonly string[]): bool
   if (slot === "CI") return tokens.includes("1B") || tokens.includes("3B");
   if (slot === "MI") return tokens.includes("2B") || tokens.includes("SS");
   if (slot === "P") return tokens.includes("SP") || tokens.includes("RP") || tokens.includes("P");
-  if (slot === "SP") return tokens.includes("SP");
-  if (slot === "RP") return tokens.includes("RP");
+  // Generic pitcher eligibility should remain usable in split SP/RP leagues.
+  if (slot === "SP") return tokens.includes("SP") || tokens.includes("P");
+  if (slot === "RP") return tokens.includes("RP") || tokens.includes("P");
   return tokens.includes(slot);
 }
 
@@ -147,7 +189,11 @@ export function greedyAssignLeagueSlotsMutable(
   demand: Map<string, number>,
   slotValues: Map<string, number[]>,
   rosterSlotKeys: ReadonlySet<string>,
-  options?: { deterministic?: boolean; seed?: number }
+  options?: {
+    deterministic?: boolean;
+    seed?: number;
+    onAssign?: (playerId: string, slotKey: string, baseline: number) => void;
+  }
 ): void {
   const det = Boolean(options?.deterministic);
 
@@ -202,6 +248,7 @@ export function greedyAssignLeagueSlotsMutable(
     const arr = slotValues.get(bestSlot) ?? [];
     arr.push(p.baseline);
     slotValues.set(bestSlot, arr);
+    options?.onAssign?.(p.player_id, bestSlot, p.baseline);
   }
 }
 
@@ -235,6 +282,33 @@ export function replacementLevelsFromSlotValues(
     } else {
       out[k] = 0;
     }
+  }
+  return out;
+}
+
+function percentileFromValues(values: number[], percentile: number): number {
+  if (values.length === 0) return 0;
+  const p = Math.max(0, Math.min(1, percentile));
+  const sorted = [...values].sort((a, b) => a - b);
+  const idx = Math.round((sorted.length - 1) * p);
+  return sorted[Math.max(0, Math.min(sorted.length - 1, idx))] ?? 0;
+}
+
+/**
+ * Replacement by slot-tail percentile instead of strict min floor.
+ * Useful for stabilizing surplus mass in deep/flex-heavy leagues.
+ */
+export function replacementLevelsFromSlotValuesPercentile(
+  slotValues: Map<string, number[]>,
+  rosterSlotKeys: ReadonlySet<string>,
+  percentileBySlot: Record<string, number>,
+  defaultPercentile = 0.65
+): Record<string, number> {
+  const out: Record<string, number> = {};
+  for (const key of rosterSlotKeys) {
+    const arr = slotValues.get(key) ?? [];
+    const p = percentileBySlot[key] ?? defaultPercentile;
+    out[key] = percentileFromValues(arr, p);
   }
   return out;
 }

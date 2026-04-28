@@ -6,12 +6,28 @@ import {
   maxSurplusOverSlots,
   playerTokensFromDrafted,
   playerTokensFromLean,
+  replacementLevelsFromSlotValuesPercentile,
   replacementLevelsFromSlotValues,
   sumDemand,
   type SlotAssignmentCandidate,
 } from "../lib/fantasyRosterSlots";
 
 const MIN_BID = 1;
+const SLOT_REPLACEMENT_PERCENTILE: Record<string, number> = {
+  C: 0.28,
+  "1B": 0.22,
+  "2B": 0.24,
+  "3B": 0.23,
+  SS: 0.24,
+  OF: 0.2,
+  CI: 0.26,
+  MI: 0.26,
+  UTIL: 0.32,
+  SP: 0.35,
+  RP: 0.34,
+  P: 0.35,
+  BN: 0.5,
+};
 
 function pid(p: LeanPlayer): string {
   return p.mlbId != null ? String(p.mlbId) : String(p._id);
@@ -163,6 +179,7 @@ export function computeReplacementSlotsV2(
   );
 
   const undraftedAssignedIds = new Set<string>();
+  const undraftedSlotValues = new Map<string, number[]>();
 
   for (const c of undraftedCandidates) {
     if (sumDemand(demand) <= 0) break;
@@ -172,14 +189,27 @@ export function computeReplacementSlotsV2(
       demand,
       slotValues,
       rosterSlotKeys,
-      { deterministic, seed }
+      {
+        deterministic,
+        seed,
+        onAssign: (_playerId, slotKey, baseline) => {
+          const arr = undraftedSlotValues.get(slotKey) ?? [];
+          arr.push(baseline);
+          undraftedSlotValues.set(slotKey, arr);
+        },
+      }
     );
     const after = sumDemand(demand);
     if (after < before) undraftedAssignedIds.add(c.player_id);
   }
 
   const replacement_values_by_slot_or_position =
-    replacementLevelsFromSlotValues(slotValues, rosterSlotKeys);
+    replacementLevelsFromSlotValuesPercentile(
+      undraftedSlotValues,
+      rosterSlotKeys,
+      SLOT_REPLACEMENT_PERCENTILE,
+      0.24
+    );
 
   const surplus_cash = Math.max(
     0,

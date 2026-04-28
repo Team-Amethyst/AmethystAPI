@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { calculateInflation, getPlayerId } from "../src/services/inflationEngine";
-import { fitsRosterSlot, tokenizeFantasyPositions } from "../src/lib/fantasyRosterSlots";
+import {
+  fitsRosterSlot,
+  playerTokensFromLean,
+  replacementLevelsFromSlotValuesPercentile,
+  tokenizeFantasyPositions,
+} from "../src/lib/fantasyRosterSlots";
 import type { DraftedPlayer, LeanPlayer, RosterSlot } from "../src/types/brain";
 
 function mk(
@@ -313,6 +318,29 @@ describe("replacement_slots_v2", () => {
 });
 
 describe("fantasyRosterSlots helpers", () => {
+  it("replacement percentile uses lower-tail floor, not strict min", () => {
+    const slotValues = new Map<string, number[]>([
+      ["SP", [1, 4, 7, 10, 15]],
+      ["RP", [2, 3, 5, 8]],
+    ]);
+    const keys = new Set<string>(["SP", "RP"]);
+    const minLike = replacementLevelsFromSlotValuesPercentile(
+      slotValues,
+      keys,
+      {},
+      0
+    );
+    const tailLike = replacementLevelsFromSlotValuesPercentile(
+      slotValues,
+      keys,
+      {},
+      0.35
+    );
+    expect(minLike.SP).toBe(1);
+    expect(tailLike.SP).toBeGreaterThan(minLike.SP);
+    expect(tailLike.RP).toBeGreaterThan(minLike.RP);
+  });
+
   it("tokenizes slash and comma positions", () => {
     const t = tokenizeFantasyPositions("2B / SS", ["OF"]);
     expect(new Set(t)).toEqual(new Set(["2B", "SS", "OF"]));
@@ -329,8 +357,8 @@ describe("fantasyRosterSlots helpers", () => {
     const sp = tokenizeFantasyPositions("SP");
     const rp = tokenizeFantasyPositions("RP");
     expect(fitsRosterSlot("P", p)).toBe(true);
-    expect(fitsRosterSlot("SP", p)).toBe(false);
-    expect(fitsRosterSlot("RP", p)).toBe(false);
+    expect(fitsRosterSlot("SP", p)).toBe(true);
+    expect(fitsRosterSlot("RP", p)).toBe(true);
     expect(fitsRosterSlot("SP", sp)).toBe(true);
     expect(fitsRosterSlot("P", sp)).toBe(true);
     expect(fitsRosterSlot("RP", rp)).toBe(true);
@@ -378,5 +406,58 @@ describe("fantasyRosterSlots helpers", () => {
     expect(fitsRosterSlot("P", tokenizeFantasyPositions("P"))).toBe(true);
     expect(judge.adjusted_value).toBeGreaterThan(1);
     expect(skubal.adjusted_value).toBeGreaterThan(1);
+  });
+
+  it("generic catalog P token is inferred to SP/RP for slot fit", () => {
+    const spLike: LeanPlayer = {
+      ...mk(10, 30, "P"),
+      projection: { pitching: { saves: 1, starts: 25, innings_pitched: 160 } },
+    };
+    const rpLike: LeanPlayer = {
+      ...mk(11, 30, "P"),
+      projection: { pitching: { saves: 25, starts: 0, innings_pitched: 62 } },
+    };
+    const hybridLike: LeanPlayer = {
+      ...mk(12, 30, "P"),
+      projection: { pitching: { saves: 8, starts: 12, innings_pitched: 95 } },
+    };
+    const spTokens = playerTokensFromLean(spLike);
+    const rpTokens = playerTokensFromLean(rpLike);
+    const hybridTokens = playerTokensFromLean(hybridLike);
+    expect(spTokens.includes("SP")).toBe(true);
+    expect(fitsRosterSlot("SP", spTokens)).toBe(true);
+    expect(rpTokens.includes("RP")).toBe(true);
+    expect(fitsRosterSlot("RP", rpTokens)).toBe(true);
+    expect(hybridTokens.includes("SP")).toBe(true);
+    expect(hybridTokens.includes("RP")).toBe(true);
+  });
+
+  it("generic P starter no longer collapses to BN-level replacement in SP/RP leagues", () => {
+    const players = [
+      {
+        ...mk(20, 68, "P", 1),
+        projection: { pitching: { saves: 0 } },
+      } as LeanPlayer,
+      mk(21, 65, "SP", 1),
+      mk(22, 40, "SP", 2),
+      mk(23, 35, "RP", 2),
+      ...Array.from({ length: 20 }, (_, i) => mk(200 + i, 15 - (i % 6), i % 2 ? "SP" : "RP", 4)),
+    ];
+    const r = roster(
+      [
+        { pos: "SP", count: 5 },
+        { pos: "RP", count: 2 },
+        { pos: "BN", count: 3 },
+      ],
+      1,
+      [],
+      players,
+      "replacement_slots_v2",
+      { budget: 260, inflationCap: 5, inflationFloor: 0.05 }
+    );
+    const genericP = r.valuations.find((v) => v.player_id === "20")!;
+    const peerSp = r.valuations.find((v) => v.player_id === "21")!;
+    expect(genericP.adjusted_value).toBeGreaterThan(1);
+    expect(genericP.adjusted_value).toBeGreaterThanOrEqual(peerSp.adjusted_value * 0.75);
   });
 });

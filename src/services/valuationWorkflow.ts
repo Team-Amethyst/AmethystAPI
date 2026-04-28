@@ -108,7 +108,8 @@ function extractDraftedIdsAndSpend(input: NormalizedValuationInput): ExtraDraftC
 export function executeValuationWorkflow(
   allPlayers: LeanPlayer[],
   input: NormalizedValuationInput,
-  scope: { playerId?: string; position?: string } = {}
+  scope: { playerId?: string; position?: string } = {},
+  options: { debugSignals?: boolean } = {}
 ): ValuationWorkflowResult {
   const basePlayers = scoringAwareBaselinePlayers(
     allPlayers,
@@ -154,6 +155,7 @@ export function executeValuationWorkflow(
         inflationModel: input.inflation_model ?? "global_v1",
         remainingLeagueSlots,
         rosteredPlayersForSlots,
+        debugSignals: options.debugSignals,
       }
     );
 

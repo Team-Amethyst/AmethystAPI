@@ -182,6 +182,8 @@ export interface CalculateInflationOptions {
   rosteredPlayersForSlots?: DraftedPlayer[];
   /** Team context for team_adjusted_value (defaults to team_1 when omitted). */
   userTeamId?: string;
+  /** Emits per-row debug_v2 diagnostics (for offline replay analysis). */
+  debugSignals?: boolean;
 }
 
 export type ValueIndicator = "Steal" | "Reach" | "Fair Value";
@@ -241,6 +243,23 @@ export interface ValuedPlayer {
       reason: string;
     }[];
     confidence: number;
+  };
+  /**
+   * Optional diagnostics payload for replay calibration; only emitted when
+   * calculateInflation is called with debugSignals=true.
+   */
+  debug_v2?: {
+    surplus_basis?: number;
+    replacement_key_used?: string | null;
+    replacement_value_used?: number | null;
+    lambda_used?: number;
+    team_multipliers?: {
+      need: number;
+      budget: number;
+      dollars_per_slot: number;
+      slot_scarcity: number;
+      replacement_dropoff: number;
+    };
   };
 }
 

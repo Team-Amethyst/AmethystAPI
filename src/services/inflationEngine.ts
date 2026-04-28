@@ -292,14 +292,39 @@ function lambdaClearingPrice(
   const elite = 1 - t;
   switch (phase) {
     case "early":
-      return 0.34 + 0.26 * elite ** 1.35;
+      return 0.5 + 0.28 * elite ** 1.25;
     case "mid":
-      return 0.28 + 0.22 * elite ** 1.2;
+      return 0.42 + 0.24 * elite ** 1.15;
     case "late":
-      return 0.12 + 0.24 * elite ** 1.35;
+      return 0.18 + 0.22 * elite ** 1.25;
     default:
-      return 0.3;
+      return 0.46;
   }
+}
+
+function isotonicNonIncreasing(values: number[]): number[] {
+  if (values.length <= 1) return [...values];
+  const blocks: Array<{ sum: number; count: number }> = [];
+  for (const v of values) {
+    blocks.push({ sum: v, count: 1 });
+    while (blocks.length >= 2) {
+      const b = blocks[blocks.length - 1];
+      const a = blocks[blocks.length - 2];
+      const meanA = a.sum / a.count;
+      const meanB = b.sum / b.count;
+      if (meanA >= meanB) break;
+      blocks.splice(blocks.length - 2, 2, {
+        sum: a.sum + b.sum,
+        count: a.count + b.count,
+      });
+    }
+  }
+  const out: number[] = [];
+  for (const b of blocks) {
+    const m = b.sum / b.count;
+    for (let i = 0; i < b.count; i++) out.push(m);
+  }
+  return out;
 }
 
 function isPitcherPosition(pos: string): boolean {
@@ -319,6 +344,21 @@ function maxReplacementDropoff(
     best = Math.max(best, baseline - (repl[slot] ?? 0));
   }
   return Math.max(0, best);
+}
+
+function bestReplacementForPlayer(
+  tokens: readonly string[],
+  repl: Record<string, number>,
+  slotKeys: ReadonlySet<string>
+): { key: string; value: number } | null {
+  let best: { key: string; value: number } | null = null;
+  for (const slot of slotKeys) {
+    if (!fitsRosterSlot(slot, tokens)) continue;
+    const v = repl[slot];
+    if (v == null || !Number.isFinite(v)) continue;
+    if (!best || v < best.value) best = { key: slot, value: v };
+  }
+  return best;
 }
 
 function dollarsPerSlotPeerRatio(params: {
@@ -645,6 +685,7 @@ export function calculateInflation(
     inflationModelEffective === "replacement_slots_v2" && v2Result
       ? v2Result.replacement_values_by_slot_or_position
       : {};
+  const byRowPlayerId = new Map(byValueRows.map((p) => [getPlayerId(p), p]));
 
   for (const row of valuations) {
     const depthFrac = depthFracById.get(row.player_id) ?? 0.5;
@@ -654,7 +695,7 @@ export function calculateInflation(
     // Pitcher markets in our replay clear closer to marginal (adjusted_value) than list anchor.
     if (isPitcherPosition(row.position)) {
       const damp =
-        draftPhase === "early" ? 0.82 : draftPhase === "mid" ? 0.72 : 0.62;
+        draftPhase === "early" ? 0.52 : draftPhase === "mid" ? 0.44 : 0.38;
       L *= damp;
     }
     let clearing = a + L * (r - a);
@@ -666,26 +707,61 @@ export function calculateInflation(
       clearing =
         MIN_AUCTION_BID + (clearing - MIN_AUCTION_BID) * Math.max(0.35, squeeze);
     }
+    if (!isPitcherPosition(row.position) && draftPhase !== "late" && depthFrac < 0.45) {
+      // Early/mid hitter markets tend to clear materially above pure marginal value.
+      const hitterMarketFloor = Math.min(
+        Math.max(a + 2, r * 0.72),
+        a * 1.6 + 4
+      );
+      clearing = Math.max(clearing, hitterMarketFloor);
+    }
+    if (!isPitcherPosition(row.position) && draftPhase !== "late" && depthFrac < 0.28) {
+      // Additional star-tier floor so top bats don't collapse into marginal pricing.
+      const starHitterFloor = Math.max(a + 4, r * 0.58);
+      clearing = Math.max(clearing, starHitterFloor);
+    }
     if (depthFrac < 0.12) {
       clearing = Math.max(clearing, a * 0.93);
     }
     const hiSoft = Math.max(r, a) * 1.15 + 8;
     clearing = Math.max(MIN_AUCTION_BID, Math.min(clearing, hiSoft));
     row.recommended_bid = parseFloat(clearing.toFixed(2));
-  }
-
-  const ordDesc = [...valuations].sort(
-    (a, b) => b.baseline_value - a.baseline_value
-  );
-  for (let k = 1; k < ordDesc.length; k++) {
-    const prev = ordDesc[k - 1].recommended_bid ?? MIN_AUCTION_BID;
-    const cur = ordDesc[k].recommended_bid ?? MIN_AUCTION_BID;
-    if (cur > prev + 1e-6) {
-      ordDesc[k].recommended_bid = parseFloat(
-        Math.max(MIN_AUCTION_BID, prev - 0.01).toFixed(2)
+    if (options?.debugSignals) {
+      const lp = byRowPlayerId.get(row.player_id);
+      const tokens = lp ? playerTokensFromLean(lp) : [];
+      const replBest = bestReplacementForPlayer(
+        tokens,
+        replForTeam,
+        rosterSlotKeysForFit
       );
+      const sb =
+        inflationModelEffective === "replacement_slots_v2" && v2Result
+          ? v2Result.playerIdToSurplusBasis.get(row.player_id) ?? 0
+          : undefined;
+      row.debug_v2 = {
+        ...(row.debug_v2 ?? {}),
+        lambda_used: Number(L.toFixed(4)),
+        surplus_basis:
+          sb != null && Number.isFinite(sb) ? Number(sb.toFixed(4)) : undefined,
+        replacement_key_used: replBest?.key ?? null,
+        replacement_value_used:
+          replBest?.value != null ? Number(replBest.value.toFixed(4)) : null,
+      };
     }
   }
+
+  const smoothGroup = (rows: typeof valuations) => {
+    const ordDesc = [...rows].sort((a, b) => b.baseline_value - a.baseline_value);
+    const recSeries = ordDesc.map((r) => r.recommended_bid ?? MIN_AUCTION_BID);
+    const smoothed = isotonicNonIncreasing(recSeries);
+    for (let k = 0; k < ordDesc.length; k++) {
+      ordDesc[k].recommended_bid = parseFloat(
+        Math.max(MIN_AUCTION_BID, smoothed[k] ?? MIN_AUCTION_BID).toFixed(2)
+      );
+    }
+  };
+  smoothGroup(valuations.filter((r) => !isPitcherPosition(r.position)));
+  smoothGroup(valuations.filter((r) => isPitcherPosition(r.position)));
 
   const userTeamId = options?.userTeamId?.trim() || DEFAULT_USER_TEAM_ID;
   const openSlots = buildOpenSlotsForUserTeam(
@@ -726,7 +802,6 @@ export function calculateInflation(
     dpsMult -= 0.11 * Math.min(1.2, 0.82 - dpsRatio);
   }
 
-  const byRowPlayerId = new Map(byValueRows.map((p) => [getPlayerId(p), p]));
   for (const row of valuations) {
     const lp = byRowPlayerId.get(row.player_id);
     if (!lp) continue;
@@ -759,6 +834,18 @@ export function calculateInflation(
     row.team_adjusted_value = parseFloat(
       Math.max(0, Math.min(saneCap, rawTeam)).toFixed(2)
     );
+    if (options?.debugSignals) {
+      row.debug_v2 = {
+        ...(row.debug_v2 ?? {}),
+        team_multipliers: {
+          need: Number(needMult.toFixed(4)),
+          budget: Number(budgetMult.toFixed(4)),
+          dollars_per_slot: Number(dpsMult.toFixed(4)),
+          slot_scarcity: Number(slotScarcityMult.toFixed(4)),
+          replacement_dropoff: Number(dropMult.toFixed(4)),
+        },
+      };
+    }
   }
 
   for (const row of valuations) {
