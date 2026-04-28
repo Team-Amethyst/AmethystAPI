@@ -127,12 +127,22 @@ async function main(): Promise<void> {
 
   const rows: PickEval[] = [];
   const limit = Math.min(sorted.length, maxPicks ?? sorted.length);
+  const skips = {
+    no_finite_paid: 0,
+    parse_failed: 0,
+    workflow_failed: 0,
+    player_not_in_valuation_pool: 0,
+    not_in_pool_sample: [] as string[],
+  };
 
   for (let i = 0; i < limit; i++) {
     const prior = sorted.slice(0, i);
     const pick = sorted[i]!;
     const paid = pick.paid ?? NaN;
-    if (!Number.isFinite(paid)) continue;
+    if (!Number.isFinite(paid)) {
+      skips.no_finite_paid++;
+      continue;
+    }
 
     const budgets = { ...keeperBudgets };
     subtractAuctionSpend(budgets, prior);
@@ -152,12 +162,26 @@ async function main(): Promise<void> {
     };
 
     const parsed = parseValuationRequest(raw as Record<string, unknown>);
-    if (!parsed.success) continue;
+    if (!parsed.success) {
+      skips.parse_failed++;
+      continue;
+    }
     const out = executeValuationWorkflow(pool, parsed.normalized, {});
-    if (!out.ok) continue;
+    if (!out.ok) {
+      skips.workflow_failed++;
+      continue;
+    }
 
     const vrow = out.response.valuations.find((r) => r.player_id === pick.player_id);
-    if (!vrow) continue;
+    if (!vrow) {
+      skips.player_not_in_valuation_pool++;
+      if (skips.not_in_pool_sample.length < 25) {
+        skips.not_in_pool_sample.push(
+          `pick ${pick.pick_number ?? "?"} ${pick.player_id} ${pick.name}`
+        );
+      }
+      continue;
+    }
 
     const rec =
       typeof vrow.recommended_bid === "number" ? vrow.recommended_bid : null;
@@ -193,10 +217,25 @@ async function main(): Promise<void> {
 
   const mean = (xs: number[]) =>
     xs.length ? xs.reduce((s, x) => s + x, 0) / xs.length : NaN;
+  const byRec = [...rows].sort((a, b) => b.abs_err_rec - a.abs_err_rec);
+  const worstRecommended = byRec.slice(0, 15).map((r) => ({
+    pick: r.pick_number,
+    player_id: r.player_id,
+    name: r.name,
+    pos: r.position,
+    paid: r.paid,
+    recommended: r.recommended,
+    team_adjusted: r.team_adjusted,
+    adjusted: r.adjusted,
+    abs_err_rec: Number(r.abs_err_rec.toFixed(2)),
+  }));
+
   const summary = {
     source_full: full,
     source_pre: pre,
+    picks_attempted: limit,
     picks_scored: rows.length,
+    skips,
     overall_mae: {
       recommended: mean(rows.map((r) => r.abs_err_rec)),
       team_adjusted: mean(rows.map((r) => r.abs_err_team)),
@@ -212,6 +251,7 @@ async function main(): Promise<void> {
           ? (rows.filter((r) => r.market_closer_than_adj).length / rows.length) * 100
           : NaN,
     },
+    worst_recommended_misses: worstRecommended,
   };
   console.log(JSON.stringify(summary, null, 2));
 }
