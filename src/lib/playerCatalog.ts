@@ -55,12 +55,22 @@ export function normalizeCatalogPlayers(
       }
     }
 
+    let positions: string[] | undefined;
+    const rawPos = d.positions;
+    if (Array.isArray(rawPos)) {
+      const arr = rawPos.filter(
+        (x): x is string => typeof x === "string" && x.trim().length > 0
+      );
+      if (arr.length > 0) positions = arr;
+    }
+
     rows.push({
       _id: d._id,
       mlbId,
       name: typeof d.name === "string" ? d.name : "Unknown",
       team: typeof d.team === "string" ? d.team : "",
       position: typeof d.position === "string" ? d.position : "",
+      ...(positions ? { positions } : {}),
       adp,
       tier,
       value,

@@ -63,6 +63,8 @@ export interface LeanPlayer {
   name: string;
   team: string;
   position: string;
+  /** Extra fantasy eligibilities (e.g. two-way DH+SP); used by slot/surplus v2. */
+  positions?: string[];
   adp: number;
   tier: number;
   value: number;

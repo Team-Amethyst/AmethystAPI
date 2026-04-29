@@ -50,7 +50,7 @@ export function tokenizeFantasyPositions(
 }
 
 export function playerTokensFromLean(p: LeanPlayer): string[] {
-  const base = tokenizeFantasyPositions(p.position, undefined);
+  const base = tokenizeFantasyPositions(p.position, p.positions);
   if (base.includes("P") && !base.includes("SP") && !base.includes("RP")) {
     const pitching = (p.projection as Record<string, unknown> | undefined)
       ?.pitching as Record<string, unknown> | undefined;
