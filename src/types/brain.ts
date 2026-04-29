@@ -270,8 +270,28 @@ export interface ValuationResponse {
   engine_contract_version: string;
   /** Which inflation pass produced this response (echo of request defaulting rule). */
   inflation_model: InflationModel;
-  /** > 1.0 = inflated market; < 1.0 = deflated */
+  /**
+   * League-wide inflation scalar after workflow cap/floor.
+   * - `global_v1`: `total_budget_remaining / pool_value_remaining` on the full undrafted pool
+   *   (≈1 means list dollars match cash; **>1** stretches budget vs list, **<1** compresses).
+   * - `surplus_slots_v1` / `replacement_slots_v2`: **surplus allocator** — dollars of free budget
+   *   above min-bid reserves per unit of modeled surplus mass; **not** anchored at 1.0 vs “list neutral.”
+   *   For v2 UI framing vs auction night one, use `inflation_index_vs_opening_auction` when present.
+   */
   inflation_factor: number;
+  /**
+   * Only for `replacement_slots_v2`: `inflation_factor` divided by the same v2
+   * factor recomputed at a counterfactual **auction open** (roster minus non-keeper
+   * `drafted_players`, budget grossed up by those rows' `paid`). Near **1.0** at
+   * the first pick; rises above 1 as surplus tightens vs that baseline. Raw
+   * `inflation_factor` stays the allocator ratio (not anchored at 1).
+   */
+  inflation_index_vs_opening_auction?: number;
+  /**
+   * When `inflation_index_vs_opening_auction` is set: `(index − 1)×100` vs auction-open baseline
+   * (same as `context_v2.market_summary.inflation_percent_vs_auction_open` after explainability).
+   */
+  inflation_percent_vs_auction_open?: number;
   /**
    * Pre–cap/floor ratio. Meaning depends on `inflation_model`:
    * - `global_v1`: `total_budget_remaining / pool_value_remaining` (full undrafted baseline $).
@@ -323,7 +343,18 @@ export interface ValuationResponse {
       inflation_factor: number;
       inflation_raw: number;
       inflation_bounded_by: InflationBoundedBy;
+      /**
+       * Always `(inflation_factor − 1)×100` vs a **1.0 factor** reference (meaningful for
+       * `global_v1`; for v2 this is the raw allocator gap, not “market temperature”).
+       */
       inflation_percent_vs_neutral: number;
+      /**
+       * Only when `inflation_index_vs_opening_auction` is present: `(index − 1)×100` vs the
+       * replayed **auction-open** baseline — use this (and the index) for v2 tooltips/headlines.
+       */
+      inflation_percent_vs_auction_open?: number;
+      /** Present for `replacement_slots_v2` when the opening counterfactual was computed. */
+      inflation_index_vs_opening_auction?: number;
       budget_left: number;
       players_left: number;
       model_version: string;

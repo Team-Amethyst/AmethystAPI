@@ -57,7 +57,7 @@
     },
     "recommended_bid_note": {
       "type": "string",
-      "description": "How recommended_bid is derived (phase-aware clearing price)."
+      "description": "Explains recommended_bid as a phase-aware clearing guide, not a guaranteed winning bid."
     },
     "phase_indicator": {
       "type": "string",

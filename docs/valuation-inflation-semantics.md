@@ -124,6 +124,12 @@ So players at or below **replacement** in model dollars stay near **$1**; stars 
 
 `remaining_slots`, `min_bid`, `surplus_cash`, `total_surplus_mass`, `draftable_pool_size`, `replacement_values_by_slot_or_position`, `fallback_reason`.
 
+### Display semantics (v2 vs `global_v1`)
+
+- **`inflation_factor`** is the **surplus allocator** used in `adjusted_value`; it is **not** meant to read like `global_v1`’s “1.0 = list dollars match cash.” Values below 1.0 at a fresh auction are normal.
+- **`inflation_index_vs_opening_auction`** (when present) is **current applied `inflation_factor` ÷** the same v2 pass recomputed on a **replayed auction-open** counterfactual: roster with **non-keeper** `drafted_players` rows removed, off-board ids from that opening roster plus `additionalDraftedIds`, and league budget **grossed up** by `paid` on those removed rows. **~1.0** means “same allocator tightness as at our replayed open.” Keeper rows must use **`is_keeper: true`** when they appear in `drafted_players`, or opening roster/budget can be wrong.
+- After **`attachValuationExplainability`**: **`inflation_percent_vs_auction_open`** = `(index − 1) × 100` (top-level echo + `context_v2.market_summary`) — **preferred for UI** (“% vs auction open”). **`inflation_percent_vs_neutral`** in `market_summary` is always **`(inflation_factor − 1) × 100`** (allocator vs 1.0), including for v2.
+
 ---
 
 ## Bounded-by flag
@@ -135,4 +141,5 @@ So players at or below **replacement** in model dollars stay near **$1**; stars 
 ## Consumers (AmethystDraft)
 
 - Echo **`inflation_model`** on responses; interpret **`inflation_raw`** and **`pool_value_remaining`** using the active model (see above).
+- For **`replacement_slots_v2`**, bind primary “inflation” UI to **`inflation_index_vs_opening_auction`** / **`inflation_percent_vs_auction_open`** when present; treat **`inflation_factor`** as the allocator used in math (or an advanced/debug readout).
 - **`pool_value_remaining` / `players_remaining`** are **not** “rows returned.” Row count is `valuations.length`.

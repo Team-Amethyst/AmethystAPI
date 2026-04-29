@@ -103,9 +103,7 @@ describe("executeValuationWorkflow", () => {
     expect(res.response.context_v2?.market_summary.players_left).toBe(
       res.response.players_remaining
     );
-    expect(res.response.recommended_bid_note).toBe(
-      "recommended_bid is a phase-aware expected clearing price (early premium for stars, late depth compression toward $1–$3)"
-    );
+    expect(res.response.recommended_bid_note).toContain("clearing target");
     expect(res.response.phase_indicator).toMatch(/^(early|mid|late)$/);
     const first = res.response.valuations[0];
     expect(first.explain_v2).toBeDefined();

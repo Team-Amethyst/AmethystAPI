@@ -4,13 +4,14 @@
   "response_summary": {
     "engine_contract_version": "1",
     "inflation_model": "replacement_slots_v2",
-    "inflation_factor": 0.2838,
-    "inflation_raw": 0.283848,
-    "inflation_bounded_by": "none",
-    "total_budget_remaining": 820,
-    "pool_value_remaining": 2624.64,
+    "inflation_factor": 3,
+    "inflation_index_vs_opening_auction": 1,
+    "inflation_raw": 53.888889,
+    "inflation_bounded_by": "cap",
+    "total_budget_remaining": 851,
+    "pool_value_remaining": 14.4,
     "players_remaining": 512,
-    "recommended_bid_note": "recommended_bid is a phase-aware expected clearing price (early premium for stars, late depth compression toward $1–$3)",
+    "recommended_bid_note": "recommended_bid is a phase-aware model clearing target (star floors, pitcher dampening, isotonic smoothing)—a bidding guide, not a prediction of the winning hammer price; room behavior can diverge materially.",
     "user_team_id_used": "team_1",
     "team_adjusted_value_note": "team_adjusted_value scales adjusted_value by roster need, dollars per open slot vs league peers, remaining-slot scarcity, and replacement drop-off for eligible slots",
     "phase_indicator": "mid",
@@ -18,8 +19,8 @@
     "valuation_model_version": "amethyst-api@1.0.0",
     "remaining_slots": 75,
     "min_bid": 1,
-    "surplus_cash": 745,
-    "total_surplus_mass": 2624.6400000000012,
+    "surplus_cash": 776,
+    "total_surplus_mass": 14.400000000000034,
     "draftable_pool_size": 24,
     "replacement_values_by_slot_or_position": {
       "C": 0,
@@ -27,15 +28,16 @@
       "2B": 0,
       "3B": 0,
       "SS": 0,
-      "OF": 0,
+      "OF": 106.8,
       "CI": 0,
       "MI": 0,
-      "UTIL": 0,
+      "UTIL": 106.8,
       "P": 0
     },
     "fallback_reason": null,
+    "inflation_percent_vs_auction_open": 0,
     "market_notes": [
-      "Market is deflated (-72% vs neutral) but 1B still shows scarcity pressure.",
+      "Market is near auction-open baseline and 1B is the key position to monitor.",
       "1B: No Tier 1 1B players remaining — act immediately.",
       "2B: No Tier 1 2B players remaining — act immediately.",
       "3B: No Tier 1 3B players remaining — act immediately."
@@ -47,12 +49,14 @@
         "league_id": "unknown"
       },
       "market_summary": {
-        "headline": "Market is deflated (-72% vs neutral) but 1B still shows scarcity pressure.",
-        "inflation_factor": 0.28,
-        "inflation_raw": 0.28,
-        "inflation_bounded_by": "none",
-        "inflation_percent_vs_neutral": -72,
-        "budget_left": 820,
+        "headline": "Market is near auction-open baseline and 1B is the key position to monitor.",
+        "inflation_factor": 3,
+        "inflation_raw": 53.89,
+        "inflation_bounded_by": "cap",
+        "inflation_percent_vs_neutral": 200,
+        "inflation_percent_vs_auction_open": 0,
+        "inflation_index_vs_opening_auction": 1,
+        "budget_left": 851,
         "players_left": 512,
         "model_version": "amethyst-api@1.0.0"
       },
@@ -155,19 +159,21 @@
         }
       ],
       "assumptions": [
-        "Auction inflation used replacement_slots_v2: greedy league-wide slot fill yields per-slot replacement baselines; surplus cash maps to value above replacement (see docs/valuation-inflation-semantics.md).",
+        "Auction inflation used replacement_slots_v2: greedy league-wide slot fill yields per-slot replacement baselines; surplus cash maps to value above replacement (see docs/valuation-inflation-semantics.md). inflation_percent_vs_auction_open and inflation_index_vs_opening_auction (1.00×) describe change vs a replayed auction-open state; inflation_percent_vs_neutral is always (inflation_factor−1)×100 (allocator vs 1.0, not \"list neutral\").",
         "The inflation factor may be clamped to a workflow floor/cap when list dollars versus remaining cash are extreme.",
+        "This response used inflation_raw=53.8889 before clamp; applied factor is 3.0000 (cap).",
         "Scarcity urgency uses remaining elite and mid-tier supply versus league demand.",
         "Draft state is treated as stateless full-context input for every request.",
         "players_remaining is always the count of the full undrafted pool; valuations.length may be smaller when player_ids filters the response.",
         "pool_value_remaining equals total_surplus_mass (sum of marginal surplus $ in the slot-assigned draftable pool).",
-        "Real auction accuracy depends on catalog value quality — run `pnpm run audit:valuation-response` for fixture QA."
+        "Real auction accuracy depends on catalog value quality and id/name alignment with the player pool.",
+        "recommended_bid is a clearing-style guide (phase- and list-informed); it is not framed as the exact price the room will pay—compare to adjusted_value and team_adjusted_value for surplus vs roster context."
       ],
       "confidence": {
         "overall": 0.9
       },
       "market_notes": [
-        "Market is deflated (-72% vs neutral) but 1B still shows scarcity pressure.",
+        "Market is near auction-open baseline and 1B is the key position to monitor.",
         "1B: No Tier 1 1B players remaining — act immediately.",
         "2B: No Tier 1 2B players remaining — act immediately.",
         "3B: No Tier 1 3B players remaining — act immediately."
@@ -182,39 +188,40 @@
       "team": "NYY",
       "adp": 1,
       "tier": 1,
-      "baseline_value": 109.96,
-      "adjusted_value": 32.21,
+      "baseline_value": 108,
+      "adjusted_value": 4.6,
       "indicator": "Fair Value",
-      "inflation_factor": 0.2838,
+      "inflation_factor": 3,
       "baseline_components": {
         "scoring_format": "5x5",
-        "projection_component": 1.96,
+        "projection_component": 0,
         "scarcity_component": 0.2
       },
       "scarcity_adjustment": 0,
-      "inflation_adjustment": -77.75,
-      "recommended_bid": 71.09,
-      "team_adjusted_value": 56.49,
-      "edge": -14.6,
+      "inflation_adjustment": -103.4,
+      "recommended_bid": 72.84,
+      "team_adjusted_value": 6.63,
+      "edge": -66.21,
       "why": [
         "ADP and model auction value are broadly aligned.",
-        "Adjusted auction $32.2 vs baseline $110.0 after league inflation (0.28×).",
-        "Roster/scarcity is reflected in baseline list price (scarcity_component=0.200 on baseline_components), before the league inflation factor."
+        "Adjusted auction $4.6 vs baseline $108.0 after league inflation (3.00×).",
+        "Roster/scarcity is reflected in baseline list price (scarcity_component=0.200 on baseline_components), before the league inflation factor.",
+        "Elite tier in an inflated market — expect competitive bidding."
       ],
       "explain_v2": {
         "indicator": "Fair Value",
-        "auction_target": 32.21,
-        "list_value": 109.96,
+        "auction_target": 4.6,
+        "list_value": 108,
         "adjustments": {
           "scarcity": 0,
-          "inflation": -77.75,
+          "inflation": -103.4,
           "other": 0
         },
         "drivers": [
           {
             "label": "League inflation",
-            "impact": -77.75,
-            "reason": "replacement_slots_v2: slot-aware surplus allocation (factor 0.28× on marginal list $ above replacement); see response replacement_values_by_slot_or_position and fallback_reason."
+            "impact": -103.4,
+            "reason": "replacement_slots_v2: slot-aware surplus allocation (factor 3.00× on marginal list $ above replacement); see response replacement_values_by_slot_or_position and fallback_reason. Auction-open index 1.00× (1.0 = same allocator at replayed auction open). Raw ratio was 53.89× before the workflow cap."
           },
           {
             "label": "Scarcity context (OF)",
@@ -237,39 +244,40 @@
       "team": "NYY",
       "adp": 46,
       "tier": 1,
-      "baseline_value": 109.96,
-      "adjusted_value": 32.21,
+      "baseline_value": 108,
+      "adjusted_value": 4.6,
       "indicator": "Steal",
-      "inflation_factor": 0.2838,
+      "inflation_factor": 3,
       "baseline_components": {
         "scoring_format": "5x5",
-        "projection_component": 1.96,
+        "projection_component": 0,
         "scarcity_component": 0.2
       },
       "scarcity_adjustment": 0,
-      "inflation_adjustment": -77.75,
-      "recommended_bid": 71.04,
-      "team_adjusted_value": 56.49,
-      "edge": -14.55,
+      "inflation_adjustment": -103.4,
+      "recommended_bid": 72.79,
+      "team_adjusted_value": 6.63,
+      "edge": -66.16,
       "why": [
         "Model ranks this player higher than ADP implies the market does — possible value.",
-        "Adjusted auction $32.2 vs baseline $110.0 after league inflation (0.28×).",
-        "Roster/scarcity is reflected in baseline list price (scarcity_component=0.200 on baseline_components), before the league inflation factor."
+        "Adjusted auction $4.6 vs baseline $108.0 after league inflation (3.00×).",
+        "Roster/scarcity is reflected in baseline list price (scarcity_component=0.200 on baseline_components), before the league inflation factor.",
+        "Elite tier in an inflated market — expect competitive bidding."
       ],
       "explain_v2": {
         "indicator": "Steal",
-        "auction_target": 32.21,
-        "list_value": 109.96,
+        "auction_target": 4.6,
+        "list_value": 108,
         "adjustments": {
           "scarcity": 0,
-          "inflation": -77.75,
+          "inflation": -103.4,
           "other": 0
         },
         "drivers": [
           {
             "label": "League inflation",
-            "impact": -77.75,
-            "reason": "replacement_slots_v2: slot-aware surplus allocation (factor 0.28× on marginal list $ above replacement); see response replacement_values_by_slot_or_position and fallback_reason."
+            "impact": -103.4,
+            "reason": "replacement_slots_v2: slot-aware surplus allocation (factor 3.00× on marginal list $ above replacement); see response replacement_values_by_slot_or_position and fallback_reason. Auction-open index 1.00× (1.0 = same allocator at replayed auction open). Raw ratio was 53.89× before the workflow cap."
           },
           {
             "label": "Scarcity context (OF)",
@@ -292,39 +300,40 @@
       "team": "NYY",
       "adp": 91,
       "tier": 1,
-      "baseline_value": 109.96,
-      "adjusted_value": 32.21,
+      "baseline_value": 108,
+      "adjusted_value": 4.6,
       "indicator": "Steal",
-      "inflation_factor": 0.2838,
+      "inflation_factor": 3,
       "baseline_components": {
         "scoring_format": "5x5",
-        "projection_component": 1.96,
+        "projection_component": 0,
         "scarcity_component": 0.2
       },
       "scarcity_adjustment": 0,
-      "inflation_adjustment": -77.75,
-      "recommended_bid": 71,
-      "team_adjusted_value": 56.49,
-      "edge": -14.51,
+      "inflation_adjustment": -103.4,
+      "recommended_bid": 72.73,
+      "team_adjusted_value": 6.63,
+      "edge": -66.1,
       "why": [
         "Model ranks this player higher than ADP implies the market does — possible value.",
-        "Adjusted auction $32.2 vs baseline $110.0 after league inflation (0.28×).",
-        "Roster/scarcity is reflected in baseline list price (scarcity_component=0.200 on baseline_components), before the league inflation factor."
+        "Adjusted auction $4.6 vs baseline $108.0 after league inflation (3.00×).",
+        "Roster/scarcity is reflected in baseline list price (scarcity_component=0.200 on baseline_components), before the league inflation factor.",
+        "Elite tier in an inflated market — expect competitive bidding."
       ],
       "explain_v2": {
         "indicator": "Steal",
-        "auction_target": 32.21,
-        "list_value": 109.96,
+        "auction_target": 4.6,
+        "list_value": 108,
         "adjustments": {
           "scarcity": 0,
-          "inflation": -77.75,
+          "inflation": -103.4,
           "other": 0
         },
         "drivers": [
           {
             "label": "League inflation",
-            "impact": -77.75,
-            "reason": "replacement_slots_v2: slot-aware surplus allocation (factor 0.28× on marginal list $ above replacement); see response replacement_values_by_slot_or_position and fallback_reason."
+            "impact": -103.4,
+            "reason": "replacement_slots_v2: slot-aware surplus allocation (factor 3.00× on marginal list $ above replacement); see response replacement_values_by_slot_or_position and fallback_reason. Auction-open index 1.00× (1.0 = same allocator at replayed auction open). Raw ratio was 53.89× before the workflow cap."
           },
           {
             "label": "Scarcity context (OF)",
@@ -347,39 +356,40 @@
       "team": "NYY",
       "adp": 136,
       "tier": 1,
-      "baseline_value": 109.96,
-      "adjusted_value": 32.21,
+      "baseline_value": 108,
+      "adjusted_value": 4.6,
       "indicator": "Steal",
-      "inflation_factor": 0.2838,
+      "inflation_factor": 3,
       "baseline_components": {
         "scoring_format": "5x5",
-        "projection_component": 1.96,
+        "projection_component": 0,
         "scarcity_component": 0.2
       },
       "scarcity_adjustment": 0,
-      "inflation_adjustment": -77.75,
-      "recommended_bid": 70.96,
-      "team_adjusted_value": 56.49,
-      "edge": -14.47,
+      "inflation_adjustment": -103.4,
+      "recommended_bid": 72.68,
+      "team_adjusted_value": 6.63,
+      "edge": -66.05,
       "why": [
         "Model ranks this player higher than ADP implies the market does — possible value.",
-        "Adjusted auction $32.2 vs baseline $110.0 after league inflation (0.28×).",
-        "Roster/scarcity is reflected in baseline list price (scarcity_component=0.200 on baseline_components), before the league inflation factor."
+        "Adjusted auction $4.6 vs baseline $108.0 after league inflation (3.00×).",
+        "Roster/scarcity is reflected in baseline list price (scarcity_component=0.200 on baseline_components), before the league inflation factor.",
+        "Elite tier in an inflated market — expect competitive bidding."
       ],
       "explain_v2": {
         "indicator": "Steal",
-        "auction_target": 32.21,
-        "list_value": 109.96,
+        "auction_target": 4.6,
+        "list_value": 108,
         "adjustments": {
           "scarcity": 0,
-          "inflation": -77.75,
+          "inflation": -103.4,
           "other": 0
         },
         "drivers": [
           {
             "label": "League inflation",
-            "impact": -77.75,
-            "reason": "replacement_slots_v2: slot-aware surplus allocation (factor 0.28× on marginal list $ above replacement); see response replacement_values_by_slot_or_position and fallback_reason."
+            "impact": -103.4,
+            "reason": "replacement_slots_v2: slot-aware surplus allocation (factor 3.00× on marginal list $ above replacement); see response replacement_values_by_slot_or_position and fallback_reason. Auction-open index 1.00× (1.0 = same allocator at replayed auction open). Raw ratio was 53.89× before the workflow cap."
           },
           {
             "label": "Scarcity context (OF)",
@@ -402,39 +412,40 @@
       "team": "NYY",
       "adp": 181,
       "tier": 1,
-      "baseline_value": 109.96,
-      "adjusted_value": 32.21,
+      "baseline_value": 108,
+      "adjusted_value": 4.6,
       "indicator": "Steal",
-      "inflation_factor": 0.2838,
+      "inflation_factor": 3,
       "baseline_components": {
         "scoring_format": "5x5",
-        "projection_component": 1.96,
+        "projection_component": 0,
         "scarcity_component": 0.2
       },
       "scarcity_adjustment": 0,
-      "inflation_adjustment": -77.75,
-      "recommended_bid": 70.92,
-      "team_adjusted_value": 56.49,
-      "edge": -14.43,
+      "inflation_adjustment": -103.4,
+      "recommended_bid": 72.62,
+      "team_adjusted_value": 6.63,
+      "edge": -65.99,
       "why": [
         "Model ranks this player higher than ADP implies the market does — possible value.",
-        "Adjusted auction $32.2 vs baseline $110.0 after league inflation (0.28×).",
-        "Roster/scarcity is reflected in baseline list price (scarcity_component=0.200 on baseline_components), before the league inflation factor."
+        "Adjusted auction $4.6 vs baseline $108.0 after league inflation (3.00×).",
+        "Roster/scarcity is reflected in baseline list price (scarcity_component=0.200 on baseline_components), before the league inflation factor.",
+        "Elite tier in an inflated market — expect competitive bidding."
       ],
       "explain_v2": {
         "indicator": "Steal",
-        "auction_target": 32.21,
-        "list_value": 109.96,
+        "auction_target": 4.6,
+        "list_value": 108,
         "adjustments": {
           "scarcity": 0,
-          "inflation": -77.75,
+          "inflation": -103.4,
           "other": 0
         },
         "drivers": [
           {
             "label": "League inflation",
-            "impact": -77.75,
-            "reason": "replacement_slots_v2: slot-aware surplus allocation (factor 0.28× on marginal list $ above replacement); see response replacement_values_by_slot_or_position and fallback_reason."
+            "impact": -103.4,
+            "reason": "replacement_slots_v2: slot-aware surplus allocation (factor 3.00× on marginal list $ above replacement); see response replacement_values_by_slot_or_position and fallback_reason. Auction-open index 1.00× (1.0 = same allocator at replayed auction open). Raw ratio was 53.89× before the workflow cap."
           },
           {
             "label": "Scarcity context (OF)",

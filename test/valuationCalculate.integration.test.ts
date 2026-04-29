@@ -125,6 +125,13 @@ describe("POST /valuation/calculate (Draft checkpoint bodies)", () => {
           budget_left: expect.any(Number),
           players_left: expect.any(Number),
           model_version: expect.any(String),
+          ...(res.body.inflation_model === "replacement_slots_v2" &&
+          res.body.inflation_index_vs_opening_auction != null
+            ? {
+                inflation_percent_vs_auction_open: expect.any(Number),
+                inflation_index_vs_opening_auction: expect.any(Number),
+              }
+            : {}),
         }),
         position_alerts: expect.any(Array),
       }),
@@ -247,9 +254,7 @@ describe("POST /valuation/calculate — AmethystDraft BFF alignment", () => {
       .expect(200);
 
     expect(res.body.engine_contract_version).toBe("1");
-    expect(res.body.recommended_bid_note).toBe(
-      "recommended_bid is a phase-aware expected clearing price (early premium for stars, late depth compression toward $1–$3)"
-    );
+    expect(res.body.recommended_bid_note).toContain("clearing target");
     expect(res.body.valuations).toHaveLength(3);
     expect(res.body.valuations.map((r: { player_id: string }) => r.player_id).sort()).toEqual([
       "1",
@@ -353,8 +358,7 @@ describe("POST /valuation/calculate — AmethystDraft BFF alignment", () => {
       inflation_bounded_by: expect.stringMatching(/^(none|cap|floor)$/),
       pool_value_remaining: expect.any(Number),
       total_budget_remaining: expect.any(Number),
-      recommended_bid_note:
-        "recommended_bid is a phase-aware expected clearing price (early premium for stars, late depth compression toward $1–$3)",
+      recommended_bid_note: expect.stringContaining("clearing target"),
       team_adjusted_value_note:
         "team_adjusted_value scales adjusted_value by roster need, dollars per open slot vs league peers, remaining-slot scarcity, and replacement drop-off for eligible slots",
       phase_indicator: expect.stringMatching(/^(early|mid|late)$/),

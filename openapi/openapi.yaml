@@ -134,7 +134,24 @@ components:
           description: Inflation pass used for this response (echoes request defaulting rule).
         inflation_factor:
           type: number
-          description: League-wide multiplier after cap/floor (applied).
+          description: |
+            League-wide scalar after cap/floor. For `global_v1`, interpret vs full undrafted list $;
+            for `replacement_slots_v2` it is the **surplus allocator** (not “list = 1.0 neutral”).
+            When `inflation_index_vs_opening_auction` is present, prefer that field (and
+            `context_v2.market_summary.inflation_percent_vs_auction_open`) for user-facing “inflation.”
+        inflation_index_vs_opening_auction:
+          type: number
+          description: |
+            Present for `replacement_slots_v2`: current `inflation_factor` divided by the v2
+            factor at a counterfactual auction open (roster without non-keeper `drafted_players`,
+            budget grossed up by their `paid`). Near 1.0 at the first pick; raw `inflation_factor`
+            remains the surplus allocator (often below 1.0 at open).
+        inflation_percent_vs_auction_open:
+          type: number
+          description: |
+            Present after explainability when `inflation_index_vs_opening_auction` is set:
+            `(index − 1)×100` — preferred user-facing “% vs auction open” (mirrors
+            `context_v2.market_summary.inflation_percent_vs_auction_open`).
         inflation_raw:
           type: number
           description: Pre–cap/floor ratio; see `inflation_model` (global = budget ÷ full pool $; surplus v1 = surplus cash ÷ draftable surplus $; v2 = surplus cash ÷ total_surplus_mass when applicable).
@@ -191,7 +208,9 @@ components:
             type: string
         recommended_bid_note:
           type: string
-          description: How `recommended_bid` is derived (phase-aware clearing price).
+          description: |
+            Explains `recommended_bid`: phase-aware clearing **target** (floors, pitcher dampening,
+            smoothed ranks)—a bidding guide, not a guaranteed winning bid vs the room.
         user_team_id_used:
           type: string
           description: Team context used for team_adjusted_value (defaults to team_1).
@@ -234,6 +253,17 @@ components:
                   enum: [none, cap, floor]
                 inflation_percent_vs_neutral:
                   type: number
+                  description: |
+                    Always `(inflation_factor − 1)×100` vs a 1.0 factor reference (clear for `global_v1`;
+                    for v2 this is the raw allocator gap, not “market temperature”).
+                inflation_percent_vs_auction_open:
+                  type: number
+                  description: |
+                    When present (v2 with opening replay): `(inflation_index_vs_opening_auction − 1)×100`
+                    — preferred for tooltips/headlines vs auction night one.
+                inflation_index_vs_opening_auction:
+                  type: number
+                  description: Echo of response top-level when present.
                 budget_left:
                   type: number
                 players_left:

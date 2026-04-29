@@ -27,21 +27,31 @@ function stripAlertPrefix(s: string): string {
   return s.replace(/^⚠️\s*/, "").trim();
 }
 
-function formatHeadline(f: number, topPosition: string | null): string {
+type InflationHeadlineBasis = "neutral_1" | "opening_index";
+
+function formatHeadline(
+  f: number,
+  topPosition: string | null,
+  basis: InflationHeadlineBasis
+): string {
   const pct = Math.round((f - 1) * 100);
+  const vs =
+    basis === "opening_index" ? "auction open" : "neutral";
   if (pct >= 12) {
     return topPosition
-      ? `Market is inflated (+${pct}% vs neutral) and ${topPosition} is the top scarcity pressure point.`
-      : `Market is inflated (+${pct}% vs neutral), so premium tiers are likely to clear above list value.`;
+      ? `Market is inflated (+${pct}% vs ${vs}) and ${topPosition} is the top scarcity pressure point.`
+      : `Market is inflated (+${pct}% vs ${vs}), so premium tiers are likely to clear above list value.`;
   }
   if (pct <= -12) {
     return topPosition
-      ? `Market is deflated (${pct}% vs neutral) but ${topPosition} still shows scarcity pressure.`
-      : `Market is deflated (${pct}% vs neutral), so disciplined value bidding should hold.`;
+      ? `Market is deflated (${pct}% vs ${vs}) but ${topPosition} still shows scarcity pressure.`
+      : `Market is deflated (${pct}% vs ${vs}), so disciplined value bidding should hold.`;
   }
   return topPosition
-    ? `Market is near neutral and ${topPosition} is the key position to monitor.`
-    : "Market is near neutral and value is broadly distributed across positions.";
+    ? `Market is near ${basis === "opening_index" ? "auction-open baseline" : "neutral"} and ${topPosition} is the key position to monitor.`
+    : basis === "opening_index"
+      ? "Market is near the auction-open baseline and value is broadly distributed across positions."
+      : "Market is near neutral and value is broadly distributed across positions.";
 }
 
 function positionTokens(pos: string): string[] {
@@ -81,6 +91,7 @@ function cacheKey(
     model: response.valuation_model_version ?? "unknown",
     inflationModel: response.inflation_model,
     inflation: response.inflation_factor,
+    indexVsOpen: response.inflation_index_vs_opening_auction ?? null,
     inflationRaw: response.inflation_raw,
     inflationBounded: response.inflation_bounded_by,
     budget: response.total_budget_remaining,
@@ -114,9 +125,14 @@ function buildDriverRows(row: ValuedPlayer, response: ValuationResponse) {
   const scFac = row.baseline_components?.scarcity_component ?? 0;
   const raw = response.inflation_raw;
   const bounded = response.inflation_bounded_by;
+  const idxOpen = response.inflation_index_vs_opening_auction;
   let leagueReason =
     response.inflation_model === "replacement_slots_v2"
-      ? `replacement_slots_v2: slot-aware surplus allocation (factor ${inflationFactor.toFixed(2)}× on marginal list $ above replacement); see response replacement_values_by_slot_or_position and fallback_reason.`
+      ? `replacement_slots_v2: slot-aware surplus allocation (factor ${inflationFactor.toFixed(2)}× on marginal list $ above replacement); see response replacement_values_by_slot_or_position and fallback_reason.${
+          idxOpen != null && Number.isFinite(idxOpen)
+            ? ` Auction-open index ${idxOpen.toFixed(2)}× (1.0 = same allocator at replayed auction open).`
+            : ""
+        }`
       : `League-wide factor ${inflationFactor.toFixed(2)}× applied to list_value (baseline already includes scoring/roster scarcity).`;
   if (bounded === "cap") {
     leagueReason += ` Raw ratio was ${raw.toFixed(2)}× before the workflow cap.`;
@@ -253,7 +269,20 @@ export function attachValuationExplainability(
       });
 
     const top = sortedAlerts[0] ?? null;
+    const idx = response.inflation_index_vs_opening_auction;
+    const headlineBasis: InflationHeadlineBasis =
+      response.inflation_model === "replacement_slots_v2" &&
+      idx != null &&
+      Number.isFinite(idx)
+        ? "opening_index"
+        : "neutral_1";
+    const headlineF =
+      headlineBasis === "opening_index" ? idx! : response.inflation_factor;
     const pctNeutral = Math.round((response.inflation_factor - 1) * 100);
+    const pctVsAuctionOpen =
+      idx != null && Number.isFinite(idx)
+        ? Math.round((idx - 1) * 100)
+        : undefined;
     const confidenceOverall = top
       ? confidenceFromSeverity(top.severity, scarcity.monopoly_warnings.length)
       : 0.7;
@@ -266,11 +295,17 @@ export function attachValuationExplainability(
         position: effectiveScope.position,
       },
       market_summary: {
-        headline: formatHeadline(response.inflation_factor, top?.position ?? null),
+        headline: formatHeadline(headlineF, top?.position ?? null, headlineBasis),
         inflation_factor: rounded(response.inflation_factor),
         inflation_raw: rounded(response.inflation_raw),
         inflation_bounded_by: response.inflation_bounded_by,
         inflation_percent_vs_neutral: pctNeutral,
+        ...(pctVsAuctionOpen != null
+          ? {
+              inflation_percent_vs_auction_open: pctVsAuctionOpen,
+              inflation_index_vs_opening_auction: rounded(idx!),
+            }
+          : {}),
         budget_left: rounded(response.total_budget_remaining),
         players_left: response.players_remaining,
         model_version: response.valuation_model_version ?? "unknown",
@@ -278,7 +313,11 @@ export function attachValuationExplainability(
       position_alerts: sortedAlerts,
       assumptions: [
         response.inflation_model === "replacement_slots_v2"
-          ? "Auction inflation used replacement_slots_v2: greedy league-wide slot fill yields per-slot replacement baselines; surplus cash maps to value above replacement (see docs/valuation-inflation-semantics.md)."
+          ? `Auction inflation used replacement_slots_v2: greedy league-wide slot fill yields per-slot replacement baselines; surplus cash maps to value above replacement (see docs/valuation-inflation-semantics.md).${
+              idx != null && Number.isFinite(idx)
+                ? ` inflation_percent_vs_auction_open and inflation_index_vs_opening_auction (${idx.toFixed(2)}×) describe change vs a replayed auction-open state; inflation_percent_vs_neutral is always (inflation_factor−1)×100 (allocator vs 1.0, not "list neutral").`
+                : ""
+            }`
           : response.inflation_model === "surplus_slots_v1"
             ? "Auction inflation used surplus_slots_v1: $1 per remaining empty roster slot is reserved; surplus cash is mapped through value above replacement in a top draftable slice (see docs/valuation-inflation-semantics.md)."
             : "Auction inflation used global_v1: remaining budget is divided by the full undrafted pool baseline list dollars.",
@@ -296,7 +335,8 @@ export function attachValuationExplainability(
           : response.inflation_model === "surplus_slots_v1"
             ? "pool_value_remaining is the sum of max(0, baseline − replacement) over the draftable inflation slice, not full-wire list dollars."
             : "pool_value_remaining sums baseline list dollars on all undrafted players (the global_v1 denominator).",
-        "Real auction accuracy depends on catalog value quality — run `pnpm run audit:valuation-response` for fixture QA.",
+        "Real auction accuracy depends on catalog value quality and id/name alignment with the player pool.",
+        "recommended_bid is a clearing-style guide (phase- and list-informed); it is not framed as the exact price the room will pay—compare to adjusted_value and team_adjusted_value for surplus vs roster context.",
       ],
       confidence: {
         overall: confidenceOverall,
@@ -374,8 +414,17 @@ export function attachValuationExplainability(
     })(),
   }));
 
+  const idxTop = response.inflation_index_vs_opening_auction;
+  const pctAuctionTop =
+    idxTop != null && Number.isFinite(idxTop)
+      ? Math.round((idxTop - 1) * 100)
+      : undefined;
+
   return {
     ...response,
+    ...(pctAuctionTop != null
+      ? { inflation_percent_vs_auction_open: pctAuctionTop }
+      : {}),
     market_notes: cached.market_notes,
     context_v2: {
       ...cached,

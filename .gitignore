@@ -137,3 +137,7 @@ dist
 # Vite logs files
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
+
+# Local draft replay analysis outputs (pnpm replay-draft-json-analysis:*-report)
+test-fixtures/replay-evaluator/draft-json-*.json
+tmp/

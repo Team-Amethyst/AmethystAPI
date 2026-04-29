@@ -54,6 +54,8 @@ The Engine accepts the **flat** body Draft builds for server-to-server calls:
 
 **Fixture paths:** CI uses [test-fixtures/player-api/checkpoints/](test-fixtures/player-api/checkpoints/). If AmethystDraft is a **sibling** repo (`…/dev/AmethystDraft`), tests prefer `apps/api/test-fixtures/player-api/checkpoints/pre_draft.json` when present so nested checkpoints run too (including `league.roster_slots` as a **slot → count** map, normalized server-side to `[{ position, count }, …]`).
 
+**Draft replay analysis (per-pick, full board):** `pnpm replay-draft-json-analysis` replays **`pre_draft.json` + `after_pick_130.json`** (defaults under `test-fixtures/player-api/checkpoints/`), rewinding `drafted_players` before each pick and scoring vs fixture `paid`. **`pnpm replay-draft-json-analysis:report`** / **`:mongo-report`** write JSON under **`tmp/`** (gitignored); use **`--out path`** for a different file. Mongo mode merges fixture ids via [`src/lib/replayMongoFixtureMerge.ts`](src/lib/replayMongoFixtureMerge.ts) (`MONGO_URI` from `.env`).
+
 **`pre_draft_rosters` (v1 behavior):** Accepted as **map or array** (see above); rows do **not** remove players from the undrafted pool until those `player_id`s appear in **`drafted_players` / `draft_state`**. **`minors` / `taxi` do not affect spend** in v1.
 
 **Draft economics (400):** Each `player_id` at most once in auction rows; **`paid` ≥ 0**; without **`budget_by_team_id`**, **Σ `paid` ≤ `total_budget × num_teams`**.

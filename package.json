@@ -21,6 +21,9 @@
     "replay-four-values": "ts-node --project tsconfig.scripts.json scripts/replay-four-values-eval.ts",
     "replay-per-team-pick": "ts-node --project tsconfig.scripts.json scripts/replay-per-team-pick.ts",
     "replay-per-pick-draft": "ts-node --project tsconfig.scripts.json scripts/replay-per-pick-draft.ts",
+    "replay-draft-json-analysis": "ts-node --project tsconfig.scripts.json scripts/replay-draft-json-per-pick-analysis.ts",
+    "replay-draft-json-analysis:report": "ts-node --project tsconfig.scripts.json scripts/replay-draft-json-per-pick-analysis.ts --out tmp/draft-json-after_pick_130-proxy-analysis.json",
+    "replay-draft-json-analysis:mongo-report": "ts-node --project tsconfig.scripts.json scripts/replay-draft-json-per-pick-analysis.ts --mongo --out tmp/draft-json-after_pick_130-mongo-analysis.json",
     "dedupe-fixtures": "ts-node --project tsconfig.scripts.json scripts/dedupe-fixture-auction-picks.ts",
     "check-fixture-catalog": "ts-node --project tsconfig.scripts.json scripts/check-fixture-catalog-ids.ts"
   },

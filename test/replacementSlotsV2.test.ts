@@ -69,6 +69,28 @@ function roster(
 }
 
 describe("replacement_slots_v2", () => {
+  it("exposes inflation_index_vs_opening_auction ≈ 1.0 with no auction picks", () => {
+    const slots: RosterSlot[] = [
+      { position: "C", count: 1 },
+      { position: "OF", count: 2 },
+    ];
+    const players = [
+      mk(1, 40, "C"),
+      mk(2, 35, "OF"),
+      ...Array.from({ length: 30 }, (_, i) => mk(200 + i, 2, "OF", 5)),
+    ];
+    const r = calculateInflation(players, [], 260, 12, slots, "Mixed", {
+      ...det,
+      inflationModel: "replacement_slots_v2",
+      rosteredPlayersForSlots: [],
+      inflationCap: 100,
+      inflationFloor: 0.05,
+    });
+    expect(r.inflation_index_vs_opening_auction).toBeDefined();
+    expect(r.inflation_index_vs_opening_auction!).toBeGreaterThan(0.98);
+    expect(r.inflation_index_vs_opening_auction!).toBeLessThan(1.02);
+  });
+
   it("C scarcity: shallow catcher pool lifts elite C vs global-style uniform scale", () => {
     const slots: RosterSlot[] = [
       { position: "C", count: 2 },

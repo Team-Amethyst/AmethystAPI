@@ -36,7 +36,7 @@ const DETERMINISTIC_CALCULATED_AT = "1970-01-01T00:00:00.000Z";
 /** Minimum auction bid reserved per empty roster slot (surplus model). */
 const MIN_AUCTION_BID = 1;
 const RECOMMENDED_BID_NOTE =
-  "recommended_bid is a phase-aware expected clearing price (early premium for stars, late depth compression toward $1–$3)";
+  "recommended_bid is a phase-aware model clearing target (star floors, pitcher dampening, isotonic smoothing)—a bidding guide, not a prediction of the winning hammer price; room behavior can diverge materially.";
 const TEAM_ADJUSTED_NOTE =
   "team_adjusted_value scales adjusted_value by roster need, dollars per open slot vs league peers, remaining-slot scarcity, and replacement drop-off for eligible slots";
 const DEFAULT_USER_TEAM_ID = "team_1";
@@ -585,6 +585,59 @@ export function calculateInflation(
   const inflationRaw = clamped.inflation_raw;
   const inflationBoundedBy = clamped.inflation_bounded_by;
 
+  let inflationIndexVsOpeningAuction: number | undefined;
+  if (inflationModelEffective === "replacement_slots_v2" && v2Result) {
+    const rostered = options?.rosteredPlayersForSlots ?? draftedPlayers;
+    const auctionAcquiredIds = new Set(
+      draftedPlayers.filter((d) => d.is_keeper !== true).map((d) => d.player_id)
+    );
+    const rosteredOpen = rostered.filter((r) => !auctionAcquiredIds.has(r.player_id));
+    const offBoardOpen = new Set(rosteredOpen.map((r) => r.player_id));
+    for (const pid of options?.additionalDraftedIds ?? []) {
+      offBoardOpen.add(pid);
+    }
+    const undraftedOpen = scoped.filter((p) => !offBoardOpen.has(getPlayerId(p)));
+    const auctionSpend = draftedPlayers
+      .filter((d) => d.is_keeper !== true)
+      .reduce((sum, d) => sum + (d.paid ?? 0), 0);
+    const budgetOpen = Math.max(0, budgetRemaining + auctionSpend);
+    const baselineByIdOpen = new Map<string, number>();
+    for (const p of scoped) {
+      baselineByIdOpen.set(getPlayerId(p), p.value || 0);
+    }
+    const v2Open = computeReplacementSlotsV2(
+      undraftedOpen,
+      rosteredOpen,
+      rosterSlots,
+      numTeams,
+      budgetOpen,
+      baselineByIdOpen,
+      {
+        deterministic: options?.deterministic,
+        seed: options?.seed,
+      }
+    );
+    let openClamped = clampInflation(
+      v2Open.inflation_factor_precap,
+      options?.inflationCap,
+      options?.inflationFloor
+    );
+    if (v2Open.skip_inflation_clamp) {
+      openClamped = {
+        inflation_raw: v2Open.inflation_raw,
+        inflation_factor: v2Open.inflation_factor_precap,
+        inflation_bounded_by: "none",
+      };
+    }
+    const fOpen = openClamped.inflation_factor;
+    if (fOpen > 1e-9 && Number.isFinite(inflationFactor)) {
+      const ratio = inflationFactor / fOpen;
+      if (Number.isFinite(ratio) && ratio > 0) {
+        inflationIndexVsOpeningAuction = parseFloat(ratio.toFixed(4));
+      }
+    }
+  }
+
   const valuations: ValuedPlayer[] = byValueRows.map((p) => {
     const pid = getPlayerId(p);
     const baselineValue = p.value || 0;
@@ -895,6 +948,9 @@ export function calculateInflation(
     engine_contract_version: ENGINE_CONTRACT_VERSION,
     inflation_model: inflationModelEffective,
     inflation_factor: parseFloat(inflationFactor.toFixed(4)),
+    ...(inflationIndexVsOpeningAuction != null
+      ? { inflation_index_vs_opening_auction: inflationIndexVsOpeningAuction }
+      : {}),
     inflation_raw: parseFloat(inflationRaw.toFixed(6)),
     inflation_bounded_by: inflationBoundedBy,
     total_budget_remaining: budgetRemaining,

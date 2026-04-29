@@ -176,6 +176,16 @@ export function validateValuationResponse(
     ) {
       issues.push("fallback_reason must be a string or null when present");
     }
+    if (response.inflation_index_vs_opening_auction !== undefined) {
+      if (
+        !isFiniteNumber(response.inflation_index_vs_opening_auction) ||
+        (response.inflation_index_vs_opening_auction as number) <= 0
+      ) {
+        issues.push(
+          "inflation_index_vs_opening_auction must be a finite positive number when present"
+        );
+      }
+    }
   }
 
   if (
