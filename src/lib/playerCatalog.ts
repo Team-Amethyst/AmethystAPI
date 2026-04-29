@@ -62,6 +62,12 @@ export function normalizeCatalogPlayers(
         (x): x is string => typeof x === "string" && x.trim().length > 0
       );
       if (arr.length > 0) positions = arr;
+    } else if (typeof rawPos === "string" && rawPos.trim().length > 0) {
+      const arr = rawPos
+        .split(/[,/|]/)
+        .map((s) => s.trim())
+        .filter((s) => s.length > 0);
+      if (arr.length > 0) positions = arr;
     }
 
     rows.push({

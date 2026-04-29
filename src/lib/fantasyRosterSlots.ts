@@ -44,7 +44,13 @@ export function tokenizeFantasyPositions(
   const out = new Set<string>();
   for (const p of parts) {
     const t = normalizePositionToken(p);
-    if (t.length > 0) out.add(t);
+    /** MLB Stats API `people.primaryPosition.abbreviation` for two-way players. */
+    if (t === "TWP") {
+      out.add("DH");
+      out.add("SP");
+    } else if (t.length > 0) {
+      out.add(t);
+    }
   }
   return [...out];
 }

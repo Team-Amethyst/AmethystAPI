@@ -45,6 +45,26 @@ describe("normalizeCatalogPlayers", () => {
     expect(rows[0]!.name).toBe("Ok");
   });
 
+  it("parses positions from a comma-separated string", () => {
+    const rows = normalizeCatalogPlayers(
+      [
+        {
+          _id: "a",
+          mlbId: 2,
+          name: "Multi",
+          team: "NYY",
+          position: "2B",
+          positions: "SS,3B",
+          value: 10,
+          adp: 5,
+          tier: 1,
+        },
+      ],
+      () => {}
+    );
+    expect(rows[0]!.positions).toEqual(["SS", "3B"]);
+  });
+
   it("passes through positions[] for slot/surplus eligibility", () => {
     const rows = normalizeCatalogPlayers(
       [

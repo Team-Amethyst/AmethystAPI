@@ -390,6 +390,12 @@ describe("fantasyRosterSlots helpers", () => {
     expect(new Set(t)).toEqual(new Set(["2B", "SS", "OF"]));
   });
 
+  it("maps MLB two-way primary (TWP) to DH and SP tokens", () => {
+    expect(new Set(tokenizeFantasyPositions("TWP", undefined))).toEqual(
+      new Set(["DH", "SP"])
+    );
+  });
+
   it("normalizes LF/CF/RF to OF", () => {
     expect(fitsRosterSlot("OF", tokenizeFantasyPositions("LF"))).toBe(true);
     expect(fitsRosterSlot("OF", tokenizeFantasyPositions("CF"))).toBe(true);

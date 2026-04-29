@@ -3,6 +3,11 @@
  * into the `players` collection so the Amethyst Engine and Draftroom share
  * the same canonical player IDs (MLB numeric IDs).
  *
+ * Persists merged hitting + pitching splits per player (so two-way players
+ * keep both `stats` / `projection` blobs), `positions[]` from split + bio
+ * (including `TWP` → DH/SP), and `projection.pitching.innings` when pitching
+ * exists — matching what the valuation catalog reads (`PLAYER_CATALOG_LEAN_SELECT`).
+ *
  * Run with:  pnpm sync-players
  *
  * Safe to re-run — uses upsert on mlbId so no duplicates are created.
@@ -40,6 +45,135 @@ interface MlbPlayer {
   currentTeam?: { id?: number; abbreviation?: string };
   primaryPosition?: { abbreviation: string };
   birthDate?: string;
+}
+
+type SplitAgg = {
+  bat?: MlbStatSplit;
+  pit?: MlbStatSplit;
+};
+
+function addMlbPositionAbbrev(set: Set<string>, abbrev?: string): void {
+  if (!abbrev) return;
+  const u = abbrev.trim().toUpperCase();
+  if (u === "TWP") {
+    set.add("DH");
+    set.add("SP");
+  } else if (u.length > 0) {
+    set.add(u);
+  }
+}
+
+function buildPlayerDocFromAgg(
+  mlbId: number,
+  agg: SplitAgg,
+  bio: MlbPlayer | undefined,
+  teamIdToAbbr: Map<number, string>
+): Record<string, unknown> | null {
+  const batVal = agg.bat ? calcBatterValue(agg.bat.stat) : 0;
+  const pitVal = agg.pit ? calcPitcherValue(agg.pit.stat) : 0;
+  if (batVal <= 0 && pitVal <= 0) return null;
+
+  const value = Math.max(batVal, pitVal);
+  const team = resolveMlbTeamAbbrev(
+    agg.bat?.team ?? agg.pit?.team,
+    bio?.currentTeam,
+    teamIdToAbbr
+  );
+
+  const posSet = new Set<string>();
+  addMlbPositionAbbrev(posSet, agg.bat?.position?.abbreviation);
+  addMlbPositionAbbrev(posSet, agg.pit?.position?.abbreviation);
+  addMlbPositionAbbrev(posSet, bio?.primaryPosition?.abbreviation);
+
+  const primaryBio = bio?.primaryPosition?.abbreviation?.trim().toUpperCase();
+  let position: string;
+  if (primaryBio === "TWP") {
+    position = batVal >= pitVal ? "DH" : "SP";
+  } else if (agg.bat && !agg.pit) {
+    position =
+      agg.bat.position?.abbreviation ??
+      bio?.primaryPosition?.abbreviation ??
+      "OF";
+  } else if (agg.pit && !agg.bat) {
+    position =
+      agg.pit.position?.abbreviation ??
+      bio?.primaryPosition?.abbreviation ??
+      "SP";
+  } else if (agg.bat && agg.pit) {
+    position =
+      batVal >= pitVal
+        ? agg.bat.position?.abbreviation ?? "DH"
+        : agg.pit.position?.abbreviation ?? "SP";
+  } else {
+    position = bio?.primaryPosition?.abbreviation ?? "OF";
+  }
+
+  const positions = [...posSet].filter((p) => p !== position);
+
+  const stats: Record<string, unknown> = {};
+  if (agg.bat) {
+    const stat = agg.bat.stat;
+    stats.batting = {
+      avg: String(stat.avg ?? ".000"),
+      hr: Number(stat.homeRuns ?? 0),
+      rbi: Number(stat.rbi ?? 0),
+      runs: Number(stat.runs ?? 0),
+      sb: Number(stat.stolenBases ?? 0),
+      obp: String(stat.obp ?? ".000"),
+      slg: String(stat.slg ?? ".000"),
+    };
+  }
+  if (agg.pit) {
+    const stat = agg.pit.stat;
+    stats.pitching = {
+      era: String(stat.era ?? "0.00"),
+      whip: String(stat.whip ?? "0.00"),
+      wins: Number(stat.wins ?? 0),
+      saves: Number(stat.saves ?? 0),
+      strikeouts: Number(stat.strikeOuts ?? 0),
+      innings: String(stat.inningsPitched ?? "0"),
+    };
+  }
+
+  const projection: Record<string, unknown> = {};
+  if (agg.bat) {
+    const stat = agg.bat.stat;
+    projection.batting = {
+      avg: String(stat.avg ?? ".000"),
+      hr: Number(stat.homeRuns ?? 0),
+      rbi: Number(stat.rbi ?? 0),
+      runs: Number(stat.runs ?? 0),
+      sb: Number(stat.stolenBases ?? 0),
+    };
+  }
+  if (agg.pit) {
+    const stat = agg.pit.stat;
+    projection.pitching = {
+      era: String(stat.era ?? "0.00"),
+      whip: String(stat.whip ?? "0.00"),
+      wins: Number(stat.wins ?? 0),
+      saves: Number(stat.saves ?? 0),
+      strikeouts: Number(stat.strikeOuts ?? 0),
+      innings: String(stat.inningsPitched ?? "0"),
+    };
+  }
+
+  const doc: Record<string, unknown> = {
+    mlbId,
+    name: agg.bat?.player.fullName ?? agg.pit?.player.fullName ?? bio?.fullName ?? "Unknown",
+    team,
+    position,
+    age: calcAge(bio?.birthDate),
+    value,
+    tier: assignTier(value),
+    stats,
+    projection,
+    outlook: "",
+  };
+  if (positions.length > 0) {
+    doc.positions = positions;
+  }
+  return doc;
 }
 
 interface MlbStatSplit {
@@ -97,82 +231,26 @@ async function sync() {
     console.warn("[MLB API] Bio fetch failed (non-fatal):", (err as Error).message);
   }
 
-  // Build canonical player map — deduplicate by mlbId, keep higher value
-  const playerMap = new Map<number, Record<string, unknown>>();
-
+  /** Merge hitting + pitching splits per player so two-way rows keep both stat blobs and eligibilities. */
+  const aggMap = new Map<number, SplitAgg>();
   for (const s of batSplits) {
-    const value = calcBatterValue(s.stat);
-    if (value <= 0) continue;
-    const bio = bioMap.get(s.player.id);
-    const stat = s.stat;
-    playerMap.set(s.player.id, {
-      mlbId: s.player.id,
-      name: s.player.fullName,
-      team: resolveMlbTeamAbbrev(s.team, bio?.currentTeam, teamIdToAbbr),
-      position: s.position?.abbreviation ?? bio?.primaryPosition?.abbreviation ?? "OF",
-      age: calcAge(bio?.birthDate),
-      value,
-      tier: assignTier(value),
-      stats: {
-        batting: {
-          avg: String(stat.avg ?? ".000"),
-          hr: Number(stat.homeRuns ?? 0),
-          rbi: Number(stat.rbi ?? 0),
-          runs: Number(stat.runs ?? 0),
-          sb: Number(stat.stolenBases ?? 0),
-          obp: String(stat.obp ?? ".000"),
-          slg: String(stat.slg ?? ".000"),
-        },
-      },
-      projection: {
-        batting: {
-          avg: String(stat.avg ?? ".000"),
-          hr: Number(stat.homeRuns ?? 0),
-          rbi: Number(stat.rbi ?? 0),
-          runs: Number(stat.runs ?? 0),
-          sb: Number(stat.stolenBases ?? 0),
-        },
-      },
-      outlook: "",
-    });
+    if (calcBatterValue(s.stat) <= 0) continue;
+    const row = aggMap.get(s.player.id) ?? {};
+    row.bat = s;
+    aggMap.set(s.player.id, row);
+  }
+  for (const s of pitSplits) {
+    if (calcPitcherValue(s.stat) <= 0) continue;
+    const row = aggMap.get(s.player.id) ?? {};
+    row.pit = s;
+    aggMap.set(s.player.id, row);
   }
 
-  for (const s of pitSplits) {
-    const value = calcPitcherValue(s.stat);
-    if (value <= 0) continue;
-    const bio = bioMap.get(s.player.id);
-    const existing = playerMap.get(s.player.id);
-    if (existing && (existing.value as number) >= value) continue; // keep batter value if higher
-    const stat = s.stat;
-    playerMap.set(s.player.id, {
-      mlbId: s.player.id,
-      name: s.player.fullName,
-      team: resolveMlbTeamAbbrev(s.team, bio?.currentTeam, teamIdToAbbr),
-      position: s.position?.abbreviation ?? bio?.primaryPosition?.abbreviation ?? "SP",
-      age: calcAge(bio?.birthDate),
-      value,
-      tier: assignTier(value),
-      stats: {
-        pitching: {
-          era: String(stat.era ?? "0.00"),
-          whip: String(stat.whip ?? "0.00"),
-          wins: Number(stat.wins ?? 0),
-          saves: Number(stat.saves ?? 0),
-          strikeouts: Number(stat.strikeOuts ?? 0),
-          innings: String(stat.inningsPitched ?? "0"),
-        },
-      },
-      projection: {
-        pitching: {
-          era: String(stat.era ?? "0.00"),
-          whip: String(stat.whip ?? "0.00"),
-          wins: Number(stat.wins ?? 0),
-          saves: Number(stat.saves ?? 0),
-          strikeouts: Number(stat.strikeOuts ?? 0),
-        },
-      },
-      outlook: "",
-    });
+  const playerMap = new Map<number, Record<string, unknown>>();
+  for (const [mlbId, agg] of aggMap) {
+    const bio = bioMap.get(mlbId);
+    const doc = buildPlayerDocFromAgg(mlbId, agg, bio, teamIdToAbbr);
+    if (doc) playerMap.set(mlbId, doc);
   }
 
   // Assign ADP by value rank

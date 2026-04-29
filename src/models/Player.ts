@@ -43,6 +43,8 @@ export interface IPlayer extends Document {
   name: string;
   team: string;
   position: string;
+  /** Secondary fantasy eligibilities (sync from MLB splits + bio); optional. */
+  positions?: string[];
   age: number;
   adp: number;
   tier: number;
@@ -58,6 +60,7 @@ const playerSchema = new Schema<IPlayer>(
     name: { type: String, required: true, trim: true },
     team: { type: String, default: "" },
     position: { type: String, default: "" },
+    positions: { type: [String] },
     age: { type: Number, default: 0 },
     adp: { type: Number, default: 0 },
     tier: { type: Number, default: 0 },
