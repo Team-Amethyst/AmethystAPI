@@ -258,6 +258,9 @@ pnpm install
 cp .env.example .env
 # Fill in MONGO_URI
 
+# Refresh catalog + verify eligibility quality
+pnpm sync-players:verify
+
 # Start dev server (port 3002 — avoids conflict with draftroom on 3001)
 pnpm dev
 ```

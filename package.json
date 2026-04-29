@@ -13,6 +13,8 @@
     "test:watch": "vitest",
     "check-types": "tsc --noEmit",
     "sync-players": "ts-node --project tsconfig.scripts.json scripts/sync-players.ts",
+    "audit:player-eligibility": "ts-node --project tsconfig.scripts.json scripts/audit-player-eligibility.ts",
+    "sync-players:verify": "pnpm sync-players && pnpm audit:player-eligibility",
     "replay-eval": "ts-node --project tsconfig.scripts.json scripts/replay-evaluator.ts",
     "replay-2026-v2": "ts-node --project tsconfig.scripts.json scripts/replay-2026-v2-validation.ts",
     "replay-attribution": "ts-node --project tsconfig.scripts.json scripts/replay-attribution.ts",
