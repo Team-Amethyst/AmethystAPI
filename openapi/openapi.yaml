@@ -331,7 +331,7 @@ components:
           description: Phase-aware expected clearing price (may lie outside adjusted_value/baseline_value band).
         team_adjusted_value:
           type: number
-          description: Team-specific marginal value (adjusted_value scaled by need, dollars per open slot vs league, slot scarcity, replacement drop-off; not capped to max bid).
+          description: Team-specific marginal value (adjusted_value scaled by need, dollars per open slot vs league, slot scarcity, replacement drop-off; not capped to max bid). Equals adjusted_value when the league snapshot is symmetric (no auction picks, no keeper/minors/taxi off-board ids, equal per-team budgets when budget_by_team_id is provided, equal rostered counts per team).
         edge:
           type: number
           description: team_adjusted_value minus recommended_bid.

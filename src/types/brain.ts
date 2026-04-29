@@ -253,13 +253,15 @@ export interface ValuedPlayer {
     replacement_key_used?: string | null;
     replacement_value_used?: number | null;
     lambda_used?: number;
-    team_multipliers?: {
-      need: number;
-      budget: number;
-      dollars_per_slot: number;
-      slot_scarcity: number;
-      replacement_dropoff: number;
-    };
+    team_multipliers?:
+      | {
+          need: number;
+          budget: number;
+          dollars_per_slot: number;
+          slot_scarcity: number;
+          replacement_dropoff: number;
+        }
+      | { symmetric_open_collapsed: 1 };
   };
 }
 

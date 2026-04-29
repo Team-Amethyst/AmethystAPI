@@ -1,5 +1,6 @@
 import { ENGINE_CONTRACT_VERSION } from "../lib/engineContract";
 import { getValuationModelVersion } from "../lib/valuationModelVersion";
+import { isSymmetricOpenLeagueContext } from "../lib/symmetricLeagueOpen";
 import { filterByScope } from "../lib/leagueScope";
 import { computeReplacementSlotsV2 } from "./replacementSlotsV2";
 import {
@@ -38,7 +39,7 @@ const MIN_AUCTION_BID = 1;
 const RECOMMENDED_BID_NOTE =
   "recommended_bid is a phase-aware model clearing target (star floors, pitcher dampening, isotonic smoothing)—a bidding guide, not a prediction of the winning hammer price; room behavior can diverge materially.";
 const TEAM_ADJUSTED_NOTE =
-  "team_adjusted_value scales adjusted_value by roster need, dollars per open slot vs league peers, remaining-slot scarcity, and replacement drop-off for eligible slots";
+  "team_adjusted_value scales adjusted_value by roster need, dollars per open slot vs league peers, remaining-slot scarcity, and replacement drop-off for eligible slots; when the league snapshot is symmetric (no auction picks, no keeper/minors/taxi off-board ids, equal per-team budgets in budget_by_team_id when provided, equal rostered counts per team), it equals adjusted_value";
 const DEFAULT_USER_TEAM_ID = "team_1";
 
 const FLEX_SLOTS = new Set(["UTIL", "CI", "MI", "P"]);
@@ -842,6 +843,14 @@ export function calculateInflation(
   smoothGroup(valuations.filter((r) => !isPitcherPosition(r.position)));
   smoothGroup(valuations.filter((r) => isPitcherPosition(r.position)));
 
+  const symmetricOpenLeague = isSymmetricOpenLeagueContext({
+    numTeams,
+    draftedPlayers,
+    additionalDraftedIds: options?.additionalDraftedIds ?? [],
+    budgetByTeamId: options?.budgetByTeamId,
+    rosteredPlayersForSlots: options?.rosteredPlayersForSlots,
+  });
+
   const userTeamId = options?.userTeamId?.trim() || DEFAULT_USER_TEAM_ID;
   const openSlots = buildOpenSlotsForUserTeam(
     rosterSlots,
@@ -884,6 +893,18 @@ export function calculateInflation(
   for (const row of valuations) {
     const lp = byRowPlayerId.get(row.player_id);
     if (!lp) continue;
+    if (symmetricOpenLeague) {
+      row.team_adjusted_value = parseFloat(row.adjusted_value.toFixed(2));
+      if (options?.debugSignals) {
+        row.debug_v2 = {
+          ...(row.debug_v2 ?? {}),
+          team_multipliers: {
+            symmetric_open_collapsed: 1,
+          },
+        };
+      }
+      continue;
+    }
     const needMult = positionalNeedMultiplier(lp, openSlots);
     const tokens = playerTokensFromLean(lp);
     const drop = maxReplacementDropoff(

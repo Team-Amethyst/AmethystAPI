@@ -91,6 +91,28 @@ describe("replacement_slots_v2", () => {
     expect(r.inflation_index_vs_opening_auction!).toBeLessThan(1.02);
   });
 
+  it("symmetric open league: team_adjusted_value equals adjusted_value", () => {
+    const slots: RosterSlot[] = [
+      { position: "C", count: 1 },
+      { position: "OF", count: 2 },
+    ];
+    const players = [
+      mk(1, 40, "C"),
+      mk(2, 35, "OF"),
+      ...Array.from({ length: 30 }, (_, i) => mk(200 + i, 2, "OF", 5)),
+    ];
+    const r = calculateInflation(players, [], 260, 12, slots, "Mixed", {
+      ...det,
+      inflationModel: "replacement_slots_v2",
+      rosteredPlayersForSlots: [],
+      inflationCap: 100,
+      inflationFloor: 0.05,
+    });
+    for (const row of r.valuations) {
+      expect(row.team_adjusted_value).toBe(row.adjusted_value);
+    }
+  });
+
   it("C scarcity: shallow catcher pool lifts elite C vs global-style uniform scale", () => {
     const slots: RosterSlot[] = [
       { position: "C", count: 2 },

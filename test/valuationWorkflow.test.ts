@@ -176,7 +176,7 @@ describe("executeValuationWorkflow", () => {
     if (!res.ok) return;
     expect(res.response.user_team_id_used).toBe("team_1");
     expect(res.response.team_adjusted_value_note).toBe(
-      "team_adjusted_value scales adjusted_value by roster need, dollars per open slot vs league peers, remaining-slot scarcity, and replacement drop-off for eligible slots"
+      "team_adjusted_value scales adjusted_value by roster need, dollars per open slot vs league peers, remaining-slot scarcity, and replacement drop-off for eligible slots; when the league snapshot is symmetric (no auction picks, no keeper/minors/taxi off-board ids, equal per-team budgets in budget_by_team_id when provided, equal rostered counts per team), it equals adjusted_value"
     );
   });
 

@@ -109,7 +109,7 @@ describe("POST /valuation/calculate (Draft checkpoint bodies)", () => {
       market_notes: expect.any(Array),
       user_team_id_used: expect.any(String),
       team_adjusted_value_note:
-        "team_adjusted_value scales adjusted_value by roster need, dollars per open slot vs league peers, remaining-slot scarcity, and replacement drop-off for eligible slots",
+        "team_adjusted_value scales adjusted_value by roster need, dollars per open slot vs league peers, remaining-slot scarcity, and replacement drop-off for eligible slots; when the league snapshot is symmetric (no auction picks, no keeper/minors/taxi off-board ids, equal per-team budgets in budget_by_team_id when provided, equal rostered counts per team), it equals adjusted_value",
       phase_indicator: expect.stringMatching(/^(early|mid|late)$/),
       context_v2: expect.objectContaining({
         schema_version: "2",
@@ -360,7 +360,7 @@ describe("POST /valuation/calculate — AmethystDraft BFF alignment", () => {
       total_budget_remaining: expect.any(Number),
       recommended_bid_note: expect.stringContaining("clearing target"),
       team_adjusted_value_note:
-        "team_adjusted_value scales adjusted_value by roster need, dollars per open slot vs league peers, remaining-slot scarcity, and replacement drop-off for eligible slots",
+        "team_adjusted_value scales adjusted_value by roster need, dollars per open slot vs league peers, remaining-slot scarcity, and replacement drop-off for eligible slots; when the league snapshot is symmetric (no auction picks, no keeper/minors/taxi off-board ids, equal per-team budgets in budget_by_team_id when provided, equal rostered counts per team), it equals adjusted_value",
       phase_indicator: expect.stringMatching(/^(early|mid|late)$/),
       user_team_id_used: expect.any(String),
     });
