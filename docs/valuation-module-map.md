@@ -91,6 +91,15 @@ This map documents where each pricing responsibility lives after the refactor.
 - `src/lib/valuationExplainabilityHelpers.ts` — string/formatting + per-row driver construction.
 - `src/lib/valuationExplainabilityContext.ts` — cached `context_v2` + `market_notes` assembly (scarcity scan).
 
+## Output validation + scarcity analytics
+
+- `src/lib/valuationQualityConstants.ts` — enum sets / finite-number guards for response QC.
+- `src/lib/valuationQualityRows.ts` — per-row pricing sanity checks.
+- `src/lib/valuationQuality.ts` — response-level post-condition validator entrypoint.
+- `src/services/scarcityConfig.ts` — scarcity constants and category stat-path mapping.
+- `src/services/scarcityHelpers.ts` — positional scarcity/tier buckets + monopoly warning builders.
+- `src/services/scarcityEngine.ts` — orchestration and response assembly.
+
 ## Test coverage map
 
 - `test/valuationWorkflow.test.ts` — workflow and output behavior.

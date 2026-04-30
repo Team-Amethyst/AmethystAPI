@@ -1,60 +1,17 @@
 import { filterByScope } from "../lib/leagueScope";
-import { getPlayerId } from "./inflationEngine";
+import { getPlayerId } from "../lib/playerId";
 import {
   DraftedPlayer,
   LeanPlayer,
   LeagueScope,
-  MonopolyWarning,
-  PositionScarcity,
   ScoringCategory,
   ScarcityResponse,
 } from "../types/brain";
-
-/** Positions that have exactly one starter slot per team in a standard league */
-const SINGLE_SLOT_POSITIONS = new Set(["C", "1B", "2B", "3B", "SS"]);
-/** Positions where multiple starters are expected */
-const MULTI_SLOT_POSITIONS: Record<string, number> = {
-  OF: 3,
-  SP: 5,
-  RP: 2,
-};
-
-/** Monopoly threshold: one team controls ≥ this share of a category */
-const MONOPOLY_THRESHOLD = 0.40;
-const TIER_TARGET_FACTORS: Record<number, number> = {
-  1: 0.25,
-  2: 0.5,
-  3: 0.5,
-  4: 0.75,
-  5: 1.0,
-};
-
-/**
- * Returns a 0–100 scarcity score for a given position.
- *
- * Score is based on remaining elite/mid-tier count relative to the expected
- * demand (num_teams × slots_per_team for that position).
- */
-function calcScarcityScore(
-  eliteRemaining: number,
-  midTierRemaining: number,
-  expectedDemand: number
-): number {
-  if (expectedDemand <= 0) return 0;
-  const highValueRemaining = eliteRemaining + midTierRemaining;
-  const ratio = highValueRemaining / expectedDemand;
-  // Clamp inversely: 0 demand-filled → 100; fully stocked → 0
-  return Math.min(100, Math.max(0, Math.round((1 - ratio) * 100)));
-}
-
-function bucketUrgency(remaining: number, target: number): number {
-  if (target <= 0) return 0;
-  return Math.min(100, Math.max(0, Math.round((1 - remaining / target) * 100)));
-}
-
-function tierPlayersCount(atPos: LeanPlayer[], tier: number): number {
-  return atPos.filter((p) => (p.tier || 99) === tier).length;
-}
+import {
+  MULTI_SLOT_POSITIONS,
+  SINGLE_SLOT_POSITIONS,
+} from "./scarcityConfig";
+import { buildMonopolyWarnings, buildPositionScarcity } from "./scarcityHelpers";
 
 /**
  * Analyzes positional scarcity and detects category monopolies.
@@ -84,144 +41,18 @@ export function analyzeScarcity(
         ...Object.keys(MULTI_SLOT_POSITIONS),
       ];
 
-  const positions: PositionScarcity[] = allPositions.map((pos) => {
-    const atPos = undrafted.filter((p) =>
-      p.position.toUpperCase().includes(pos.toUpperCase())
-    );
-
-    const elite = atPos.filter((p) => (p.tier || 99) === 1).length;
-    const midTier = atPos.filter(
-      (p) => (p.tier || 99) >= 2 && (p.tier || 99) <= 3
-    ).length;
-    const depth = atPos.filter((p) => (p.tier || 99) >= 4).length;
-    const total = atPos.length;
-
-    const slotsPerTeam = SINGLE_SLOT_POSITIONS.has(pos)
-      ? 1
-      : (MULTI_SLOT_POSITIONS[pos] ?? 1);
-    const expectedDemand = numTeams * slotsPerTeam;
-    const score = calcScarcityScore(elite, midTier, expectedDemand);
-
-    let alert: string | null = null;
-    if (elite === 0) {
-      alert = `⚠️ No Tier 1 ${pos} players remaining — act immediately.`;
-    } else if (elite <= 2) {
-      alert = `⚠️ Only ${elite} Tier 1 ${pos} remaining — critical scarcity.`;
-    } else if (score >= 70) {
-      alert = `${pos} is becoming scarce (score ${score}/100). Consider drafting soon.`;
-    }
-
-    return {
-      position: pos,
-      elite_remaining: elite,
-      mid_tier_remaining: midTier,
-      depth_remaining: depth,
-      total_remaining: total,
-      scarcity_score: score,
-      alert,
-    };
-  });
-  const tier_buckets = allPositions.map((pos) => {
-    const atPos = undrafted.filter((p) =>
-      p.position.toUpperCase().includes(pos.toUpperCase())
-    );
-    const slotsPerTeam = SINGLE_SLOT_POSITIONS.has(pos)
-      ? 1
-      : (MULTI_SLOT_POSITIONS[pos] ?? 1);
-    const expectedDemand = numTeams * slotsPerTeam;
-
-    const buckets = [1, 2, 3, 4, 5].map((tier) => {
-      const remaining = tierPlayersCount(atPos, tier);
-      const target = Math.max(
-        1,
-        Math.round(expectedDemand * (TIER_TARGET_FACTORS[tier] ?? 0.5))
-      );
-      const urgency = bucketUrgency(remaining, target);
-      return {
-        tier: `Tier ${tier}`,
-        remaining,
-        urgency_score: urgency,
-        message:
-          remaining === 0
-            ? `Tier ${tier} ${pos} is exhausted.`
-            : `${remaining} Tier ${tier} ${pos} remain.`,
-        recommended_action:
-          urgency >= 80
-            ? `Act now if you need Tier ${tier} ${pos} quality.`
-            : urgency >= 60
-              ? `Prepare Tier ${tier} ${pos} as a near-term target.`
-              : `Tier ${tier} ${pos} supply is currently manageable.`,
-      };
-    });
-    return { position: pos, buckets };
+  const { positions, tier_buckets } = buildPositionScarcity({
+    undrafted,
+    allPositions,
+    numTeams,
   });
 
   // ── Monopoly detection ────────────────────────────────────────────────────
-  const monopoly_warnings: MonopolyWarning[] = [];
-
-  // Build player lookup from the full player pool
-  const playerMap = new Map(scoped.map((p) => [getPlayerId(p), p]));
-
-  for (const cat of scoringCategories) {
-    const catName = cat.name.toUpperCase();
-
-    // Determine which projection field to inspect
-    type StatPath = {
-      section: "batting" | "pitching";
-      field: string;
-    };
-
-    const catStatMap: Record<string, StatPath> = {
-      SV: { section: "pitching", field: "saves" },
-      K: { section: "pitching", field: "strikeouts" },
-      W: { section: "pitching", field: "wins" },
-      HR: { section: "batting", field: "hr" },
-      SB: { section: "batting", field: "sb" },
-      RBI: { section: "batting", field: "rbi" },
-      R: { section: "batting", field: "runs" },
-    };
-
-    const statPath = catStatMap[catName];
-    if (!statPath) continue;
-
-    // Accumulate projected stat totals by fantasy team
-    const byTeam: Record<string, { total: number; players: string[] }> = {};
-    let leagueTotal = 0;
-
-    for (const dp of draftedPlayers) {
-      const player = playerMap.get(dp.player_id);
-      if (!player) continue;
-
-      const projection = player.projection as
-        | Record<string, Record<string, number>>
-        | undefined;
-      const statValue =
-        projection?.[statPath.section]?.[statPath.field] ?? 0;
-      if (statValue <= 0) continue;
-
-      leagueTotal += statValue;
-      if (!byTeam[dp.team_id]) {
-        byTeam[dp.team_id] = { total: 0, players: [] };
-      }
-      byTeam[dp.team_id].total += statValue;
-      byTeam[dp.team_id].players.push(dp.name);
-    }
-
-    if (leagueTotal === 0) continue;
-
-    for (const [teamId, data] of Object.entries(byTeam)) {
-      const share = data.total / leagueTotal;
-      if (share >= MONOPOLY_THRESHOLD) {
-        monopoly_warnings.push({
-          team_id: teamId,
-          category: `${cat.name} (${statPath.section})`,
-          controlled_players: data.players,
-          share_percentage: parseFloat((share * 100).toFixed(1)),
-          message: `⚠️ Monopoly Warning: Team "${teamId}" controls ${(share * 100).toFixed(1)}% of projected ${cat.name} — consider counterbalancing picks.`,
-        });
-      }
-    }
-  }
+  const monopoly_warnings = buildMonopolyWarnings({
+    draftedPlayers,
+    scoped,
+    scoringCategories,
+  });
 
   return {
     positions,
