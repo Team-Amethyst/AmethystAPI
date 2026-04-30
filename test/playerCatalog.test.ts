@@ -39,6 +39,26 @@ describe("normalizeCatalogPlayers", () => {
     expect(warn.mock.calls.length).toBeGreaterThanOrEqual(3);
   });
 
+  it("coerces numeric-string mlbId and clamps negative tier", () => {
+    const rows = normalizeCatalogPlayers(
+      [
+        {
+          _id: "a",
+          mlbId: "660271",
+          name: "ID Parse",
+          team: "LAD",
+          position: "DH",
+          value: 10,
+          adp: 5,
+          tier: -4,
+        },
+      ],
+      () => {}
+    );
+    expect(rows[0]!.mlbId).toBe(660271);
+    expect(rows[0]!.tier).toBe(0);
+  });
+
   it("skips non-objects", () => {
     const rows = normalizeCatalogPlayers([null, "x", { name: "Ok", value: 1 }], () => {});
     expect(rows).toHaveLength(1);
