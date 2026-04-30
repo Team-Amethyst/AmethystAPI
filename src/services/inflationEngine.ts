@@ -47,6 +47,56 @@ const FLEX_SLOTS = new Set(["UTIL", "CI", "MI", "P"]);
 /** Draftable pool size = ceil(remaining_slots × multiplier), capped by undrafted count. */
 const DEFAULT_SURPLUS_DRAFTABLE_MULTIPLIER = 1.35;
 
+const RECOMMENDED_BID_TUNING = {
+  pitcher_lambda_damp: {
+    early: 0.52,
+    mid: 0.44,
+    late: 0.38,
+  },
+  early_elite_anchor_boost: 0.045,
+  late_squeeze_floor: 0.35,
+  hitter_floor: {
+    depth_cutoff: 0.45,
+    baseline_weight: 0.72,
+    adjusted_mult: 1.6,
+    adjusted_add: 4,
+    adjusted_floor_add: 2,
+  },
+  hitter_star_floor: {
+    depth_cutoff: 0.28,
+    adjusted_add: 4,
+    baseline_weight: 0.58,
+  },
+  global_depth_min_adjusted_mult: {
+    depth_cutoff: 0.12,
+    mult: 0.93,
+  },
+  late_hitter_anchor_cap: {
+    depth_min: 0.52,
+    baseline_min: 32,
+    adjusted_to_baseline_max_ratio: 0.45,
+    blend_weight: 0.22,
+  },
+  pitcher_hybrid_floor: {
+    depth_cutoff: 0.5,
+    baseline_min: 26,
+    adjusted_max: 18,
+    baseline_weight: 0.42,
+    adjusted_mult: 2.55,
+    adjusted_add: 10,
+    absolute_floor_add: 3,
+  },
+  early_neutral_pitcher_cap: {
+    index_delta_max: 0.08,
+    adjusted_add: 5,
+    adjusted_mult: 1.45,
+  },
+  hi_soft_cap: {
+    max_base_mult: 1.15,
+    add: 8,
+  },
+} as const;
+
 /**
  * Returns the canonical ID used to match this player against drafted_players.
  * Prefers mlbId (string) since that's what Draftroom sends; falls back to _id.
@@ -388,63 +438,93 @@ function computeRecommendedBid(params: {
   const r = row.baseline_value;
   const nearAuctionOpenNeutral =
     inflationIndexVsOpeningAuction != null &&
-    Math.abs(inflationIndexVsOpeningAuction - 1) <= 0.08;
+    Math.abs(inflationIndexVsOpeningAuction - 1) <=
+      RECOMMENDED_BID_TUNING.early_neutral_pitcher_cap.index_delta_max;
   let L = lambdaClearingPrice(draftPhase, depthFrac);
   // Pitcher markets in our replay clear closer to marginal (adjusted_value) than list anchor.
   if (isPitcherPosition(row.position)) {
     const damp =
-      draftPhase === "early" ? 0.52 : draftPhase === "mid" ? 0.44 : 0.38;
+      draftPhase === "early"
+        ? RECOMMENDED_BID_TUNING.pitcher_lambda_damp.early
+        : draftPhase === "mid"
+          ? RECOMMENDED_BID_TUNING.pitcher_lambda_damp.mid
+          : RECOMMENDED_BID_TUNING.pitcher_lambda_damp.late;
     L *= damp;
   }
   let clearing = a + L * (r - a);
   if (draftPhase === "early" && depthFrac < 0.06) {
-    clearing += 0.045 * (r - a);
+    clearing += RECOMMENDED_BID_TUNING.early_elite_anchor_boost * (r - a);
   }
   if (draftPhase === "late") {
     const squeeze = 0.5 + 0.5 * (1 - depthFrac);
     clearing =
-      MIN_AUCTION_BID + (clearing - MIN_AUCTION_BID) * Math.max(0.35, squeeze);
+      MIN_AUCTION_BID +
+      (clearing - MIN_AUCTION_BID) *
+        Math.max(RECOMMENDED_BID_TUNING.late_squeeze_floor, squeeze);
   }
-  if (!isPitcherPosition(row.position) && draftPhase !== "late" && depthFrac < 0.45) {
+  if (
+    !isPitcherPosition(row.position) &&
+    draftPhase !== "late" &&
+    depthFrac < RECOMMENDED_BID_TUNING.hitter_floor.depth_cutoff
+  ) {
     // Early/mid hitter markets tend to clear materially above pure marginal value.
     const hitterMarketFloor = Math.min(
-      Math.max(a + 2, r * 0.72),
-      a * 1.6 + 4
+      Math.max(a + RECOMMENDED_BID_TUNING.hitter_floor.adjusted_floor_add, r * RECOMMENDED_BID_TUNING.hitter_floor.baseline_weight),
+      a * RECOMMENDED_BID_TUNING.hitter_floor.adjusted_mult +
+        RECOMMENDED_BID_TUNING.hitter_floor.adjusted_add
     );
     clearing = Math.max(clearing, hitterMarketFloor);
   }
-  if (!isPitcherPosition(row.position) && draftPhase !== "late" && depthFrac < 0.28) {
+  if (
+    !isPitcherPosition(row.position) &&
+    draftPhase !== "late" &&
+    depthFrac < RECOMMENDED_BID_TUNING.hitter_star_floor.depth_cutoff
+  ) {
     // Additional star-tier floor so top bats don't collapse into marginal pricing.
-    const starHitterFloor = Math.max(a + 4, r * 0.58);
+    const starHitterFloor = Math.max(
+      a + RECOMMENDED_BID_TUNING.hitter_star_floor.adjusted_add,
+      r * RECOMMENDED_BID_TUNING.hitter_star_floor.baseline_weight
+    );
     clearing = Math.max(clearing, starHitterFloor);
   }
-  if (depthFrac < 0.12) {
-    clearing = Math.max(clearing, a * 0.93);
+  if (depthFrac < RECOMMENDED_BID_TUNING.global_depth_min_adjusted_mult.depth_cutoff) {
+    clearing = Math.max(
+      clearing,
+      a * RECOMMENDED_BID_TUNING.global_depth_min_adjusted_mult.mult
+    );
   }
   // Late: star hitter with huge baseline but surplus-crushed adjusted — cap anchor drag (paid replay).
   if (
     !isPitcherPosition(row.position) &&
     draftPhase === "late" &&
-    depthFrac > 0.52 &&
-    r > 32 &&
+    depthFrac > RECOMMENDED_BID_TUNING.late_hitter_anchor_cap.depth_min &&
+    r > RECOMMENDED_BID_TUNING.late_hitter_anchor_cap.baseline_min &&
     a > 0 &&
-    a < r * 0.45
+    a <
+      r * RECOMMENDED_BID_TUNING.late_hitter_anchor_cap.adjusted_to_baseline_max_ratio
   ) {
-    clearing = Math.min(clearing, a + (r - a) * 0.22);
+    clearing = Math.min(
+      clearing,
+      a + (r - a) * RECOMMENDED_BID_TUNING.late_hitter_anchor_cap.blend_weight
+    );
   }
   // Mid/early: ace-tier SP with tiny adjusted — lift clearing off the $1 floor toward hybrid anchor.
   if (
     isPitcherPosition(row.position) &&
     draftPhase !== "late" &&
-    depthFrac < 0.5 &&
-    r > 26 &&
+    depthFrac < RECOMMENDED_BID_TUNING.pitcher_hybrid_floor.depth_cutoff &&
+    r > RECOMMENDED_BID_TUNING.pitcher_hybrid_floor.baseline_min &&
     a > 0 &&
-    a < 18
+    a < RECOMMENDED_BID_TUNING.pitcher_hybrid_floor.adjusted_max
   ) {
     clearing = Math.max(
       clearing,
-      Math.min(r * 0.42, a * 2.55 + 10),
-      a + 3
+      Math.min(
+        r * RECOMMENDED_BID_TUNING.pitcher_hybrid_floor.baseline_weight,
+        a * RECOMMENDED_BID_TUNING.pitcher_hybrid_floor.adjusted_mult +
+          RECOMMENDED_BID_TUNING.pitcher_hybrid_floor.adjusted_add
+      ),
+      a + RECOMMENDED_BID_TUNING.pitcher_hybrid_floor.absolute_floor_add
     );
   }
   // Early auction with index ~1.0: keep SP clearing guidance close to
@@ -456,10 +536,15 @@ function computeRecommendedBid(params: {
     nearAuctionOpenNeutral &&
     a > 0
   ) {
-    const neutralCeil = Math.max(a + 5, a * 1.45);
+    const neutralCeil = Math.max(
+      a + RECOMMENDED_BID_TUNING.early_neutral_pitcher_cap.adjusted_add,
+      a * RECOMMENDED_BID_TUNING.early_neutral_pitcher_cap.adjusted_mult
+    );
     clearing = Math.min(clearing, neutralCeil);
   }
-  const hiSoft = Math.max(r, a) * 1.15 + 8;
+  const hiSoft =
+    Math.max(r, a) * RECOMMENDED_BID_TUNING.hi_soft_cap.max_base_mult +
+    RECOMMENDED_BID_TUNING.hi_soft_cap.add;
   return Math.max(MIN_AUCTION_BID, Math.min(clearing, hiSoft));
 }
 
