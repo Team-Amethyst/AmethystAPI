@@ -24,6 +24,15 @@ function coercePositiveInt(raw: unknown): number | undefined {
   return Math.trunc(n);
 }
 
+/** 0–3 injury severity for baseline; omit when absent or zero. */
+function coerceInjurySeverity(raw: unknown): number | undefined {
+  if (raw === undefined || raw === null) return undefined;
+  const n = coerceFiniteNumber(raw, Number.NaN);
+  if (!Number.isFinite(n)) return undefined;
+  const s = Math.min(3, Math.max(0, Math.trunc(n)));
+  return s > 0 ? s : undefined;
+}
+
 function coerceMlbId(raw: unknown): number | undefined {
   if (typeof raw === "number" && Number.isFinite(raw)) return raw;
   if (typeof raw === "string") {
@@ -97,6 +106,9 @@ export function normalizeCatalogPlayers(
     const depthChartPosition = coercePositiveInt(
       d.depthChartPosition ?? d.depth_chart_position
     );
+    const injurySeverity = coerceInjurySeverity(
+      d.injurySeverity ?? d.injury_severity
+    );
 
     rows.push({
       _id: d._id,
@@ -107,6 +119,7 @@ export function normalizeCatalogPlayers(
       ...(positions ? { positions } : {}),
       ...(age != null ? { age } : {}),
       ...(depthChartPosition != null ? { depthChartPosition } : {}),
+      ...(injurySeverity != null ? { injurySeverity } : {}),
       adp,
       tier,
       value,

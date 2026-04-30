@@ -47,6 +47,7 @@ export interface IPlayer extends Document {
   positions?: string[];
   age: number;
   depthChartPosition?: number;
+  injurySeverity?: number;
   adp: number;
   tier: number;
   value: number;
@@ -64,6 +65,7 @@ const playerSchema = new Schema<IPlayer>(
     positions: { type: [String] },
     age: { type: Number, default: 0 },
     depthChartPosition: { type: Number },
+    injurySeverity: { type: Number, min: 0, max: 3 },
     adp: { type: Number, default: 0 },
     tier: { type: Number, default: 0 },
     value: { type: Number, default: 0 },

@@ -3,7 +3,8 @@ import ApiKey from "../models/ApiKey";
 import { getCached, setCache } from "../lib/redis";
 import { UnauthorizedError, ForbiddenError } from "../lib/appError";
 import { logger } from "../lib/logger";
-import { hashApiKey, validateApiKeyFormat } from "../lib/apiKey";
+import { hashApiKey, normalizeScopes, validateApiKeyFormat } from "../lib/apiKey";
+import type { ApiKeyScope } from "../lib/apiKey";
 
 const CACHE_PREFIX = "ae:apikey:";
 const CACHE_TTL_SECONDS = 60;
@@ -12,6 +13,8 @@ const CACHE_TTL_SECONDS = 60;
 export interface ApiKeyRequest extends Request {
   apiKeyOwner?: string;
   apiKeyTier?: string;
+  /** Normalized scopes from Mongo; empty means legacy key (treated as all scopes in scope middleware). */
+  apiKeyScopes?: ApiKeyScope[];
 }
 
 /**
@@ -44,6 +47,7 @@ const apiKeyMiddleware = async (
       owner: string;
       tier: string;
       isActive: boolean;
+      scopes: unknown;
     }>(cacheKey);
 
     if (!cached) {
@@ -64,7 +68,12 @@ const apiKeyMiddleware = async (
         throw new ForbiddenError("API key has expired.", 403, "API_KEY_EXPIRED");
       }
 
-      cached = { owner: doc.owner, tier: doc.tier, isActive: doc.isActive };
+      cached = {
+        owner: doc.owner,
+        tier: doc.tier,
+        isActive: doc.isActive,
+        scopes: doc.scopes,
+      };
       await setCache(cacheKey, cached, CACHE_TTL_SECONDS);
 
       if (!doc.keyHash && doc.key === key) {
@@ -86,6 +95,7 @@ const apiKeyMiddleware = async (
 
     req.apiKeyOwner = cached.owner;
     req.apiKeyTier = cached.tier;
+    req.apiKeyScopes = normalizeScopes(cached.scopes);
     next();
   } catch (err) {
     next(err);

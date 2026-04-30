@@ -14,13 +14,14 @@ import {
   stdDev,
   toNum,
 } from "./baselineProjectionStats";
-import { applyAgeDepthAdjustment } from "./baselineAgeDepthAdjustments";
+import { applyBaselineRiskChain } from "./baselineRiskChain";
 
 type BaselineComponents = {
   value: number;
   projectionComponent: number;
   scarcityComponent: number;
   ageDepthComponent?: number;
+  injuryComponent?: number;
 };
 
 type RotoGroupKind = "hitter" | "pitcher";
@@ -58,16 +59,17 @@ function rotoBaselineForGroup(
         1,
         priorFloor != null ? Math.max(scarcityAdjusted, priorFloor) : scarcityAdjusted
       );
-      const ageDepth = applyAgeDepthAdjustment({
+      const risk = applyBaselineRiskChain({
         player: p,
         baselineValue: baseValue,
         isPitcher: isPitcherForBaseline(p),
       });
       out.set(String(p._id), {
-        value: Number(ageDepth.adjustedValue.toFixed(2)),
+        value: Number(risk.adjustedValue.toFixed(2)),
         projectionComponent: 0,
         scarcityComponent,
-        ageDepthComponent: ageDepth.ageDepthComponent,
+        ageDepthComponent: risk.ageDepthComponent,
+        injuryComponent: risk.injuryComponent,
       });
     }
     return out;
@@ -107,16 +109,17 @@ function rotoBaselineForGroup(
     let value = Math.max(1, scarcityAdjusted * projectionMult);
     const priorFloor = speculativePriorBaselineFloor(p);
     if (priorFloor != null) value = Math.max(value, priorFloor);
-    const ageDepth = applyAgeDepthAdjustment({
+    const risk = applyBaselineRiskChain({
       player: p,
       baselineValue: value,
       isPitcher: isPitcherForBaseline(p),
     });
     out.set(String(p._id), {
-      value: Number(ageDepth.adjustedValue.toFixed(2)),
+      value: Number(risk.adjustedValue.toFixed(2)),
       projectionComponent: Number((value - scarcityAdjusted).toFixed(2)),
       scarcityComponent,
-      ageDepthComponent: ageDepth.ageDepthComponent,
+      ageDepthComponent: risk.ageDepthComponent,
+      injuryComponent: risk.injuryComponent,
     });
   }
   return out;
@@ -147,19 +150,21 @@ function rotisserieBaseline(
   projectionComponent: number;
   scarcityComponent: number;
   ageDepthComponent?: number;
+  injuryComponent?: number;
 } {
   const scarcityComponent = scarcityMultiplierForPosition(p, rosterSlots) - 1;
   const scarcityAdjusted = Math.max(1, (p.value || 0) * (1 + scarcityComponent));
-  const ageDepth = applyAgeDepthAdjustment({
+  const risk = applyBaselineRiskChain({
     player: p,
     baselineValue: scarcityAdjusted,
     isPitcher: isPitcherForBaseline(p),
   });
   return {
-    value: Number(ageDepth.adjustedValue.toFixed(2)),
+    value: Number(risk.adjustedValue.toFixed(2)),
     projectionComponent: 0,
     scarcityComponent,
-    ageDepthComponent: ageDepth.ageDepthComponent,
+    ageDepthComponent: risk.ageDepthComponent,
+    injuryComponent: risk.injuryComponent,
   };
 }
 
@@ -171,6 +176,7 @@ function pointsBaseline(
   projectionComponent: number;
   scarcityComponent: number;
   ageDepthComponent?: number;
+  injuryComponent?: number;
 } {
   const batting = getProjectionSection(p, "batting");
   const pitching = getProjectionSection(p, "pitching");
@@ -199,16 +205,17 @@ function pointsBaseline(
   );
   const priorFloor = speculativePriorBaselineFloor(p);
   if (priorFloor != null) value = Math.max(value, priorFloor);
-  const ageDepth = applyAgeDepthAdjustment({
+  const risk = applyBaselineRiskChain({
     player: p,
     baselineValue: value,
     isPitcher: isPitcherForBaseline(p),
   });
   return {
-    value: ageDepth.adjustedValue,
+    value: risk.adjustedValue,
     projectionComponent,
     scarcityComponent,
-    ageDepthComponent: ageDepth.ageDepthComponent,
+    ageDepthComponent: risk.ageDepthComponent,
+    injuryComponent: risk.injuryComponent,
   };
 }
 
@@ -247,6 +254,11 @@ export function scoringAwareBaselinePlayers(
       ...(derived.ageDepthComponent != null
         ? {
             age_depth_component: Number(derived.ageDepthComponent.toFixed(2)),
+          }
+        : {}),
+      ...(derived.injuryComponent != null
+        ? {
+            injury_component: Number(derived.injuryComponent.toFixed(2)),
           }
         : {}),
     };

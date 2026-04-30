@@ -61,7 +61,7 @@ The Engine accepts the **flat** body Draft builds for server-to-server calls:
 
 **Draft economics (400):** Each `player_id` at most once in auction rows; **`paid` ≥ 0**; without **`budget_by_team_id`**, **Σ `paid` ≤ `total_budget × num_teams`**.
 
-**Operational hardening:** Request bodies are limited to **1 MB**. **`POST /valuation/calculate`** is **not** Redis-cached (avoids stale prices after player sync). **Rate limits** (per `x-api-key`, or IP if the key is missing): defaults **~300/min** on `/valuation/calculate`, **~1200/min** on `/catalog/batch-values` — controlled with **`RATE_LIMIT_ENABLED`** (`0`/`off` to disable), **`RATE_LIMIT_VALUATION_MAX`**, **`RATE_LIMIT_VALUATION_WINDOW_MS`**, **`RATE_LIMIT_CATALOG_MAX`**, **`RATE_LIMIT_CATALOG_WINDOW_MS`**. Limits are **off under Vitest** unless **`RATE_LIMIT_ENABLED=1`**.
+**Operational hardening:** Request bodies are limited to **1 MB**. **`POST /valuation/calculate`** is **not** Redis-cached (avoids stale prices after player sync). **Rate limits** (per `x-api-key`, or IP if the key is missing) are **tier-aware**: `free` tier has the lowest ceilings, `standard` uses the baseline env max, `premium` the highest. Env: **`RATE_LIMIT_ENABLED`**, **`RATE_LIMIT_VALUATION_MAX`** / **`RATE_LIMIT_VALUATION_MAX_FREE`** / **`RATE_LIMIT_VALUATION_MAX_PREMIUM`**, **`RATE_LIMIT_VALUATION_WINDOW_MS`**, **`RATE_LIMIT_CATALOG_MAX`** / **`RATE_LIMIT_CATALOG_MAX_FREE`** / **`RATE_LIMIT_CATALOG_MAX_PREMIUM`**, **`RATE_LIMIT_CATALOG_WINDOW_MS`**. Licensed routes also require an **API key scope** matching the mount (`valuation`, `catalog`, `scarcity`, `simulation`, `signals`). **Optional IP gate:** set **`ENGINE_IP_ALLOWLIST`** to a comma-separated list of allowed client IPs; then set **`TRUST_PROXY=1`** (or rely on allowlist enabling trust proxy in code) so `req.ip` matches the caller behind App Runner / ALB. Limits are **off under Vitest** unless **`RATE_LIMIT_ENABLED=1`**.
 
 **Logging:** JSON logs via **Pino**; set **`LOG_LEVEL`** (`debug`, `info`, `warn`, `error`, `silent`). Defaults to **`silent` in tests** unless `LOG_LEVEL` is set.
 
@@ -78,7 +78,7 @@ The course diagram expects: ingest league + player state → choose **Rotisserie
 | Diagram step | Where it lives now | Your “own model” (course) |
 |---|---|---|
 | League + draft state | Request body → `parseValuationRequest` / `NormalizedValuationInput` | Draft/fixtures build this; not outsourced. |
-| Eligible player bios & history | Mongo `players` (`stats`, `projection`, `value`, `tier`, `adp`, …) | **You** populate via sync/analytics (e.g. 3-year stats, age, role, injury) — not a third-party valuation API. |
+| Eligible player bios & history | Mongo `players` (`stats` = last completed season, `projection` = 5:3:2 three-year blend from sync, `value`, `tier`, `adp`, optional `injurySeverity`, …) | Populated by **`pnpm sync-players`** + optional ops fields — not a third-party valuation API. |
 | Filter drafted / scope | `calculateInflation` + `league_scope` | Same. |
 | Scoring branch (Roto vs points) | `resolveScoringMode` in [`src/services/valuationWorkflow.ts`](src/services/valuationWorkflow.ts) — logged as `scoring_mode`; **v1 math still uses stored `value` for both** | Next increment: compute or rescale `value` per `scoring_format` + `scoring_categories` before inflation. |
 | Surplus / scarcity / market | Baseline `value` + inflation vs remaining budget + Steal/Reach vs ADP | Extend `inflationEngine` / scarcity as you add SABR-style signals. |

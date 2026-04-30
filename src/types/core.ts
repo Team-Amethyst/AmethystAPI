@@ -47,6 +47,8 @@ export interface LeanPlayer {
   positions?: string[];
   age?: number;
   depthChartPosition?: number;
+  /** 0 healthy/unknown; 1 day-to-day; 2 IL short; 3 long-term — used in baseline injury haircut. */
+  injurySeverity?: number;
   adp: number;
   tier: number;
   value: number;

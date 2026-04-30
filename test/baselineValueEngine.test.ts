@@ -294,6 +294,33 @@ describe("scoringAwareBaselinePlayers", () => {
     expect(vPrime).toBeGreaterThan(vOld);
   });
 
+  it("applies injury severity haircut after other baseline steps", () => {
+    const healthy: LeanPlayer = {
+      ...players[0],
+      _id: "inj-ok",
+      mlbId: 8001,
+      value: 30,
+      tier: 2,
+      age: 28,
+      depthChartPosition: 1,
+    };
+    const hurt: LeanPlayer = {
+      ...healthy,
+      _id: "inj-bad",
+      mlbId: 8002,
+      injurySeverity: 3,
+    };
+    const out = scoringAwareBaselinePlayers(
+      [healthy, hurt],
+      "5x5",
+      [],
+      [{ position: "OF", count: 3 }]
+    );
+    const vOk = out.find((x) => x._id === "inj-ok")!.value;
+    const vBad = out.find((x) => x._id === "inj-bad")!.value;
+    expect(vBad).toBeLessThan(vOk);
+  });
+
   it("penalizes deeper depth-chart roles", () => {
     const starter: LeanPlayer = {
       ...players[0],

@@ -85,6 +85,38 @@ describe("normalizeCatalogPlayers", () => {
     expect(rows[0]!.positions).toEqual(["SS", "3B"]);
   });
 
+  it("coerces injury severity from injury_severity or injurySeverity", () => {
+    const rows = normalizeCatalogPlayers(
+      [
+        {
+          _id: "a",
+          mlbId: 9,
+          name: "IL",
+          team: "NYY",
+          position: "OF",
+          value: 10,
+          adp: 5,
+          tier: 2,
+          injury_severity: 2,
+        },
+        {
+          _id: "b",
+          mlbId: 10,
+          name: "Fine",
+          team: "BOS",
+          position: "SP",
+          value: 10,
+          adp: 5,
+          tier: 2,
+          injurySeverity: 0,
+        },
+      ],
+      () => {}
+    );
+    expect(rows[0]!.injurySeverity).toBe(2);
+    expect(rows[1]!.injurySeverity).toBeUndefined();
+  });
+
   it("passes through positions[] for slot/surplus eligibility", () => {
     const rows = normalizeCatalogPlayers(
       [

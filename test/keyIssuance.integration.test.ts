@@ -34,6 +34,7 @@ describe.skipIf(!MONGO_URI)("POST /api/keys/issue (integration)", () => {
 
     expect(res.body.apiKey).toMatch(/^amethyst_live_[a-f0-9]{20}\.[a-f0-9]{48}$/);
     expect(res.body.owner).toBe("integration-owner");
+    expect(res.body.developerAccountId).toBeDefined();
   });
 
   it("POST /api/keys still works after /issue", async () => {

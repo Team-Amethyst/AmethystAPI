@@ -1,5 +1,7 @@
 import rateLimit from "express-rate-limit";
 import type { Request, RequestHandler } from "express";
+import type { ApiKeyRequest } from "./apiKey";
+import { catalogLimitForTier, valuationLimitForTier } from "./tierRateLimits";
 
 function apiKeyOrIpKey(req: Request): string {
   const raw = req.headers["x-api-key"];
@@ -39,7 +41,7 @@ const noop: RequestHandler = (_req, _res, next) => {
 
 function createLimiter(options: {
   windowMs: number;
-  limit: number;
+  limit: number | ((req: Request) => number | Promise<number>);
   message: string;
 }): RequestHandler {
   return rateLimit({
@@ -68,10 +70,10 @@ export function valuationRateLimiter(): RequestHandler {
     process.env.RATE_LIMIT_VALUATION_WINDOW_MS,
     60_000
   );
-  const limit = parsePositiveInt(process.env.RATE_LIMIT_VALUATION_MAX, 300);
   return createLimiter({
     windowMs,
-    limit,
+    limit: (req) =>
+      valuationLimitForTier((req as ApiKeyRequest).apiKeyTier),
     message:
       "Too many valuation requests. Please slow down and try again shortly.",
   });
@@ -90,10 +92,9 @@ export function catalogRateLimiter(): RequestHandler {
     process.env.RATE_LIMIT_CATALOG_WINDOW_MS,
     60_000
   );
-  const limit = parsePositiveInt(process.env.RATE_LIMIT_CATALOG_MAX, 1200);
   return createLimiter({
     windowMs,
-    limit,
+    limit: (req) => catalogLimitForTier((req as ApiKeyRequest).apiKeyTier),
     message:
       "Too many catalog requests. Please slow down and try again shortly.",
   });

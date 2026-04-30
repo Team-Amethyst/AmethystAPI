@@ -2,6 +2,14 @@
 
 This map documents where each pricing responsibility lives after the refactor.
 
+## Licensing gates (HTTP stack)
+
+- `src/middleware/ipAllowlist.ts` — optional `ENGINE_IP_ALLOWLIST` for licensed routes only.
+- `src/middleware/apiKey.ts` — validates `x-api-key`, attaches `apiKeyTier` + `apiKeyScopes` (cached).
+- `src/middleware/apiKeyScope.ts` — per-route scope checks (`valuation`, `catalog`, …).
+- `src/middleware/tierRateLimits.ts` — tier-derived ceilings consumed by `engineRateLimit`.
+- `src/middleware/engineRateLimit.ts` — express-rate-limit on `/valuation` and `/catalog` mounts.
+
 ## Core orchestrator
 
 - `src/services/inflationEngine.ts`
@@ -26,8 +34,11 @@ This map documents where each pricing responsibility lives after the refactor.
 ## Baseline (catalog → list $ before inflation)
 
 - `src/services/baselineValueEngine.ts` — `scoringAwareBaselinePlayers` (roto z-score vs points vs scarcity-only fallback).
+- `src/services/baselineRiskChain.ts` — orders age/depth then injury multipliers before inflation.
 - `src/services/baselineProjectionStats.ts` — projection field reads, category weights/directions, pooled mean/stddev helpers; pitcher detection uses `playerTokensFromLean` (aligned with slot logic / two-way eligibility).
 - `src/services/baselineAgeDepthAdjustments.ts` — age-curve and depth-chart priors with explicit tuning constants and fallback depth proxy behavior.
+- `src/services/baselineInjuryAdjustments.ts` — optional catalog `injurySeverity` haircut.
+- `src/lib/mlbProjectionBlend.ts` — pure 5:3:2 multi-year batting/pitching projection (used by sync into Mongo `projection`).
 
 ## Request parsing (valuation calculate)
 
@@ -82,7 +93,7 @@ This map documents where each pricing responsibility lives after the refactor.
 - `src/lib/playerCatalog.ts`
   - Normalizes Mongo docs into `LeanPlayer` and hardens coercion.
 - `scripts/sync-players.ts`
-  - Syncs MLB splits to Mongo, preserves two-way eligibility (`positions[]`), and persists coarse `depthChartPosition` priors.
+  - Syncs MLB splits to Mongo, preserves two-way eligibility (`positions[]`), persists coarse `depthChartPosition`, writes **`stats`** for the last completed season and **`projection`** as a three-year weighted blend (`catalogMeta` lists seasons).
 - `scripts/audit-player-eligibility.ts`
   - Post-sync QA script (`pnpm sync-players:verify`).
 

@@ -106,6 +106,7 @@ export interface ValuedPlayer {
     projection_component: number;
     scarcity_component: number;
     age_depth_component?: number;
+    injury_component?: number;
   };
   scarcity_adjustment?: number;
   inflation_adjustment?: number;

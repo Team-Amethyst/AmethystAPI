@@ -17,6 +17,11 @@ import developersRoutes from "./routes/developers";
 
 // Licensing middleware
 import apiKeyMiddleware from "./middleware/apiKey";
+import { requireApiKeyScope } from "./middleware/apiKeyScope";
+import {
+  engineIpAllowlistEnabled,
+  engineIpAllowlistMiddleware,
+} from "./middleware/ipAllowlist";
 import { requestIdMiddleware } from "./middleware/requestId";
 import {
   catalogRateLimiter,
@@ -43,6 +48,11 @@ if (!process.env.MONGO_URI) {
 }
 
 const app = express();
+
+/** Trust first proxy hop when allowlist or explicit TRUST_PROXY=1 (so `req.ip` matches client behind App Runner / ALB). */
+if (engineIpAllowlistEnabled() || process.env.TRUST_PROXY === "1") {
+  app.set("trust proxy", 1);
+}
 
 const corsOrigin = process.env.CORS_ORIGIN || "http://localhost:5173";
 
@@ -87,20 +97,79 @@ app.use("/api/usage", usageRoutes);
 
 // ── Amethyst Engine — licensed analytical endpoints (require x-api-key) ────────
 //
-// All routes below are gated by the API key middleware.
+// All routes below: optional IP allowlist → API key → scope → tier-aware rate limit → handler.
 // Usage is tracked per-key to support the 5% net-revenue royalty model.
-app.use("/valuation", apiKeyMiddleware, valuationRateLimiter(), valuationRoutes);
-app.use("/catalog", apiKeyMiddleware, catalogRateLimiter(), catalogRoutes);
-app.use("/analysis/scarcity", apiKeyMiddleware, scarcityRoutes);
-app.use("/simulation", apiKeyMiddleware, simulationRoutes);
-app.use("/signals", apiKeyMiddleware, signalsRoutes);
+const licensedBeforeHandler = [
+  engineIpAllowlistMiddleware(),
+  apiKeyMiddleware,
+] as const;
+
+app.use(
+  "/valuation",
+  ...licensedBeforeHandler,
+  requireApiKeyScope("valuation"),
+  valuationRateLimiter(),
+  valuationRoutes
+);
+app.use(
+  "/catalog",
+  ...licensedBeforeHandler,
+  requireApiKeyScope("catalog"),
+  catalogRateLimiter(),
+  catalogRoutes
+);
+app.use(
+  "/analysis/scarcity",
+  ...licensedBeforeHandler,
+  requireApiKeyScope("scarcity"),
+  scarcityRoutes
+);
+app.use(
+  "/simulation",
+  ...licensedBeforeHandler,
+  requireApiKeyScope("simulation"),
+  simulationRoutes
+);
+app.use(
+  "/signals",
+  ...licensedBeforeHandler,
+  requireApiKeyScope("signals"),
+  signalsRoutes
+);
 
 /** Versioned mounts — same handlers/middleware as unprefixed routes (see ENGINE_AGENT_BRIEF). */
-app.use("/v1/valuation", apiKeyMiddleware, valuationRateLimiter(), valuationRoutes);
-app.use("/v1/catalog", apiKeyMiddleware, catalogRateLimiter(), catalogRoutes);
-app.use("/v1/analysis/scarcity", apiKeyMiddleware, scarcityRoutes);
-app.use("/v1/simulation", apiKeyMiddleware, simulationRoutes);
-app.use("/v1/signals", apiKeyMiddleware, signalsRoutes);
+app.use(
+  "/v1/valuation",
+  ...licensedBeforeHandler,
+  requireApiKeyScope("valuation"),
+  valuationRateLimiter(),
+  valuationRoutes
+);
+app.use(
+  "/v1/catalog",
+  ...licensedBeforeHandler,
+  requireApiKeyScope("catalog"),
+  catalogRateLimiter(),
+  catalogRoutes
+);
+app.use(
+  "/v1/analysis/scarcity",
+  ...licensedBeforeHandler,
+  requireApiKeyScope("scarcity"),
+  scarcityRoutes
+);
+app.use(
+  "/v1/simulation",
+  ...licensedBeforeHandler,
+  requireApiKeyScope("simulation"),
+  simulationRoutes
+);
+app.use(
+  "/v1/signals",
+  ...licensedBeforeHandler,
+  requireApiKeyScope("signals"),
+  signalsRoutes
+);
 
 // ── Global error handler ──────────────────────────────────────────────────────
 // 404 for unknown routes

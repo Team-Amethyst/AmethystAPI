@@ -107,6 +107,7 @@ export function buildValuedRows(params: {
               projection_component?: number;
               scarcity_component?: number;
               age_depth_component?: number;
+              injury_component?: number;
             };
           }
         | undefined
@@ -137,6 +138,9 @@ export function buildValuedRows(params: {
         scarcity_component: meta?.scarcity_component ?? 0,
         ...(meta?.age_depth_component != null
           ? { age_depth_component: meta.age_depth_component }
+          : {}),
+        ...(meta?.injury_component != null
+          ? { injury_component: meta.injury_component }
           : {}),
       },
       scarcity_adjustment: 0,

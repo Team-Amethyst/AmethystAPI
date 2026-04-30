@@ -5,8 +5,9 @@
  *
  * Persists merged hitting + pitching splits per player (so two-way players
  * keep both `stats` / `projection` blobs), `positions[]` from split + bio
- * (including `TWP` → DH/SP), and `projection.pitching.innings` when pitching
- * exists — matching what the valuation catalog reads (`PLAYER_CATALOG_LEAN_SELECT`).
+ * (including `TWP` → DH/SP). **`stats`** = last completed MLB season only.
+ * **`projection`** = weighted 5:3:2 blend over the last three completed seasons
+ * (see `src/lib/mlbProjectionBlend.ts`). `catalogMeta` records which seasons were used.
  *
  * Run with:  pnpm sync-players
  *
@@ -21,6 +22,7 @@ import {
   calcBatterValue,
   calcPitcherValue,
 } from "../src/lib/mlbSyncFormulas";
+import { projectBatting, projectPitching } from "../src/lib/mlbProjectionBlend";
 import { resolveMlbTeamAbbrev } from "../src/lib/mlbTeamResolve";
 import Player from "../src/models/Player";
 
@@ -33,11 +35,8 @@ if (!MONGO_URI) {
 }
 
 const MLB_API = "https://statsapi.mlb.com/api/v1";
-// During the active MLB season (March–October) use the current year;
-// before opening day fall back to the last completed season.
-const now = new Date();
-const month = now.getMonth() + 1; // 1-indexed
-const SEASON = month >= 3 && month <= 10 ? now.getFullYear() : now.getFullYear() - 1;
+/** Last completed calendar season (aligns with monolith / Draft Kit “last year” stat basis). */
+const LAST_COMPLETED_SEASON = new Date().getFullYear() - 1;
 
 interface MlbPlayer {
   id: number;
@@ -66,6 +65,10 @@ type PlayerSyncDoc = {
   projection: Record<string, unknown>;
   outlook: string;
   adp?: number;
+  catalogMeta?: {
+    stats_season: number;
+    projection_blend_seasons: number[];
+  };
 };
 
 function addMlbPositionAbbrev(set: Set<string>, abbrev?: string): void {
@@ -83,7 +86,10 @@ function buildPlayerDocFromAgg(
   mlbId: number,
   agg: SplitAgg,
   bio: MlbPlayer | undefined,
-  teamIdToAbbr: Map<number, string>
+  teamIdToAbbr: Map<number, string>,
+  yearBat: Map<number, Map<number, Record<string, string | number>>>,
+  yearPit: Map<number, Map<number, Record<string, string | number>>>,
+  lastSeason: number
 ): PlayerSyncDoc | null {
   const batVal = agg.bat ? calcBatterValue(agg.bat.stat) : 0;
   const pitVal = agg.pit ? calcPitcherValue(agg.pit.stat) : 0;
@@ -151,8 +157,22 @@ function buildPlayerDocFromAgg(
     };
   }
 
+  const y2 = lastSeason - 1;
+  const y3 = lastSeason - 2;
+  const bat1 = yearBat.get(lastSeason)?.get(mlbId);
+  const bat2 = yearBat.get(y2)?.get(mlbId);
+  const bat3 = yearBat.get(y3)?.get(mlbId);
+  const pit1 = yearPit.get(lastSeason)?.get(mlbId);
+  const pit2 = yearPit.get(y2)?.get(mlbId);
+  const pit3 = yearPit.get(y3)?.get(mlbId);
+
+  const blendedBat = projectBatting(bat1, bat2, bat3);
+  const blendedPit = projectPitching(pit1, pit2, pit3);
+
   const projection: Record<string, unknown> = {};
-  if (agg.bat) {
+  if (blendedBat) {
+    projection.batting = blendedBat;
+  } else if (agg.bat) {
     const stat = agg.bat.stat;
     projection.batting = {
       avg: String(stat.avg ?? ".000"),
@@ -162,7 +182,16 @@ function buildPlayerDocFromAgg(
       sb: Number(stat.stolenBases ?? 0),
     };
   }
-  if (agg.pit) {
+  if (blendedPit) {
+    projection.pitching = {
+      era: blendedPit.era,
+      whip: blendedPit.whip,
+      wins: blendedPit.wins,
+      saves: blendedPit.saves,
+      strikeouts: blendedPit.strikeouts,
+      innings: blendedPit.innings,
+    };
+  } else if (agg.pit) {
     const stat = agg.pit.stat;
     projection.pitching = {
       era: String(stat.era ?? "0.00"),
@@ -186,6 +215,10 @@ function buildPlayerDocFromAgg(
     stats,
     projection,
     outlook: "",
+    catalogMeta: {
+      stats_season: lastSeason,
+      projection_blend_seasons: [lastSeason, y2, y3],
+    },
   };
   if (positions.length > 0) {
     doc.positions = positions;
@@ -241,16 +274,16 @@ async function fetchJson<T>(url: string): Promise<T> {
   return res.json() as Promise<T>;
 }
 
-async function fetchSeasonSplits(): Promise<{
+async function fetchSeasonSplitsForYear(season: number): Promise<{
   batSplits: MlbStatSplit[];
   pitSplits: MlbStatSplit[];
 }> {
   const [batJson, pitJson] = await Promise.all([
     fetchJson<{ stats: { splits: MlbStatSplit[] }[] }>(
-      `${MLB_API}/stats?stats=season&group=hitting&season=${SEASON}&playerPool=ALL&limit=400&sportId=1`
+      `${MLB_API}/stats?stats=season&group=hitting&season=${season}&playerPool=ALL&limit=400&sportId=1`
     ),
     fetchJson<{ stats: { splits: MlbStatSplit[] }[] }>(
-      `${MLB_API}/stats?stats=season&group=pitching&season=${SEASON}&playerPool=ALL&limit=300&sportId=1`
+      `${MLB_API}/stats?stats=season&group=pitching&season=${season}&playerPool=ALL&limit=300&sportId=1`
     ),
   ]);
   const batSplits = batJson.stats?.[0]?.splits ?? [];
@@ -258,9 +291,29 @@ async function fetchSeasonSplits(): Promise<{
   return { batSplits, pitSplits };
 }
 
+function indexBattingByPlayer(
+  splits: MlbStatSplit[]
+): Map<number, Record<string, string | number>> {
+  const m = new Map<number, Record<string, string | number>>();
+  for (const s of splits) {
+    m.set(s.player.id, s.stat as Record<string, string | number>);
+  }
+  return m;
+}
+
+function indexPitchingByPlayer(
+  splits: MlbStatSplit[]
+): Map<number, Record<string, string | number>> {
+  const m = new Map<number, Record<string, string | number>>();
+  for (const s of splits) {
+    m.set(s.player.id, s.stat as Record<string, string | number>);
+  }
+  return m;
+}
+
 async function fetchTeamAbbrevMap(): Promise<Map<number, string>> {
   const teamsJson = await fetchJson<{ teams: { id: number; abbreviation: string }[] }>(
-    `${MLB_API}/teams?sportId=1&season=${SEASON}`
+    `${MLB_API}/teams?sportId=1&season=${LAST_COMPLETED_SEASON}`
   );
   const teamIdToAbbr = new Map<number, string>();
   for (const t of teamsJson.teams ?? []) {
@@ -313,10 +366,23 @@ function assignAdpByValue(players: PlayerSyncDoc[]): PlayerSyncDoc[] {
 
 async function sync() {
   await mongoose.connect(MONGO_URI as string);
-  console.log(`[MongoDB] Connected — syncing season ${SEASON}`);
+  const last = LAST_COMPLETED_SEASON;
+  const seasons = [last, last - 1, last - 2] as const;
+  console.log(`[MongoDB] Connected — syncing stats ${last}, projection blend ${seasons.join("/")}`);
 
-  const { batSplits, pitSplits } = await fetchSeasonSplits();
-  console.log(`[MLB API] ${batSplits.length} batting splits, ${pitSplits.length} pitching splits`);
+  const perYear = await Promise.all(seasons.map((se) => fetchSeasonSplitsForYear(se)));
+  const yearBat = new Map<number, Map<number, Record<string, string | number>>>();
+  const yearPit = new Map<number, Map<number, Record<string, string | number>>>();
+  for (let i = 0; i < seasons.length; i++) {
+    const se = seasons[i]!;
+    yearBat.set(se, indexBattingByPlayer(perYear[i]!.batSplits));
+    yearPit.set(se, indexPitchingByPlayer(perYear[i]!.pitSplits));
+  }
+  const batSplits = perYear[0]!.batSplits;
+  const pitSplits = perYear[0]!.pitSplits;
+  console.log(
+    `[MLB API] ${batSplits.length} batting / ${pitSplits.length} pitching splits (anchor year ${last})`
+  );
 
   const teamIdToAbbr = await fetchTeamAbbrevMap();
   console.log(`[MLB API] Loaded ${teamIdToAbbr.size} team abbreviations`);
@@ -334,7 +400,7 @@ async function sync() {
   const playerMap = new Map<number, PlayerSyncDoc>();
   for (const [mlbId, agg] of aggMap) {
     const bio = bioMap.get(mlbId);
-    const doc = buildPlayerDocFromAgg(mlbId, agg, bio, teamIdToAbbr);
+    const doc = buildPlayerDocFromAgg(mlbId, agg, bio, teamIdToAbbr, yearBat, yearPit, last);
     if (doc) playerMap.set(mlbId, doc);
   }
 
