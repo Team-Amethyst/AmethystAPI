@@ -377,6 +377,156 @@ function dollarsPerSlotPeerRatio(params: {
   return dpsUser / dpsPeer;
 }
 
+function computeRecommendedBid(params: {
+  row: ValuedPlayer;
+  draftPhase: DraftPhaseIndicator;
+  depthFrac: number;
+  inflationIndexVsOpeningAuction: number | undefined;
+}): number {
+  const { row, draftPhase, depthFrac, inflationIndexVsOpeningAuction } = params;
+  const a = row.adjusted_value;
+  const r = row.baseline_value;
+  const nearAuctionOpenNeutral =
+    inflationIndexVsOpeningAuction != null &&
+    Math.abs(inflationIndexVsOpeningAuction - 1) <= 0.08;
+  let L = lambdaClearingPrice(draftPhase, depthFrac);
+  // Pitcher markets in our replay clear closer to marginal (adjusted_value) than list anchor.
+  if (isPitcherPosition(row.position)) {
+    const damp =
+      draftPhase === "early" ? 0.52 : draftPhase === "mid" ? 0.44 : 0.38;
+    L *= damp;
+  }
+  let clearing = a + L * (r - a);
+  if (draftPhase === "early" && depthFrac < 0.06) {
+    clearing += 0.045 * (r - a);
+  }
+  if (draftPhase === "late") {
+    const squeeze = 0.5 + 0.5 * (1 - depthFrac);
+    clearing =
+      MIN_AUCTION_BID + (clearing - MIN_AUCTION_BID) * Math.max(0.35, squeeze);
+  }
+  if (!isPitcherPosition(row.position) && draftPhase !== "late" && depthFrac < 0.45) {
+    // Early/mid hitter markets tend to clear materially above pure marginal value.
+    const hitterMarketFloor = Math.min(
+      Math.max(a + 2, r * 0.72),
+      a * 1.6 + 4
+    );
+    clearing = Math.max(clearing, hitterMarketFloor);
+  }
+  if (!isPitcherPosition(row.position) && draftPhase !== "late" && depthFrac < 0.28) {
+    // Additional star-tier floor so top bats don't collapse into marginal pricing.
+    const starHitterFloor = Math.max(a + 4, r * 0.58);
+    clearing = Math.max(clearing, starHitterFloor);
+  }
+  if (depthFrac < 0.12) {
+    clearing = Math.max(clearing, a * 0.93);
+  }
+  // Late: star hitter with huge baseline but surplus-crushed adjusted — cap anchor drag (paid replay).
+  if (
+    !isPitcherPosition(row.position) &&
+    draftPhase === "late" &&
+    depthFrac > 0.52 &&
+    r > 32 &&
+    a > 0 &&
+    a < r * 0.45
+  ) {
+    clearing = Math.min(clearing, a + (r - a) * 0.22);
+  }
+  // Mid/early: ace-tier SP with tiny adjusted — lift clearing off the $1 floor toward hybrid anchor.
+  if (
+    isPitcherPosition(row.position) &&
+    draftPhase !== "late" &&
+    depthFrac < 0.5 &&
+    r > 26 &&
+    a > 0 &&
+    a < 18
+  ) {
+    clearing = Math.max(
+      clearing,
+      Math.min(r * 0.42, a * 2.55 + 10),
+      a + 3
+    );
+  }
+  // Early auction with index ~1.0: keep SP clearing guidance close to
+  // modeled marginal value; avoids ace/SP2 recommendations that outrun
+  // realistic opening-room clears in neutral conditions.
+  if (
+    isPitcherPosition(row.position) &&
+    draftPhase === "early" &&
+    nearAuctionOpenNeutral &&
+    a > 0
+  ) {
+    const neutralCeil = Math.max(a + 5, a * 1.45);
+    clearing = Math.min(clearing, neutralCeil);
+  }
+  const hiSoft = Math.max(r, a) * 1.15 + 8;
+  return Math.max(MIN_AUCTION_BID, Math.min(clearing, hiSoft));
+}
+
+function smoothRecommendedBids(valuations: ValuedPlayer[]): void {
+  const smoothGroup = (rows: ValuedPlayer[]) => {
+    const ordDesc = [...rows].sort((a, b) => b.baseline_value - a.baseline_value);
+    const recSeries = ordDesc.map((r) => r.recommended_bid ?? MIN_AUCTION_BID);
+    const smoothed = isotonicNonIncreasing(recSeries);
+    for (let k = 0; k < ordDesc.length; k++) {
+      ordDesc[k].recommended_bid = parseFloat(
+        Math.max(MIN_AUCTION_BID, smoothed[k] ?? MIN_AUCTION_BID).toFixed(2)
+      );
+    }
+  };
+  smoothGroup(valuations.filter((r) => !isPitcherPosition(r.position)));
+  smoothGroup(valuations.filter((r) => isPitcherPosition(r.position)));
+}
+
+function computeTeamAdjustedValue(params: {
+  row: ValuedPlayer;
+  lp: LeanPlayer;
+  openSlots: Map<string, number>;
+  budgetMult: number;
+  dpsMult: number;
+  slotScarcityMult: number;
+  replForTeam: Record<string, number>;
+  rosterSlotKeysForFit: ReadonlySet<string>;
+}): number {
+  const {
+    row,
+    lp,
+    openSlots,
+    budgetMult,
+    dpsMult,
+    slotScarcityMult,
+    replForTeam,
+    rosterSlotKeysForFit,
+  } = params;
+  const needMult = positionalNeedMultiplier(lp, openSlots);
+  const tokens = playerTokensFromLean(lp);
+  const drop = maxReplacementDropoff(
+    row.baseline_value,
+    tokens,
+    replForTeam,
+    rosterSlotKeysForFit
+  );
+  const dropMult =
+    Object.keys(replForTeam).length > 0
+      ? 1 + 0.22 * Math.min(1.25, drop / Math.max(8, row.baseline_value))
+      : 1;
+  const rawTeam =
+    row.adjusted_value *
+    needMult *
+    budgetMult *
+    dpsMult *
+    slotScarcityMult *
+    dropMult;
+  const saneCap = Math.min(
+    8000,
+    Math.max(
+      row.adjusted_value * 6,
+      row.baseline_value * 4 + row.adjusted_value
+    )
+  );
+  return parseFloat(Math.max(0, Math.min(saneCap, rawTeam)).toFixed(2));
+}
+
 type SurplusPlan = {
   replacementValue: number;
   poolSurplusSum: number;
@@ -743,68 +893,12 @@ export function calculateInflation(
 
   for (const row of valuations) {
     const depthFrac = depthFracById.get(row.player_id) ?? 0.5;
-    const a = row.adjusted_value;
-    const r = row.baseline_value;
-    let L = lambdaClearingPrice(draftPhase, depthFrac);
-    // Pitcher markets in our replay clear closer to marginal (adjusted_value) than list anchor.
-    if (isPitcherPosition(row.position)) {
-      const damp =
-        draftPhase === "early" ? 0.52 : draftPhase === "mid" ? 0.44 : 0.38;
-      L *= damp;
-    }
-    let clearing = a + L * (r - a);
-    if (draftPhase === "early" && depthFrac < 0.06) {
-      clearing += 0.045 * (r - a);
-    }
-    if (draftPhase === "late") {
-      const squeeze = 0.5 + 0.5 * (1 - depthFrac);
-      clearing =
-        MIN_AUCTION_BID + (clearing - MIN_AUCTION_BID) * Math.max(0.35, squeeze);
-    }
-    if (!isPitcherPosition(row.position) && draftPhase !== "late" && depthFrac < 0.45) {
-      // Early/mid hitter markets tend to clear materially above pure marginal value.
-      const hitterMarketFloor = Math.min(
-        Math.max(a + 2, r * 0.72),
-        a * 1.6 + 4
-      );
-      clearing = Math.max(clearing, hitterMarketFloor);
-    }
-    if (!isPitcherPosition(row.position) && draftPhase !== "late" && depthFrac < 0.28) {
-      // Additional star-tier floor so top bats don't collapse into marginal pricing.
-      const starHitterFloor = Math.max(a + 4, r * 0.58);
-      clearing = Math.max(clearing, starHitterFloor);
-    }
-    if (depthFrac < 0.12) {
-      clearing = Math.max(clearing, a * 0.93);
-    }
-    // Late: star hitter with huge baseline but surplus-crushed adjusted — cap anchor drag (paid replay).
-    if (
-      !isPitcherPosition(row.position) &&
-      draftPhase === "late" &&
-      depthFrac > 0.52 &&
-      r > 32 &&
-      a > 0 &&
-      a < r * 0.45
-    ) {
-      clearing = Math.min(clearing, a + (r - a) * 0.22);
-    }
-    // Mid/early: ace-tier SP with tiny adjusted — lift clearing off the $1 floor toward hybrid anchor.
-    if (
-      isPitcherPosition(row.position) &&
-      draftPhase !== "late" &&
-      depthFrac < 0.5 &&
-      r > 26 &&
-      a > 0 &&
-      a < 18
-    ) {
-      clearing = Math.max(
-        clearing,
-        Math.min(r * 0.42, a * 2.55 + 10),
-        a + 3
-      );
-    }
-    const hiSoft = Math.max(r, a) * 1.15 + 8;
-    clearing = Math.max(MIN_AUCTION_BID, Math.min(clearing, hiSoft));
+    const clearing = computeRecommendedBid({
+      row,
+      draftPhase,
+      depthFrac,
+      inflationIndexVsOpeningAuction,
+    });
     row.recommended_bid = parseFloat(clearing.toFixed(2));
     if (options?.debugSignals) {
       const lp = byRowPlayerId.get(row.player_id);
@@ -820,7 +914,7 @@ export function calculateInflation(
           : undefined;
       row.debug_v2 = {
         ...(row.debug_v2 ?? {}),
-        lambda_used: Number(L.toFixed(4)),
+        lambda_used: Number(lambdaClearingPrice(draftPhase, depthFrac).toFixed(4)),
         surplus_basis:
           sb != null && Number.isFinite(sb) ? Number(sb.toFixed(4)) : undefined,
         replacement_key_used: replBest?.key ?? null,
@@ -830,18 +924,7 @@ export function calculateInflation(
     }
   }
 
-  const smoothGroup = (rows: typeof valuations) => {
-    const ordDesc = [...rows].sort((a, b) => b.baseline_value - a.baseline_value);
-    const recSeries = ordDesc.map((r) => r.recommended_bid ?? MIN_AUCTION_BID);
-    const smoothed = isotonicNonIncreasing(recSeries);
-    for (let k = 0; k < ordDesc.length; k++) {
-      ordDesc[k].recommended_bid = parseFloat(
-        Math.max(MIN_AUCTION_BID, smoothed[k] ?? MIN_AUCTION_BID).toFixed(2)
-      );
-    }
-  };
-  smoothGroup(valuations.filter((r) => !isPitcherPosition(r.position)));
-  smoothGroup(valuations.filter((r) => isPitcherPosition(r.position)));
+  smoothRecommendedBids(valuations);
 
   const symmetricOpenLeague = isSymmetricOpenLeagueContext({
     numTeams,
@@ -905,36 +988,29 @@ export function calculateInflation(
       }
       continue;
     }
-    const needMult = positionalNeedMultiplier(lp, openSlots);
-    const tokens = playerTokensFromLean(lp);
-    const drop = maxReplacementDropoff(
-      row.baseline_value,
-      tokens,
+    row.team_adjusted_value = computeTeamAdjustedValue({
+      row,
+      lp,
+      openSlots,
+      budgetMult,
+      dpsMult,
+      slotScarcityMult,
       replForTeam,
-      rosterSlotKeysForFit
-    );
-    const dropMult =
-      Object.keys(replForTeam).length > 0
-        ? 1 + 0.22 * Math.min(1.25, drop / Math.max(8, row.baseline_value))
-        : 1;
-    const rawTeam =
-      row.adjusted_value *
-      needMult *
-      budgetMult *
-      dpsMult *
-      slotScarcityMult *
-      dropMult;
-    const saneCap = Math.min(
-      8000,
-      Math.max(
-        row.adjusted_value * 6,
-        row.baseline_value * 4 + row.adjusted_value
-      )
-    );
-    row.team_adjusted_value = parseFloat(
-      Math.max(0, Math.min(saneCap, rawTeam)).toFixed(2)
-    );
+      rosterSlotKeysForFit,
+    });
     if (options?.debugSignals) {
+      const needMult = positionalNeedMultiplier(lp, openSlots);
+      const tokens = playerTokensFromLean(lp);
+      const drop = maxReplacementDropoff(
+        row.baseline_value,
+        tokens,
+        replForTeam,
+        rosterSlotKeysForFit
+      );
+      const dropMult =
+        Object.keys(replForTeam).length > 0
+          ? 1 + 0.22 * Math.min(1.25, drop / Math.max(8, row.baseline_value))
+          : 1;
       row.debug_v2 = {
         ...(row.debug_v2 ?? {}),
         team_multipliers: {

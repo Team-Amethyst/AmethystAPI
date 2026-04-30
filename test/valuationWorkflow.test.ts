@@ -317,6 +317,56 @@ describe("executeValuationWorkflow", () => {
     expect(hi.team_adjusted_value!).toBeGreaterThan(lo.team_adjusted_value!);
   });
 
+  it("early neutral v2 keeps pitcher recommended_bid near adjusted_value", () => {
+    const localPlayers: LeanPlayer[] = [
+      {
+        _id: "sp1",
+        mlbId: 501,
+        name: "AceSP",
+        team: "MIL",
+        position: "SP",
+        adp: 25,
+        tier: 1,
+        value: 68,
+      },
+      ...Array.from({ length: 120 }, (_, i) => ({
+        _id: `of_${i}`,
+        mlbId: 8000 + i,
+        name: `OF_${i}`,
+        team: "NYY",
+        position: "OF",
+        adp: 100 + i,
+        tier: 3,
+        value: 12,
+      })),
+    ];
+    const input = minimalInput({
+      inflation_model: "replacement_slots_v2",
+      roster_slots: [
+        { position: "C", count: 1 },
+        { position: "1B", count: 1 },
+        { position: "2B", count: 1 },
+        { position: "3B", count: 1 },
+        { position: "SS", count: 1 },
+        { position: "OF", count: 3 },
+        { position: "UTIL", count: 1 },
+        { position: "SP", count: 5 },
+        { position: "RP", count: 3 },
+      ],
+      drafted_players: [],
+      num_teams: 12,
+      total_budget: 260,
+    });
+    const res = executeValuationWorkflow(localPlayers, input);
+    expect(res.ok).toBe(true);
+    if (!res.ok) return;
+    const sp = res.response.valuations.find((v) => v.player_id === "501");
+    expect(sp).toBeDefined();
+    const a = sp!.adjusted_value;
+    const cap = Math.max(a + 5, a * 1.45);
+    expect(sp!.recommended_bid!).toBeLessThanOrEqual(cap + 0.01);
+  });
+
   it("when budget_by_team_id is set, ignores paid on drafted_players", () => {
     const highPaid = minimalInput({
       drafted_players: [
