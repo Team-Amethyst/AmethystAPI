@@ -9,6 +9,7 @@ export interface IApiKey extends Document {
   keyPrefix: string;
   label: string;
   owner: string;
+  developerAccountId?: mongoose.Types.ObjectId | null;
   /** Optional; unique synthetic value may be assigned for legacy Mongo unique indexes on email */
   email?: string;
   tier: ApiKeyTier;
@@ -48,6 +49,13 @@ const apiKeySchema = new Schema<IApiKey>(
       type: String,
       required: true,
       trim: true,
+    },
+    developerAccountId: {
+      type: Schema.Types.ObjectId,
+      ref: "DeveloperAccount",
+      required: false,
+      default: null,
+      index: true,
     },
     email: {
       type: String,

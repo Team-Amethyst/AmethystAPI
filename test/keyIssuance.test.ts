@@ -5,10 +5,21 @@ import keyIssuanceRoutes from "../src/routes/keyIssuance";
 import errorHandler from "../src/middleware/errorHandler";
 
 const createMock = vi.fn();
+const findByIdMock = vi.fn();
+const findOneMock = vi.fn();
+const developerCreateMock = vi.fn();
 
 vi.mock("../src/models/ApiKey", () => ({
   default: {
     create: (...args: unknown[]) => createMock(...args),
+  },
+}));
+
+vi.mock("../src/models/DeveloperAccount", () => ({
+  default: {
+    findById: (...args: unknown[]) => findByIdMock(...args),
+    findOne: (...args: unknown[]) => findOneMock(...args),
+    create: (...args: unknown[]) => developerCreateMock(...args),
   },
 }));
 
@@ -22,6 +33,16 @@ describe("POST /api/keys/issue", () => {
     vi.resetAllMocks();
     process.env.KEY_ISSUANCE_ENABLED = "1";
     delete process.env.KEY_ISSUANCE_SECRET;
+    findByIdMock.mockResolvedValue(null);
+    findOneMock.mockResolvedValue(null);
+    developerCreateMock.mockResolvedValue({
+      _id: "507f1f77bcf86cd799439011",
+      displayName: "Acme Draft",
+      normalizedName: "acme draft",
+      contactEmail: "a@b.co",
+      organization: null,
+      isActive: true,
+    });
   });
 
   afterEach(() => {
@@ -69,9 +90,11 @@ describe("POST /api/keys/issue", () => {
     expect(res.body.tier).toBe("free");
     expect(res.body.label).toBe("Acme Draft (a@b.co)");
     expect(res.body.email).toBe("a@b.co");
+    expect(res.body.developerAccountId).toBe("507f1f77bcf86cd799439011");
     expect(createMock).toHaveBeenCalledTimes(1);
     const arg = createMock.mock.calls[0][0] as Record<string, unknown>;
     expect(arg.owner).toBe("Acme Draft");
+    expect(arg.developerAccountId).toBe("507f1f77bcf86cd799439011");
     expect(arg.keyHash).toBeTruthy();
     expect(arg.keyPrefix).toBeTruthy();
     expect(Array.isArray(arg.scopes)).toBe(true);

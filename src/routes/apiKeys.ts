@@ -8,6 +8,7 @@ import {
   normalizeScopes,
 } from "../lib/apiKey";
 import { ValidationError, NotFoundError } from "../lib/appError";
+import { resolveDeveloperAccount } from "../lib/developerAccounts";
 
 const router: Router = Router();
 
@@ -18,6 +19,8 @@ interface CreateApiKeyBody {
   scopes: unknown;
   email?: string;
   expiresAt?: string;
+  developerAccountId?: string;
+  organization?: string;
 }
 
 const listKeys: RequestHandler = async (_req, res, next) => {
@@ -31,6 +34,7 @@ const listKeys: RequestHandler = async (_req, res, next) => {
         id: doc._id,
         label: doc.label,
         owner: doc.owner,
+        developerAccountId: doc.developerAccountId ?? null,
         tier: doc.tier,
         scopes: doc.scopes,
         keyPrefix: doc.keyPrefix,
@@ -82,11 +86,18 @@ const createKey: RequestHandler = async (req, res, next) => {
   const email = allocateUniqueKeyEmail(body.email);
 
   try {
+    const developerAccount = await resolveDeveloperAccount({
+      developerAccountId: body.developerAccountId,
+      owner,
+      email: body.email,
+      organization: body.organization,
+    });
     const created = await ApiKey.create({
       keyHash,
       keyPrefix,
       label,
       owner,
+      developerAccountId: developerAccount._id,
       email,
       tier,
       scopes,
@@ -99,6 +110,7 @@ const createKey: RequestHandler = async (req, res, next) => {
       id: created._id,
       label: created.label,
       owner: created.owner,
+      developerAccountId: created.developerAccountId ?? null,
       tier: created.tier,
       scopes: created.scopes,
       keyPrefix: created.keyPrefix,
