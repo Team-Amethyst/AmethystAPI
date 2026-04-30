@@ -8,6 +8,14 @@ This map documents where each pricing responsibility lives after the refactor.
   - Orchestrates request-scoped valuation flow end to end.
   - Handles player filtering, rank labels (Steal/Reach/Fair), row shaping, and response assembly.
 
+## Row shaping and identity helpers
+
+- `src/services/valuationRows.ts`
+  - Deterministic value/ADP sorting helpers.
+  - Per-row adjusted/baseline/inflation shaping with indicator assignment.
+- `src/lib/playerId.ts`
+  - Canonical player id resolution (`mlbId` fallback to `_id`).
+
 ## Inflation model branch logic
 
 - `src/services/inflationModel.ts`

@@ -28,6 +28,12 @@ import {
   buildLeagueSlotDemand,
   playerTokensFromLean,
 } from "../lib/fantasyRosterSlots";
+import { getPlayerId } from "../lib/playerId";
+import {
+  buildValuedRows,
+  compareByAdpAsc,
+  compareByValueDesc,
+} from "./valuationRows";
 import type {
   CalculateInflationOptions,
   DraftedPlayer,
@@ -36,18 +42,8 @@ import type {
   LeanPlayer,
   LeagueScope,
   RosterSlot,
-  ValuedPlayer,
-  ValueIndicator,
   ValuationResponse,
 } from "../types/brain";
-
-/**
- * A player is a "Steal" if ADP rank is significantly later than value rank
- * (the market undervalues them) and a "Reach" if ADP rank is significantly
- * earlier than value rank (the market overvalues them).
- */
-const STEAL_SLOPE = 1.25; // ADP rank ≥ 25% later than value rank
-const REACH_SLOPE = 0.75; // ADP rank ≥ 25% earlier than value rank
 
 const DETERMINISTIC_CALCULATED_AT = "1970-01-01T00:00:00.000Z";
 
@@ -62,61 +58,7 @@ const DEFAULT_USER_TEAM_ID = "team_1";
 /** Draftable pool size = ceil(remaining_slots × multiplier), capped by undrafted count. */
 const DEFAULT_SURPLUS_DRAFTABLE_MULTIPLIER = 1.35;
 
-/**
- * Returns the canonical ID used to match this player against drafted_players.
- * Prefers mlbId (string) since that's what Draftroom sends; falls back to _id.
- */
-export function getPlayerId(player: LeanPlayer): string {
-  return player.mlbId != null ? String(player.mlbId) : String(player._id);
-}
-
-/** Deterministic 32-bit mix for seeded tie-breaks (grading / CI). */
-function hash32(seed: number, s: string): number {
-  let h = seed >>> 0;
-  for (let i = 0; i < s.length; i++) {
-    h = Math.imul(31, h) + s.charCodeAt(i);
-    h >>>= 0;
-  }
-  return h >>> 0;
-}
-
-function compareByValueDesc(
-  a: LeanPlayer,
-  b: LeanPlayer,
-  options?: CalculateInflationOptions
-): number {
-  const diff = (b.value || 0) - (a.value || 0);
-  if (diff !== 0) return diff;
-  if (
-    options?.deterministic &&
-    options.seed != null &&
-    Number.isFinite(options.seed)
-  ) {
-    return (
-      hash32(options.seed, getPlayerId(a)) - hash32(options.seed, getPlayerId(b))
-    );
-  }
-  return getPlayerId(a).localeCompare(getPlayerId(b));
-}
-
-function compareByAdpAsc(
-  a: LeanPlayer,
-  b: LeanPlayer,
-  options?: CalculateInflationOptions
-): number {
-  const diff = (a.adp || 9999) - (b.adp || 9999);
-  if (diff !== 0) return diff;
-  if (
-    options?.deterministic &&
-    options.seed != null &&
-    Number.isFinite(options.seed)
-  ) {
-    return (
-      hash32(options.seed, getPlayerId(a)) - hash32(options.seed, getPlayerId(b))
-    );
-  }
-  return getPlayerId(a).localeCompare(getPlayerId(b));
-}
+export { getPlayerId } from "../lib/playerId";
 
 function resolveDraftPhase(params: {
   rosterSlots: RosterSlot[];
@@ -211,7 +153,6 @@ export function calculateInflation(
     byValueFull.map((p, i) => [getPlayerId(p), i + 1])
   );
   const adpRank = new Map(byAdpFull.map((p, i) => [getPlayerId(p), i + 1]));
-  const n = undraftedFull.length;
 
   const byValueRows = [...undraftedForRows].sort((a, b) =>
     compareByValueDesc(a, b, options)
@@ -271,79 +212,16 @@ export function calculateInflation(
     getPlayerId,
   });
 
-  const valuations: ValuedPlayer[] = byValueRows.map((p) => {
-    const pid = getPlayerId(p);
-    const baselineValue = p.value || 0;
-    let adjustedValue: number;
-    if (inflationModelEffective === "replacement_slots_v2" && v2Result) {
-      const sb = v2Result.playerIdToSurplusBasis.get(pid) ?? 0;
-      if (v2Result.baselineOnly) {
-        adjustedValue = parseFloat(baselineValue.toFixed(2));
-      } else if (
-        v2Result.fallback_reason === "no_surplus_mass" &&
-        v2Result.surplus_cash > 0
-      ) {
-        adjustedValue = parseFloat(
-          Math.max(MIN_AUCTION_BID, baselineValue).toFixed(2)
-        );
-      } else {
-        adjustedValue = parseFloat(
-          (MIN_AUCTION_BID + inflationFactor * sb).toFixed(2)
-        );
-      }
-    } else if (inflationModelEffective === "surplus_slots_v1") {
-      adjustedValue = parseFloat(
-        (
-          MIN_AUCTION_BID +
-          inflationFactor * Math.max(0, baselineValue - replacementValue)
-        ).toFixed(2)
-      );
-    } else {
-      adjustedValue = parseFloat(
-        (baselineValue * inflationFactor).toFixed(2)
-      );
-    }
-    const meta = (
-      p.projection as
-        | {
-            __valuation_meta__?: {
-              scoring_format?: "5x5" | "6x6" | "points";
-              projection_component?: number;
-              scarcity_component?: number;
-            };
-          }
-        | undefined
-    )?.__valuation_meta__;
-
-    let indicator: ValueIndicator = "Fair Value";
-    if (n > 0) {
-      const vRank = valueRank.get(pid) ?? 0;
-      const aRank = adpRank.get(pid) ?? 0;
-      if (aRank > vRank * STEAL_SLOPE) indicator = "Steal";
-      else if (aRank < vRank * REACH_SLOPE) indicator = "Reach";
-    }
-
-    return {
-      player_id: pid,
-      name: p.name,
-      position: p.position,
-      team: p.team,
-      adp: p.adp || 0,
-      tier: p.tier || 0,
-      baseline_value: baselineValue,
-      adjusted_value: adjustedValue,
-      indicator,
-      inflation_factor: parseFloat(inflationFactor.toFixed(4)),
-      baseline_components: {
-        scoring_format: meta?.scoring_format ?? "default",
-        projection_component: meta?.projection_component ?? 0,
-        scarcity_component: meta?.scarcity_component ?? 0,
-      },
-      // scarcity_adjustment: always 0 — roster/scarcity is in baseline_value (baseline_components).
-      scarcity_adjustment: 0,
-      // inflation_adjustment: full delta from inflation pass (adjusted − baseline).
-      inflation_adjustment: parseFloat((adjustedValue - baselineValue).toFixed(2)),
-    };
+  const valuations = buildValuedRows({
+    byValueRows,
+    inflationModelEffective,
+    v2Result,
+    replacementValue,
+    inflationFactor,
+    minAuctionBid: MIN_AUCTION_BID,
+    valueRank,
+    adpRank,
+    undraftedCount: undraftedFull.length,
   });
 
   const leagueCap = leagueSlotCapacity(rosterSlots, numTeams);
