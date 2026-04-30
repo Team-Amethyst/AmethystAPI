@@ -29,6 +29,7 @@ Stateless analytical API for fantasy baseball. Receives draft state and league s
 | [ENGINE_AGENT_BRIEF.md](ENGINE_AGENT_BRIEF.md) | **Handoff for agents / new contributors** — Draft ↔ Engine HTTP contract, headers, flat valuation body, fixtures, checklist. |
 | [docs/valuation-response-field-audit.md](docs/valuation-response-field-audit.md) | **Response-field semantics & QA** — what each valuation field means, known decomposition gaps, `pnpm run audit:valuation-response`. |
 | [docs/valuation-inflation-semantics.md](docs/valuation-inflation-semantics.md) | **Inflation contract** — `inflation_model` (`global_v1` vs `surplus_slots_v1`), `player_ids` as output filter, `inflation_raw` / cap-floor, aggregates. |
+| [docs/valuation-module-map.md](docs/valuation-module-map.md) | **Code ownership map** — which valuation module owns inflation branch logic, recommended-bid heuristics, and team-adjusted economics. |
 | [openapi/openapi.yaml](openapi/openapi.yaml) | **Human-facing API spec** — paths, headers, success/error shapes, budget rules, tracing. |
 | [schemas/valuation-request.v1.schema.json](schemas/valuation-request.v1.schema.json) | **Machine validation** for the flat `POST /valuation/calculate` body (keep in sync with Draft). |
 | [schemas/valuation-request-v1.json](schemas/valuation-request-v1.json) | Nested `{ league, draft_state }` alternate (fixtures / legacy). |
