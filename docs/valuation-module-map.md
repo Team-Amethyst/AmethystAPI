@@ -8,6 +8,13 @@ This map documents where each pricing responsibility lives after the refactor.
   - Orchestrates request-scoped valuation flow end to end.
   - Handles player filtering, rank labels (Steal/Reach/Fair), row shaping, and response assembly.
 
+## Post-inflation row passes
+
+- `src/services/inflationPostProcess.ts`
+  - Draft phase from league slot fill.
+  - `recommended_bid` pass (depth ordering + optional `debug_v2` lambda/replacement lines).
+  - `team_adjusted_value` + `edge` pass (symmetric-open collapse lives here).
+
 ## Row shaping and identity helpers
 
 - `src/services/valuationRows.ts`
@@ -15,6 +22,23 @@ This map documents where each pricing responsibility lives after the refactor.
   - Per-row adjusted/baseline/inflation shaping with indicator assignment.
 - `src/lib/playerId.ts`
   - Canonical player id resolution (`mlbId` fallback to `_id`).
+
+## Request parsing (valuation calculate)
+
+- `src/lib/valuationRequestSchemas.ts` — Zod schemas for flat vs nested bodies.
+- `src/lib/valuationRequestNormalization.ts` — map parsed payloads → `NormalizedValuationInput`.
+- `src/lib/valuationRequest.ts` — `parseValuationRequest` / economics validation entrypoints.
+
+## Fantasy roster slots
+
+- `src/lib/fantasyPositioning.ts` — tokenization, hitter/pitcher checks, slot fit rules.
+- `src/lib/fantasySlotAssignment.ts` — league demand, greedy assignment, replacement levels, surplus max.
+- `src/lib/fantasyRosterSlots.ts` — **barrel** re-export (stable import path for callers).
+
+## Shared TypeScript contracts
+
+- `src/types/brain.ts` — re-exports domain types for a single import surface.
+- `src/types/core.ts`, `src/types/valuation.ts`, … — split files by domain to keep each file small.
 
 ## Inflation model branch logic
 
