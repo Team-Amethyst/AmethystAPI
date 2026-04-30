@@ -54,31 +54,11 @@ const DEFAULT_SURPLUS_DRAFTABLE_MULTIPLIER = 1.35;
 export { getPlayerId } from "../lib/playerId";
 
 /**
- * Calculates auction inflation and returns adjusted player valuations.
+ * Orchestrates the valuation pipeline: pool selection → inflation model branch → row shaping →
+ * recommended bid smoothing → team-adjusted economics → response assembly.
  *
- * **Budget (contract):**
- * - If `options.budgetByTeamId` is non-empty: `total_budget_remaining` = **sum of map values**
- *   (per-team **remaining** dollars). **`paid` on `drafted_players` is ignored** for that request.
- * - Otherwise: `total_budget_remaining` = `total_budget * num_teams` − **sum(`drafted_players[].paid`)**
- *   (missing `paid` treated as 0). **`pre_draft_rosters`, `minors`, and `taxi` do not affect spend in v1.**
- *
- * **`inflation_model`:**
- * - `global_v1` — `inflation_factor` ≈ remaining budget ÷ sum of baseline $ on the **full** undrafted pool;
- *   `adjusted_value` = `baseline_value × inflation_factor`.
- * - `surplus_slots_v1` — reserves `MIN_AUCTION_BID` per remaining empty roster slot, builds a
- *   top-by-baseline draftable slice sized from those slots, sets replacement at the slice floor,
- *   then `inflation_raw = surplus_cash / Σ max(0, baseline − replacement)` on that slice and
- *   `adjusted_value = MIN_AUCTION_BID + inflation_factor × max(0, baseline − replacement)` for
- *   every undrafted row. Falls back to `global_v1` math when the surplus plan is degenerate.
- * - `replacement_slots_v2` — slot/position-aware replacement levels + surplus allocation
- *   (preferred for Draftroom). Never falls back to `global_v1`; see response metadata.
- *
- * **`player_ids`:** does not change the inflation denominator; it only filters
- * which rows appear in `valuations[]` (same parameters applied to each).
- *
- * Value Indicator:
- *   Ranks use the **full** undrafted pool so Steal/Reach stay meaningful when
- *   `valuations[]` is a subset.
+ * Contract details (budget semantics, model meanings, `player_ids` subset behavior) live in
+ * `docs/valuation-inflation-semantics.md` and `docs/valuation-module-map.md`.
  */
 export function calculateInflation(
   allPlayers: LeanPlayer[],
