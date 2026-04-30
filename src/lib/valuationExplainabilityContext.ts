@@ -1,4 +1,3 @@
-import crypto from "crypto";
 import { analyzeScarcity } from "../services/scarcityEngine";
 import type { LeanPlayer, NormalizedValuationInput, ValuationResponse } from "../types/brain";
 import {
@@ -13,70 +12,17 @@ import {
   stripAlertPrefix,
   type InflationHeadlineBasis,
 } from "./valuationExplainabilityHelpers";
+import {
+  explainabilityCacheKey,
+  sortPositionAlerts,
+  upsertCachedContext,
+  type CachedExplainabilityContext as CachedContext,
+  type ExplainabilityScope,
+} from "./valuationExplainabilityCache";
 
-export type ExplainabilityScope = {
-  playerId?: string;
-  position?: string;
-};
-
-type CachedContext = NonNullable<ValuationResponse["context_v2"]> & {
-  market_notes: string[];
-};
+export type { ExplainabilityScope } from "./valuationExplainabilityCache";
 
 const contextCache = new Map<string, CachedContext>();
-
-function explainabilityCacheKey(
-  response: ValuationResponse,
-  input: NormalizedValuationInput,
-  scope: ExplainabilityScope
-): string {
-  const payload = JSON.stringify({
-    model: response.valuation_model_version ?? "unknown",
-    inflationModel: response.inflation_model,
-    inflation: response.inflation_factor,
-    indexVsOpen: response.inflation_index_vs_opening_auction ?? null,
-    inflationRaw: response.inflation_raw,
-    inflationBounded: response.inflation_bounded_by,
-    budget: response.total_budget_remaining,
-    players: response.players_remaining,
-    v2meta:
-      response.inflation_model === "replacement_slots_v2"
-        ? {
-            remaining_slots: response.remaining_slots ?? null,
-            surplus_cash: response.surplus_cash ?? null,
-            total_surplus_mass: response.total_surplus_mass ?? null,
-            draftable_pool_size: response.draftable_pool_size ?? null,
-            fallback_reason: response.fallback_reason ?? null,
-            repl: response.replacement_values_by_slot_or_position ?? null,
-          }
-        : null,
-    leagueId: input.league_id ?? null,
-    scope,
-    drafted: input.drafted_players.map((d) => [
-      d.player_id,
-      d.team_id,
-      d.paid ?? null,
-    ]),
-    budgets: input.budget_by_team_id ?? null,
-    leagueScope: input.league_scope,
-  });
-  return crypto.createHash("sha1").update(payload).digest("hex");
-}
-
-function sortPositionAlerts<T extends { severity: string; urgency_score: number; position: string }>(
-  alerts: T[]
-): T[] {
-  return [...alerts].sort((a, b) => {
-    const sevRank = { critical: 4, high: 3, medium: 2, low: 1 } as const;
-    const bySeverity =
-      (sevRank[b.severity as keyof typeof sevRank] ?? 0) -
-      (sevRank[a.severity as keyof typeof sevRank] ?? 0);
-    if (bySeverity !== 0) return bySeverity;
-    const byUrgency = b.urgency_score - a.urgency_score;
-    if (byUrgency !== 0) return byUrgency;
-    return a.position.localeCompare(b.position);
-  });
-}
 
 /**
  * Cached league/market context used by `attachValuationExplainability` (expensive scarcity scan).
@@ -219,11 +165,8 @@ export function getOrBuildExplainabilityContext(params: {
     ...scarcity.monopoly_warnings.slice(0, 2).map((w) => stripAlertPrefix(w.message)),
   ];
 
-  const cached: CachedContext = { ...context, market_notes: marketNotes };
-  contextCache.set(key, cached);
-  if (contextCache.size > 200) {
-    const oldest = contextCache.keys().next().value;
-    if (oldest) contextCache.delete(oldest);
-  }
-  return cached;
+  return upsertCachedContext(contextCache, key, {
+    ...context,
+    market_notes: marketNotes,
+  });
 }
