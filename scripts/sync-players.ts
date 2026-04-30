@@ -52,6 +52,21 @@ type SplitAgg = {
   pit?: MlbStatSplit;
 };
 
+type PlayerSyncDoc = {
+  mlbId: number;
+  name: string;
+  team: string;
+  position: string;
+  positions?: string[];
+  age: number;
+  value: number;
+  tier: number;
+  stats: Record<string, unknown>;
+  projection: Record<string, unknown>;
+  outlook: string;
+  adp?: number;
+};
+
 function addMlbPositionAbbrev(set: Set<string>, abbrev?: string): void {
   if (!abbrev) return;
   const u = abbrev.trim().toUpperCase();
@@ -68,7 +83,7 @@ function buildPlayerDocFromAgg(
   agg: SplitAgg,
   bio: MlbPlayer | undefined,
   teamIdToAbbr: Map<number, string>
-): Record<string, unknown> | null {
+): PlayerSyncDoc | null {
   const batVal = agg.bat ? calcBatterValue(agg.bat.stat) : 0;
   const pitVal = agg.pit ? calcPitcherValue(agg.pit.stat) : 0;
   if (batVal <= 0 && pitVal <= 0) return null;
@@ -158,7 +173,7 @@ function buildPlayerDocFromAgg(
     };
   }
 
-  const doc: Record<string, unknown> = {
+  const doc: PlayerSyncDoc = {
     mlbId,
     name: agg.bat?.player.fullName ?? agg.pit?.player.fullName ?? bio?.fullName ?? "Unknown",
     team,
@@ -189,10 +204,10 @@ async function fetchJson<T>(url: string): Promise<T> {
   return res.json() as Promise<T>;
 }
 
-async function sync() {
-  await mongoose.connect(MONGO_URI as string);
-  console.log(`[MongoDB] Connected — syncing season ${SEASON}`);
-
+async function fetchSeasonSplits(): Promise<{
+  batSplits: MlbStatSplit[];
+  pitSplits: MlbStatSplit[];
+}> {
   const [batJson, pitJson] = await Promise.all([
     fetchJson<{ stats: { splits: MlbStatSplit[] }[] }>(
       `${MLB_API}/stats?stats=season&group=hitting&season=${SEASON}&playerPool=ALL&limit=400&sportId=1`
@@ -201,11 +216,12 @@ async function sync() {
       `${MLB_API}/stats?stats=season&group=pitching&season=${SEASON}&playerPool=ALL&limit=300&sportId=1`
     ),
   ]);
-
   const batSplits = batJson.stats?.[0]?.splits ?? [];
   const pitSplits = pitJson.stats?.[0]?.splits ?? [];
-  console.log(`[MLB API] ${batSplits.length} batting splits, ${pitSplits.length} pitching splits`);
+  return { batSplits, pitSplits };
+}
 
+async function fetchTeamAbbrevMap(): Promise<Map<number, string>> {
   const teamsJson = await fetchJson<{ teams: { id: number; abbreviation: string }[] }>(
     `${MLB_API}/teams?sportId=1&season=${SEASON}`
   );
@@ -213,25 +229,27 @@ async function sync() {
   for (const t of teamsJson.teams ?? []) {
     teamIdToAbbr.set(t.id, t.abbreviation);
   }
-  console.log(`[MLB API] Loaded ${teamIdToAbbr.size} team abbreviations`);
+  return teamIdToAbbr;
+}
 
-  // Fetch bio data for all players
-  const playerIds = [
-    ...new Set([...batSplits.map((s) => s.player.id), ...pitSplits.map((s) => s.player.id)]),
-  ].slice(0, 600);
-
+async function fetchBioMap(playerIds: number[]): Promise<Map<number, MlbPlayer>> {
   const bioMap = new Map<number, MlbPlayer>();
+  if (playerIds.length === 0) return bioMap;
   try {
     const bioJson = await fetchJson<{ people: MlbPlayer[] }>(
       `${MLB_API}/people?personIds=${playerIds.join(",")}&hydrate=currentTeam`
     );
     for (const p of bioJson.people ?? []) bioMap.set(p.id, p);
-    console.log(`[MLB API] Fetched bio for ${bioMap.size} players`);
   } catch (err) {
     console.warn("[MLB API] Bio fetch failed (non-fatal):", (err as Error).message);
   }
+  return bioMap;
+}
 
-  /** Merge hitting + pitching splits per player so two-way rows keep both stat blobs and eligibilities. */
+function aggregatePositiveSplits(
+  batSplits: MlbStatSplit[],
+  pitSplits: MlbStatSplit[]
+): Map<number, SplitAgg> {
   const aggMap = new Map<number, SplitAgg>();
   for (const s of batSplits) {
     if (calcBatterValue(s.stat) <= 0) continue;
@@ -245,8 +263,38 @@ async function sync() {
     row.pit = s;
     aggMap.set(s.player.id, row);
   }
+  return aggMap;
+}
 
-  const playerMap = new Map<number, Record<string, unknown>>();
+function assignAdpByValue(players: PlayerSyncDoc[]): PlayerSyncDoc[] {
+  const sorted = [...players].sort((a, b) => b.value - a.value);
+  sorted.forEach((p, i) => {
+    p.adp = i + 1;
+  });
+  return sorted;
+}
+
+async function sync() {
+  await mongoose.connect(MONGO_URI as string);
+  console.log(`[MongoDB] Connected — syncing season ${SEASON}`);
+
+  const { batSplits, pitSplits } = await fetchSeasonSplits();
+  console.log(`[MLB API] ${batSplits.length} batting splits, ${pitSplits.length} pitching splits`);
+
+  const teamIdToAbbr = await fetchTeamAbbrevMap();
+  console.log(`[MLB API] Loaded ${teamIdToAbbr.size} team abbreviations`);
+
+  // Fetch bio data for all players (bounded to avoid oversized query string).
+  const playerIds = [
+    ...new Set([...batSplits.map((s) => s.player.id), ...pitSplits.map((s) => s.player.id)]),
+  ].slice(0, 600);
+
+  const bioMap = await fetchBioMap(playerIds);
+  console.log(`[MLB API] Fetched bio for ${bioMap.size} players`);
+
+  /** Merge hitting + pitching splits per player so two-way rows keep both stat blobs and eligibilities. */
+  const aggMap = aggregatePositiveSplits(batSplits, pitSplits);
+  const playerMap = new Map<number, PlayerSyncDoc>();
   for (const [mlbId, agg] of aggMap) {
     const bio = bioMap.get(mlbId);
     const doc = buildPlayerDocFromAgg(mlbId, agg, bio, teamIdToAbbr);
@@ -254,10 +302,7 @@ async function sync() {
   }
 
   // Assign ADP by value rank
-  const players = [...playerMap.values()].sort(
-    (a, b) => (b.value as number) - (a.value as number)
-  );
-  players.forEach((p, i) => { p.adp = i + 1; });
+  const players = assignAdpByValue([...playerMap.values()]);
 
   // Upsert all players — safe to re-run
   const ops = players.map((p) => ({
