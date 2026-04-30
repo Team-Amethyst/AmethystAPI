@@ -85,6 +85,13 @@ This map documents where each pricing responsibility lives after the refactor.
 - `scripts/audit-player-eligibility.ts`
   - Post-sync QA script (`pnpm sync-players:verify`).
 
+## Replay + simulation helpers
+
+- `src/services/mockPickEngine.ts` — mock pick orchestration over pool + team needs.
+- `src/services/mockPickHelpers.ts` — slot-fit and team-needs calculations used by simulation.
+- `src/lib/replayMongoFixtureMerge.ts` — fixture/Mongo identity merge orchestrator.
+- `src/lib/replayMongoNameMatching.ts` — folded-name key expansion + alias matching utilities.
+
 ## Explainability (additive UI fields)
 
 - `src/lib/valuationExplainability.ts` — public entry (`attachValuationExplainability`).

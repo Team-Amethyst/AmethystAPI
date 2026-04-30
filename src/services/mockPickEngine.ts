@@ -1,7 +1,6 @@
 import { filterByScope } from "../lib/leagueScope";
-import { getPlayerId } from "./inflationEngine";
+import { getPlayerId } from "../lib/playerId";
 import {
-  DraftedPlayer,
   LeanPlayer,
   LeagueScope,
   MockPickTeam,
@@ -9,73 +8,7 @@ import {
   MockPickResponse,
   RosterSlot,
 } from "../types/brain";
-
-/**
- * Returns true if a player is eligible for the given roster slot.
- * Handles multi-position eligibility (e.g. "2B/SS") and flex slots.
- */
-function fitsSlot(playerPosition: string, slotPosition: string): boolean {
-  const slot = slotPosition.toUpperCase();
-  if (slot === "BN" || slot === "UTIL") return true; // flex slots accept anyone
-  return playerPosition.toUpperCase().includes(slot);
-}
-
-function draftedPlayerFitsSlot(dp: DraftedPlayer, slotPosition: string): boolean {
-  if (fitsSlot(dp.position, slotPosition)) return true;
-  return (
-    dp.positions?.some((pos) => fitsSlot(pos, slotPosition)) ?? false
-  );
-}
-
-/**
- * Calculates how urgently a team needs to fill each roster slot.
- * Returns a map of position → need ratio (higher = more urgent).
- * Need ratio = unfilled_slots / total_slots_of_that_type
- */
-function calcTeamNeeds(
-  team: MockPickTeam,
-  rosterSlots: RosterSlot[]
-): Map<string, number> {
-  const needs = new Map<string, number>();
-
-  // Count existing players per position category
-  const currentCounts = new Map<string, number>();
-  for (const dp of team.roster) {
-    for (const slot of rosterSlots) {
-      if (
-        slot.position !== "BN" &&
-        slot.position !== "UTIL" &&
-        draftedPlayerFitsSlot(dp, slot.position)
-      ) {
-        currentCounts.set(
-          slot.position,
-          (currentCounts.get(slot.position) ?? 0) + 1
-        );
-        break; // count the player in the first matching slot only
-      }
-    }
-  }
-
-  // Aggregate slot requirements
-  const slotTotals = new Map<string, number>();
-  for (const slot of rosterSlots) {
-    if (slot.position === "BN" || slot.position === "UTIL") continue;
-    slotTotals.set(
-      slot.position,
-      (slotTotals.get(slot.position) ?? 0) + slot.count
-    );
-  }
-
-  for (const [pos, required] of slotTotals) {
-    const have = Math.min(currentCounts.get(pos) ?? 0, required);
-    const unfilled = required - have;
-    if (unfilled > 0) {
-      needs.set(pos, unfilled / required); // normalized urgency
-    }
-  }
-
-  return needs;
-}
+import { calcTeamNeeds, fitsSlot } from "./mockPickHelpers";
 
 /**
  * Predicts the most likely pick for each team in the pick_order using
@@ -104,7 +37,9 @@ export function simulateMockPicks(
     teams.flatMap((t) => t.roster.map((p) => p.player_id))
   );
 
-  const poolMap = new Map(scoped.map((p) => [getPlayerId(p), p]));
+  const poolMap = new Map<string, LeanPlayer>(
+    scoped.map((p): [string, LeanPlayer] => [getPlayerId(p), p])
+  );
   const explicitPool = availablePlayerIds
     ? new Set(availablePlayerIds)
     : null;
