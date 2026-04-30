@@ -78,6 +78,12 @@ This map documents where each pricing responsibility lives after the refactor.
 - `scripts/audit-player-eligibility.ts`
   - Post-sync QA script (`pnpm sync-players:verify`).
 
+## Explainability (additive UI fields)
+
+- `src/lib/valuationExplainability.ts` — public entry (`attachValuationExplainability`).
+- `src/lib/valuationExplainabilityHelpers.ts` — string/formatting + per-row driver construction.
+- `src/lib/valuationExplainabilityContext.ts` — cached `context_v2` + `market_notes` assembly (scarcity scan).
+
 ## Test coverage map
 
 - `test/valuationWorkflow.test.ts` — workflow and output behavior.
