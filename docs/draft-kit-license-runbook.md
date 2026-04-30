@@ -39,7 +39,11 @@ Rotate keys via existing **`POST /api/keys/:id/revoke`** and issue new secrets; 
 2. **Debounced** `POST /valuation/calculate` (e.g. 150–400 ms) so rapid UI edits do not stampede the API.
 3. Rely on the fact that **valuation responses are not Redis-cached** so returned dollars always match the latest request body.
 
-## Developer portal UI (out of this repo)
+## Developer portal UI (served from this repo)
+
+The static portal at **`public/index.html`** (same origin as the API) registers a **developer account** via **`POST /api/developers`** before the billing placeholder step, then calls **`POST /api/keys/issue`** with **`developerAccountId`** so keys are explicitly tied to that record. There is still **no password login** — the key remains the secret.
+
+For a fully custom UI (Draftroom, etc.), call the same APIs:
 
 Account and key UX should call:
 

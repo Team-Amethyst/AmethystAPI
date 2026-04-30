@@ -217,10 +217,11 @@ Keys are stored in the `apikeys` MongoDB collection.
 
 ### One-off keys (developer portal)
 
-The bundled developer portal (**Get a key** tab) can mint a key through **`POST /api/keys/issue`** unless issuance is explicitly turned off. The plaintext is returned **once** in the JSON body; there is no account recovery.
+The bundled developer portal (**Get a key** tab) registers a **developer account** with **`POST /api/developers`** (display name, optional email and organization), then mints a key with **`POST /api/keys/issue`** including **`developerAccountId`**, unless issuance is explicitly turned off. There is **no password login**; the plaintext key is returned **once** in the JSON body (no key recovery).
 
 - **`GET /api/keys/status`** — `{ "issuanceEnabled": boolean, "requiresToken": boolean }` for the UI. Issuance defaults to **on**; set **`KEY_ISSUANCE_ENABLED=0`**, **`false`**, or **`off`** to disable.
-- **`POST /api/keys/issue`** — JSON body `{ "owner": string (required), "email"?: string, "tier"?: "free" | "standard" | "premium" }`. If **`KEY_ISSUANCE_SECRET`** is set in the environment, clients must send header **`X-Key-Issuance-Token`** with the same value.
+- **`POST /api/developers`** — `{ "displayName": string, "contactEmail"?: string, "organization"?: string }` — create or return an existing active account (deduped by email or normalized name).
+- **`POST /api/keys/issue`** — JSON body `{ "owner": string (required), "email"?: string, "tier"?: "free" | "standard" | "premium", "developerAccountId"?: string }`. If **`KEY_ISSUANCE_SECRET`** is set in the environment, clients must send header **`X-Key-Issuance-Token`** with the same value.
 
 Example (local, issuance enabled, no secret):
 
@@ -230,7 +231,7 @@ curl -sS -X POST "http://localhost:3002/api/keys/issue" \
   -d '{"owner":"local-dev","tier":"free"}' | jq .
 ```
 
-Successful responses include **`apiKey`**, a single string of the form **`amethyst_live_<hex>.<hex>`** (use it as the `x-api-key` value). **`POST /api/keys`** is the full programmatic create (label, owner, tier, scopes, optional expiry); **`POST /api/keys/issue`** is the portal-oriented shortcut (all scopes, no expiry).
+Successful issue responses include **`apiKey`** (use as `x-api-key`), **`developerAccountId`**, and metadata. **`POST /api/keys`** is the full programmatic create (label, owner, tier, scopes, optional expiry); **`POST /api/keys/issue`** is the portal-oriented shortcut (all scopes, no expiry).
 
 For **CI / pre-deploy smoke tests** that call both **Engine** (`x-api-key`) and **Draft** (`x-player-api-key` / Bearer), use the same step-by-step tone as your runbooks: [docs/pre-deploy-testing-keys.md](docs/pre-deploy-testing-keys.md).
 

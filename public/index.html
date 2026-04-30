@@ -1755,8 +1755,8 @@ player_id: player._id          <span class="t-cmt">// MongoDB ObjectId — not r
       <h2>Issue an API key</h2>
       <p class="section-desc">
         Generate a new <code style="color:var(--orange);background:rgba(251,146,60,0.1);padding:1px 6px;border-radius:3px;font-size:12px;">x-api-key</code> for this environment.
-        There are no user accounts: copy the key when it appears and store it in your secrets manager or <code style="font-size:12px">.env</code>.
-        The server never shows this value again.
+        Keys are tied to a <strong>developer account</strong> record (team / product identity, optional email) — there is <strong>no password login</strong> here; treat the key like a secret.
+        Copy the key when it appears and store it in your secrets manager or <code style="font-size:12px">.env</code>. The server never shows the key again.
       </p>
     </div>
 
@@ -1789,13 +1789,23 @@ player_id: player._id          <span class="t-cmt">// MongoDB ObjectId — not r
 
       <div class="portal-card" id="keysStep1">
         <div class="portal-field">
-          <label class="portal-label" for="keysOwner">License label <span style="color:var(--red)">*</span></label>
-          <input class="portal-input" id="keysOwner" maxlength="200" placeholder="e.g. Draftroom staging, CS 6310 project" autocomplete="organization" />
-          <p class="portal-hint">Shown in usage stats. Not a login — any short name your team recognizes.</p>
+          <label class="portal-label" for="keysAccountName">Developer account name <span style="color:var(--red)">*</span></label>
+          <input class="portal-input" id="keysAccountName" maxlength="200" placeholder="e.g. Draftroom, Acme Fantasy Labs" autocomplete="organization" />
+          <p class="portal-hint">Creates or reuses a <code style="font-size:11px">DeveloperAccount</code> via <code style="font-size:11px">POST /api/developers</code> (deduped by email or name). Used for licensing / support — not a login.</p>
+        </div>
+        <div class="portal-field">
+          <label class="portal-label" for="keysOrganization">Organization (optional)</label>
+          <input class="portal-input" id="keysOrganization" maxlength="200" placeholder="Company or school" autocomplete="organization" />
         </div>
         <div class="portal-field">
           <label class="portal-label" for="keysEmail">Contact email (optional)</label>
           <input class="portal-input" id="keysEmail" type="email" maxlength="254" placeholder="you@school.edu" autocomplete="email" />
+          <p class="portal-hint">Helps reuse the same developer account when you issue more keys later.</p>
+        </div>
+        <div class="portal-field">
+          <label class="portal-label" for="keysOwner">API key label <span style="color:var(--red)">*</span></label>
+          <input class="portal-input" id="keysOwner" maxlength="200" placeholder="e.g. Production server, CI bot" autocomplete="off" />
+          <p class="portal-hint">Shown on the key record and in usage exports. Defaults from your account name if you leave this blank when you continue.</p>
         </div>
         <div class="portal-field">
           <span class="portal-label">Tier</span>
@@ -1815,11 +1825,12 @@ player_id: player._id          <span class="t-cmt">// MongoDB ObjectId — not r
           </div>
         </div>
         <div class="wizard-actions">
-          <button type="button" class="load-btn" onclick="keysGoStep(2)">Continue</button>
+          <button type="button" class="load-btn" id="keysStep1ContinueBtn" onclick="keysOnContinueFromStep1()">Continue</button>
         </div>
       </div>
 
       <div class="portal-card" id="keysStep2" style="display:none">
+        <p id="keysLinkedAccountPreview" class="portal-hint" style="margin:0 0 14px;font-size:13px;color:var(--text)"></p>
         <p style="font-size:13px;color:var(--muted);margin-bottom:16px;line-height:1.6">
           In production, activating a paid tier would collect payment through a PCI-compliant provider.
           This step is a placeholder for your course submission — no card data is sent or stored.
@@ -1866,6 +1877,7 @@ player_id: player._id          <span class="t-cmt">// MongoDB ObjectId — not r
             <button type="button" class="copy-btn" id="keysCopyBtn" onclick="keysCopyKey()">Copy</button>
             <pre id="keysRevealPre"></pre>
           </div>
+          <p id="keysDeveloperIdEcho" class="portal-hint" style="margin-top:12px;font-size:12px;color:var(--muted)"></p>
           <div class="chk-row" style="margin-top:18px">
             <input type="checkbox" id="keysCopiedAck" />
             <label for="keysCopiedAck">I have copied my key and stored it somewhere safe.</label>
@@ -2362,6 +2374,9 @@ player_id: player._id          <span class="t-cmt">// MongoDB ObjectId — not r
   let keysStatusLoaded = false;
   let keysRequiresToken = false;
   let keysIssuedValue = '';
+  /** Mongo id string from POST /api/developers — sent with POST /api/keys/issue */
+  let keysDeveloperAccountId = null;
+  let keysLastAccountDisplayName = '';
 
   function keysHide(el) { el.style.display = 'none'; }
   function keysShow(el) { el.style.display = 'block'; }
@@ -2419,11 +2434,18 @@ player_id: player._id          <span class="t-cmt">// MongoDB ObjectId — not r
     const errBanner = document.getElementById('keysErrorBanner');
     keysHide(errBanner);
 
+    if (step === 1) {
+      keysDeveloperAccountId = null;
+      keysLastAccountDisplayName = '';
+      const linkPrev = document.getElementById('keysLinkedAccountPreview');
+      if (linkPrev) linkPrev.textContent = '';
+    }
+
     if (step === 2) {
       const owner = document.getElementById('keysOwner').value.trim();
       if (!owner) {
         keysShow(errBanner);
-        errBanner.textContent = 'Enter a license label before continuing.';
+        errBanner.textContent = 'Enter an API key label before continuing.';
         return;
       }
       const tier = document.querySelector('input[name="keysTier"]:checked')?.value || 'free';
@@ -2431,6 +2453,13 @@ player_id: player._id          <span class="t-cmt">// MongoDB ObjectId — not r
         tier.charAt(0).toUpperCase() + tier.slice(1) + ' tier — demo checkout';
       document.getElementById('keysBillingAck').checked = false;
       document.getElementById('keysStep2Next').disabled = true;
+      const linkPrev = document.getElementById('keysLinkedAccountPreview');
+      if (linkPrev && keysDeveloperAccountId && keysLastAccountDisplayName) {
+        linkPrev.textContent =
+          'Developer account linked: “' +
+          keysLastAccountDisplayName +
+          '”. This key will be stored under that account for usage and support.';
+      }
     }
 
     if (step === 3) {
@@ -2450,6 +2479,53 @@ player_id: player._id          <span class="t-cmt">// MongoDB ObjectId — not r
     if (step === 3) keysShow(document.getElementById('keysStep3'));
 
     keysSetStepIndicator(step);
+  }
+
+  async function keysOnContinueFromStep1() {
+    const errBanner = document.getElementById('keysErrorBanner');
+    keysHide(errBanner);
+    const btn = document.getElementById('keysStep1ContinueBtn');
+    const accountName = document.getElementById('keysAccountName').value.trim();
+    if (!accountName) {
+      keysShow(errBanner);
+      errBanner.textContent = 'Enter a developer account name (your team or product).';
+      return;
+    }
+    let owner = document.getElementById('keysOwner').value.trim();
+    if (!owner) {
+      owner = accountName + ' — API key';
+      document.getElementById('keysOwner').value = owner;
+    }
+    const email = document.getElementById('keysEmail').value.trim();
+    const org = document.getElementById('keysOrganization').value.trim();
+    btn.disabled = true;
+    btn.textContent = 'Linking account…';
+    try {
+      const r = await fetch('/api/developers', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          displayName: accountName,
+          ...(email ? { contactEmail: email } : {}),
+          ...(org ? { organization: org } : {}),
+        }),
+      });
+      const data = await r.json();
+      if (!r.ok) {
+        keysShow(errBanner);
+        errBanner.textContent = portalApiMessage(data) || 'Could not register developer account.';
+        return;
+      }
+      keysDeveloperAccountId = data.id;
+      keysLastAccountDisplayName = data.displayName || accountName;
+      keysGoStep(2);
+    } catch {
+      keysShow(errBanner);
+      errBanner.textContent = 'Network error while registering developer account.';
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Continue';
+    }
   }
 
   document.getElementById('keysBillingAck').addEventListener('change', e => {
@@ -2484,14 +2560,16 @@ player_id: player._id          <span class="t-cmt">// MongoDB ObjectId — not r
     if (keysRequiresToken) headers['X-Key-Issuance-Token'] = tokenInput.value.trim();
 
     try {
+      const issueBody = {
+        owner,
+        tier,
+        ...(email ? { email } : {}),
+        ...(keysDeveloperAccountId ? { developerAccountId: keysDeveloperAccountId } : {}),
+      };
       const r = await fetch('/api/keys/issue', {
         method: 'POST',
         headers,
-        body: JSON.stringify({
-          owner,
-          tier,
-          ...(email ? { email } : {}),
-        }),
+        body: JSON.stringify(issueBody),
       });
       const data = await r.json();
 
@@ -2503,6 +2581,13 @@ player_id: player._id          <span class="t-cmt">// MongoDB ObjectId — not r
 
       keysIssuedValue = data.apiKey || '';
       document.getElementById('keysRevealPre').textContent = keysIssuedValue;
+      const devEcho = document.getElementById('keysDeveloperIdEcho');
+      if (devEcho) {
+        const did = data.developerAccountId ?? keysDeveloperAccountId;
+        devEcho.textContent = did != null && String(did).length > 0
+          ? 'Developer account id (for support / automation): ' + String(did)
+          : '';
+      }
       keysHide(document.getElementById('keysGenerateRow'));
       keysShow(document.getElementById('keysRevealBlock'));
       document.getElementById('keysCopiedAck').checked = false;
@@ -2534,12 +2619,18 @@ player_id: player._id          <span class="t-cmt">// MongoDB ObjectId — not r
   function keysFinish() {
     keysIssuedValue = '';
     document.getElementById('keysRevealPre').textContent = '';
+    const devEcho = document.getElementById('keysDeveloperIdEcho');
+    if (devEcho) devEcho.textContent = '';
     keysHide(document.getElementById('keysRevealBlock'));
     keysShow(document.getElementById('keysGenerateRow'));
+    document.getElementById('keysAccountName').value = '';
+    document.getElementById('keysOrganization').value = '';
     document.getElementById('keysOwner').value = '';
     document.getElementById('keysEmail').value = '';
     document.getElementById('keysIssuanceToken').value = '';
     document.querySelector('#tierFree').checked = true;
+    keysDeveloperAccountId = null;
+    keysLastAccountDisplayName = '';
     keysGoStep(1);
     const info = document.getElementById('keysInfoBanner');
     keysShow(info);
