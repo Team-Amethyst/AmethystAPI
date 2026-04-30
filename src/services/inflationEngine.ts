@@ -1,5 +1,3 @@
-import { ENGINE_CONTRACT_VERSION } from "../lib/engineContract";
-import { getValuationModelVersion } from "../lib/valuationModelVersion";
 import { isSymmetricOpenLeagueContext } from "../lib/symmetricLeagueOpen";
 import { filterByScope } from "../lib/leagueScope";
 import {
@@ -28,6 +26,9 @@ import {
   applyTeamAdjustedAndEdgePass,
   resolveDraftPhase,
 } from "./inflationPostProcess";
+import {
+  buildInflationResponse,
+} from "./inflationAssemble";
 import type {
   CalculateInflationOptions,
   DraftedPlayer,
@@ -38,14 +39,8 @@ import type {
   ValuationResponse,
 } from "../types/brain";
 
-const DETERMINISTIC_CALCULATED_AT = "1970-01-01T00:00:00.000Z";
-
 /** Minimum auction bid reserved per empty roster slot (surplus model). */
 const MIN_AUCTION_BID = 1;
-const RECOMMENDED_BID_NOTE =
-  "recommended_bid is a phase-aware model clearing target (star floors, pitcher dampening, isotonic smoothing)—a bidding guide, not a prediction of the winning hammer price; room behavior can diverge materially.";
-const TEAM_ADJUSTED_NOTE =
-  "team_adjusted_value scales adjusted_value by roster need, dollars per open slot vs league peers, remaining-slot scarcity, and replacement drop-off for eligible slots; when the league snapshot is symmetric (no auction picks, no keeper/minors/taxi off-board ids, equal per-team budgets in budget_by_team_id when provided, equal rostered counts per team), it equals adjusted_value";
 const DEFAULT_USER_TEAM_ID = "team_1";
 
 /** Draftable pool size = ceil(remaining_slots × multiplier), capped by undrafted count. */
@@ -247,29 +242,19 @@ export function calculateInflation(
       : {}),
   };
 
-  const calculatedAt = options?.deterministic
-    ? DETERMINISTIC_CALCULATED_AT
-    : new Date().toISOString();
-
-  return {
-    engine_contract_version: ENGINE_CONTRACT_VERSION,
-    inflation_model: inflationModelEffective,
-    inflation_factor: parseFloat(inflationFactor.toFixed(4)),
-    ...(inflationIndexVsOpeningAuction != null
-      ? { inflation_index_vs_opening_auction: inflationIndexVsOpeningAuction }
-      : {}),
-    inflation_raw: parseFloat(inflationRaw.toFixed(6)),
-    inflation_bounded_by: inflationBoundedBy,
-    total_budget_remaining: budgetRemaining,
-    pool_value_remaining: parseFloat(poolValueRemaining.toFixed(2)),
-    players_remaining: undraftedFull.length,
+  return buildInflationResponse({
+    inflationModelEffective,
+    inflationFactor,
+    inflationIndexVsOpeningAuction,
+    inflationRaw,
+    inflationBoundedBy,
+    budgetRemaining,
+    poolValueRemaining,
+    playersRemaining: undraftedFull.length,
     valuations,
-    recommended_bid_note: RECOMMENDED_BID_NOTE,
-    user_team_id_used: userTeamId,
-    team_adjusted_value_note: TEAM_ADJUSTED_NOTE,
-    phase_indicator: draftPhase,
-    calculated_at: calculatedAt,
-    valuation_model_version: getValuationModelVersion(),
-    ...slotMeta,
-  };
+    userTeamId,
+    draftPhase,
+    slotMeta,
+    deterministic: options?.deterministic,
+  });
 }
