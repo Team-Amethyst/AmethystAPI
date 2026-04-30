@@ -106,6 +106,7 @@ export function buildValuedRows(params: {
               scoring_format?: "5x5" | "6x6" | "points";
               projection_component?: number;
               scarcity_component?: number;
+              age_depth_component?: number;
             };
           }
         | undefined
@@ -134,6 +135,9 @@ export function buildValuedRows(params: {
         scoring_format: meta?.scoring_format ?? "default",
         projection_component: meta?.projection_component ?? 0,
         scarcity_component: meta?.scarcity_component ?? 0,
+        ...(meta?.age_depth_component != null
+          ? { age_depth_component: meta.age_depth_component }
+          : {}),
       },
       scarcity_adjustment: 0,
       inflation_adjustment: parseFloat((adjustedValue - baselineValue).toFixed(2)),

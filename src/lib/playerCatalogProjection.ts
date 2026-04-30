@@ -1,7 +1,7 @@
 /**
  * Lean fields loaded for valuation, scarcity, simulation, and catalog batch.
- * Excludes large `stats` / `projection` blobs from the hot path.
+ * Includes `projection` for baseline scoring/depth priors; excludes `stats`.
  * `_id` remains included by Mongoose unless explicitly excluded.
  */
 export const PLAYER_CATALOG_LEAN_SELECT =
-  "mlbId name team position positions adp tier value outlook" as const;
+  "mlbId name team position positions age depthChartPosition adp tier value outlook projection" as const;

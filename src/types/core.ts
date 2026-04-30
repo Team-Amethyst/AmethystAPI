@@ -45,6 +45,8 @@ export interface LeanPlayer {
   team: string;
   position: string;
   positions?: string[];
+  age?: number;
+  depthChartPosition?: number;
   adp: number;
   tier: number;
   value: number;

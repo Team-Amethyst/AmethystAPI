@@ -18,6 +18,12 @@ function coerceTier(raw: unknown): number {
   return Math.max(0, Math.trunc(n));
 }
 
+function coercePositiveInt(raw: unknown): number | undefined {
+  const n = coerceFiniteNumber(raw, Number.NaN);
+  if (!Number.isFinite(n) || n <= 0) return undefined;
+  return Math.trunc(n);
+}
+
 function coerceMlbId(raw: unknown): number | undefined {
   if (typeof raw === "number" && Number.isFinite(raw)) return raw;
   if (typeof raw === "string") {
@@ -87,6 +93,10 @@ export function normalizeCatalogPlayers(
 
     const mlbId = coerceMlbId(d.mlbId);
     const positions = coercePositions(d.positions);
+    const age = coercePositiveInt(d.age);
+    const depthChartPosition = coercePositiveInt(
+      d.depthChartPosition ?? d.depth_chart_position
+    );
 
     rows.push({
       _id: d._id,
@@ -95,6 +105,8 @@ export function normalizeCatalogPlayers(
       team: typeof d.team === "string" ? d.team : "",
       position: typeof d.position === "string" ? d.position : "",
       ...(positions ? { positions } : {}),
+      ...(age != null ? { age } : {}),
+      ...(depthChartPosition != null ? { depthChartPosition } : {}),
       adp,
       tier,
       value,

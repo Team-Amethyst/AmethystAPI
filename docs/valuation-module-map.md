@@ -27,6 +27,7 @@ This map documents where each pricing responsibility lives after the refactor.
 
 - `src/services/baselineValueEngine.ts` — `scoringAwareBaselinePlayers` (roto z-score vs points vs scarcity-only fallback).
 - `src/services/baselineProjectionStats.ts` — projection field reads, category weights/directions, pooled mean/stddev helpers; pitcher detection uses `playerTokensFromLean` (aligned with slot logic / two-way eligibility).
+- `src/services/baselineAgeDepthAdjustments.ts` — age-curve and depth-chart priors with explicit tuning constants and fallback depth proxy behavior.
 
 ## Request parsing (valuation calculate)
 
@@ -81,7 +82,7 @@ This map documents where each pricing responsibility lives after the refactor.
 - `src/lib/playerCatalog.ts`
   - Normalizes Mongo docs into `LeanPlayer` and hardens coercion.
 - `scripts/sync-players.ts`
-  - Syncs MLB splits to Mongo and preserves two-way eligibility (`positions[]`).
+  - Syncs MLB splits to Mongo, preserves two-way eligibility (`positions[]`), and persists coarse `depthChartPosition` priors.
 - `scripts/audit-player-eligibility.ts`
   - Post-sync QA script (`pnpm sync-players:verify`).
 

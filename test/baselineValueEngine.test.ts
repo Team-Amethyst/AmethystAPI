@@ -267,4 +267,57 @@ describe("scoringAwareBaselinePlayers", () => {
     expect(vSpec).toBeGreaterThan(vFlat);
     expect(vSpec).toBeGreaterThan(3);
   });
+
+  it("applies age curve adjustment when age is available", () => {
+    const prime: LeanPlayer = {
+      ...players[0],
+      _id: "age-prime",
+      mlbId: 7001,
+      age: 27,
+      value: 25,
+      tier: 2,
+    };
+    const older: LeanPlayer = {
+      ...prime,
+      _id: "age-old",
+      mlbId: 7002,
+      age: 37,
+    };
+    const out = scoringAwareBaselinePlayers(
+      [prime, older],
+      "5x5",
+      [],
+      [{ position: "OF", count: 3 }]
+    );
+    const vPrime = out.find((x) => x._id === "age-prime")!.value;
+    const vOld = out.find((x) => x._id === "age-old")!.value;
+    expect(vPrime).toBeGreaterThan(vOld);
+  });
+
+  it("penalizes deeper depth-chart roles", () => {
+    const starter: LeanPlayer = {
+      ...players[0],
+      _id: "depth-1",
+      mlbId: 7101,
+      value: 24,
+      tier: 2,
+      depthChartPosition: 1,
+      age: 28,
+    };
+    const bench: LeanPlayer = {
+      ...starter,
+      _id: "depth-3",
+      mlbId: 7103,
+      depthChartPosition: 3,
+    };
+    const out = scoringAwareBaselinePlayers(
+      [starter, bench],
+      "5x5",
+      [],
+      [{ position: "OF", count: 3 }]
+    );
+    const vStarter = out.find((x) => x._id === "depth-1")!.value;
+    const vBench = out.find((x) => x._id === "depth-3")!.value;
+    expect(vStarter).toBeGreaterThan(vBench);
+  });
 });

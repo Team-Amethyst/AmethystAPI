@@ -46,6 +46,7 @@ export interface IPlayer extends Document {
   /** Secondary fantasy eligibilities (sync from MLB splits + bio); optional. */
   positions?: string[];
   age: number;
+  depthChartPosition?: number;
   adp: number;
   tier: number;
   value: number;
@@ -62,6 +63,7 @@ const playerSchema = new Schema<IPlayer>(
     position: { type: String, default: "" },
     positions: { type: [String] },
     age: { type: Number, default: 0 },
+    depthChartPosition: { type: Number },
     adp: { type: Number, default: 0 },
     tier: { type: Number, default: 0 },
     value: { type: Number, default: 0 },

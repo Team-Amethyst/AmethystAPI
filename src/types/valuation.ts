@@ -105,6 +105,7 @@ export interface ValuedPlayer {
     scoring_format: ScoringFormat | "default";
     projection_component: number;
     scarcity_component: number;
+    age_depth_component?: number;
   };
   scarcity_adjustment?: number;
   inflation_adjustment?: number;

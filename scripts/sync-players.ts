@@ -59,6 +59,7 @@ type PlayerSyncDoc = {
   position: string;
   positions?: string[];
   age: number;
+  depthChartPosition?: number;
   value: number;
   tier: number;
   stats: Record<string, unknown>;
@@ -179,6 +180,7 @@ function buildPlayerDocFromAgg(
     team,
     position,
     age: calcAge(bio?.birthDate),
+    depthChartPosition: deriveDepthChartPosition(agg),
     value,
     tier: assignTier(value),
     stats,
@@ -189,6 +191,41 @@ function buildPlayerDocFromAgg(
     doc.positions = positions;
   }
   return doc;
+}
+
+function deriveDepthChartPosition(agg: SplitAgg): number | undefined {
+  const asNum = (v: unknown): number | undefined => {
+    if (typeof v === "number" && Number.isFinite(v)) return v;
+    if (typeof v === "string" && v.trim().length > 0) {
+      const n = Number(v);
+      if (Number.isFinite(n)) return n;
+    }
+    return undefined;
+  };
+  const batStat = agg.bat?.stat ?? {};
+  const pitStat = agg.pit?.stat ?? {};
+  const pa = asNum((batStat as Record<string, unknown>).plateAppearances);
+  const ab = asNum((batStat as Record<string, unknown>).atBats);
+  const hitterVolume = pa ?? ab ?? 0;
+
+  const gs = asNum((pitStat as Record<string, unknown>).gamesStarted);
+  const sv = asNum((pitStat as Record<string, unknown>).saves);
+  const ip = asNum((pitStat as Record<string, unknown>).inningsPitched);
+
+  const hitterDepth =
+    hitterVolume >= 420 ? 1 : hitterVolume >= 180 ? 2 : hitterVolume > 0 ? 3 : undefined;
+  const pitcherDepth =
+    (gs ?? 0) >= 20 || (ip ?? 0) >= 120
+      ? 1
+      : (gs ?? 0) >= 8 || (sv ?? 0) >= 15 || (ip ?? 0) >= 45
+        ? 2
+        : (gs ?? 0) > 0 || (sv ?? 0) > 0 || (ip ?? 0) > 0
+          ? 3
+          : undefined;
+
+  if (hitterDepth == null) return pitcherDepth;
+  if (pitcherDepth == null) return hitterDepth;
+  return Math.min(hitterDepth, pitcherDepth);
 }
 
 interface MlbStatSplit {

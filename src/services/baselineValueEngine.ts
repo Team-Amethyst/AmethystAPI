@@ -14,11 +14,13 @@ import {
   stdDev,
   toNum,
 } from "./baselineProjectionStats";
+import { applyAgeDepthAdjustment } from "./baselineAgeDepthAdjustments";
 
 type BaselineComponents = {
   value: number;
   projectionComponent: number;
   scarcityComponent: number;
+  ageDepthComponent?: number;
 };
 
 type RotoGroupKind = "hitter" | "pitcher";
@@ -52,14 +54,20 @@ function rotoBaselineForGroup(
       const scarcityComponent = scarcityMultiplierForPosition(p, rosterSlots) - 1;
       const scarcityAdjusted = Math.max(1, (p.value || 0) * (1 + scarcityComponent));
       const priorFloor = speculativePriorBaselineFloor(p);
-      const value = Math.max(
+      const baseValue = Math.max(
         1,
         priorFloor != null ? Math.max(scarcityAdjusted, priorFloor) : scarcityAdjusted
       );
+      const ageDepth = applyAgeDepthAdjustment({
+        player: p,
+        baselineValue: baseValue,
+        isPitcher: isPitcherForBaseline(p),
+      });
       out.set(String(p._id), {
-        value: Number(value.toFixed(2)),
+        value: Number(ageDepth.adjustedValue.toFixed(2)),
         projectionComponent: 0,
         scarcityComponent,
+        ageDepthComponent: ageDepth.ageDepthComponent,
       });
     }
     return out;
@@ -99,10 +107,16 @@ function rotoBaselineForGroup(
     let value = Math.max(1, scarcityAdjusted * projectionMult);
     const priorFloor = speculativePriorBaselineFloor(p);
     if (priorFloor != null) value = Math.max(value, priorFloor);
+    const ageDepth = applyAgeDepthAdjustment({
+      player: p,
+      baselineValue: value,
+      isPitcher: isPitcherForBaseline(p),
+    });
     out.set(String(p._id), {
-      value: Number(value.toFixed(2)),
+      value: Number(ageDepth.adjustedValue.toFixed(2)),
       projectionComponent: Number((value - scarcityAdjusted).toFixed(2)),
       scarcityComponent,
+      ageDepthComponent: ageDepth.ageDepthComponent,
     });
   }
   return out;
@@ -127,22 +141,37 @@ function scarcityMultiplierForPosition(p: LeanPlayer, rosterSlots: RosterSlot[])
 
 function rotisserieBaseline(
   p: LeanPlayer,
-  scoringCategories: ScoringCategory[],
   rosterSlots: RosterSlot[]
-): { value: number; projectionComponent: number; scarcityComponent: number } {
+): {
+  value: number;
+  projectionComponent: number;
+  scarcityComponent: number;
+  ageDepthComponent?: number;
+} {
   const scarcityComponent = scarcityMultiplierForPosition(p, rosterSlots) - 1;
   const scarcityAdjusted = Math.max(1, (p.value || 0) * (1 + scarcityComponent));
+  const ageDepth = applyAgeDepthAdjustment({
+    player: p,
+    baselineValue: scarcityAdjusted,
+    isPitcher: isPitcherForBaseline(p),
+  });
   return {
-    value: Number(scarcityAdjusted.toFixed(2)),
+    value: Number(ageDepth.adjustedValue.toFixed(2)),
     projectionComponent: 0,
     scarcityComponent,
+    ageDepthComponent: ageDepth.ageDepthComponent,
   };
 }
 
 function pointsBaseline(
   p: LeanPlayer,
   rosterSlots: RosterSlot[]
-): { value: number; projectionComponent: number; scarcityComponent: number } {
+): {
+  value: number;
+  projectionComponent: number;
+  scarcityComponent: number;
+  ageDepthComponent?: number;
+} {
   const batting = getProjectionSection(p, "batting");
   const pitching = getProjectionSection(p, "pitching");
   const scarcityComponent = scarcityMultiplierForPosition(p, rosterSlots) - 1;
@@ -170,7 +199,17 @@ function pointsBaseline(
   );
   const priorFloor = speculativePriorBaselineFloor(p);
   if (priorFloor != null) value = Math.max(value, priorFloor);
-  return { value, projectionComponent, scarcityComponent };
+  const ageDepth = applyAgeDepthAdjustment({
+    player: p,
+    baselineValue: value,
+    isPitcher: isPitcherForBaseline(p),
+  });
+  return {
+    value: ageDepth.adjustedValue,
+    projectionComponent,
+    scarcityComponent,
+    ageDepthComponent: ageDepth.ageDepthComponent,
+  };
 }
 
 export function scoringAwareBaselinePlayers(
@@ -200,11 +239,16 @@ export function scoringAwareBaselinePlayers(
       fmt === "points"
         ? pointsBaseline(p, rosterSlots)
         : rotoMap.get(String(p._id)) ??
-          rotisserieBaseline(p, scoringCategories, rosterSlots);
+          rotisserieBaseline(p, rosterSlots);
     const baselineComponents = {
       scoring_format: fmt,
       projection_component: Number(derived.projectionComponent.toFixed(2)),
       scarcity_component: Number(derived.scarcityComponent.toFixed(4)),
+      ...(derived.ageDepthComponent != null
+        ? {
+            age_depth_component: Number(derived.ageDepthComponent.toFixed(2)),
+          }
+        : {}),
     };
     return {
       ...p,
