@@ -47,11 +47,8 @@ This map documents where each pricing responsibility lives after the refactor.
 
 ## Inflation model branch logic
 
-- `src/services/inflationModel.ts`
-  - `computeBudgetRemaining`
-  - `selectInflationModel` (`global_v1`, `surplus_slots_v1`, `replacement_slots_v2`)
-  - `clampInflation`
-  - `computeInflationIndexVsOpeningAuction`
+- `src/services/inflationPrimitives.ts` — budget remaining, surplus-slice plan (`tryBuildSurplusPlan`), and inflation clamp math (shared with opening-auction index replay).
+- `src/services/inflationModel.ts` — `selectInflationModel` (`global_v1`, `surplus_slots_v1`, `replacement_slots_v2`) and `computeInflationIndexVsOpeningAuction` (re-exports primitives for a single import surface).
 
 ## Recommended bid heuristics
 
@@ -71,8 +68,10 @@ This map documents where each pricing responsibility lives after the refactor.
 
 ## Replacement model implementation
 
-- `src/services/replacementSlotsV2.ts`
-  - Slot-aware replacement allocation and surplus mass for v2.
+- `src/services/replacementSlotsV2.ts` — `computeReplacementSlotsV2` orchestration (greedy fill, draftable pool, surplus mass).
+- `src/services/replacementSlotsV2Types.ts` — result type for v2 runs.
+- `src/services/replacementSlotsV2Config.ts` — min bid and per-slot replacement percentiles.
+- `src/services/replacementSlotsV2Compare.ts` — deterministic sort tie-break for slot assignment candidates.
 
 ## Catalog normalization and sync
 

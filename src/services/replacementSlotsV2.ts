@@ -1,4 +1,5 @@
 import type { DraftedPlayer, LeanPlayer, RosterSlot } from "../types/brain";
+import { getPlayerId } from "../lib/playerId";
 import {
   buildLeagueSlotDemand,
   cloneDemandMap,
@@ -11,65 +12,15 @@ import {
   sumDemand,
   type SlotAssignmentCandidate,
 } from "../lib/fantasyRosterSlots";
+import { compareSlotAssignmentCandidates } from "./replacementSlotsV2Compare";
+import {
+  REPLACEMENT_SLOTS_V2_MIN_BID,
+  SLOT_REPLACEMENT_DEFAULT_PERCENTILE,
+  SLOT_REPLACEMENT_PERCENTILE,
+} from "./replacementSlotsV2Config";
+import type { ReplacementSlotsV2Result } from "./replacementSlotsV2Types";
 
-const MIN_BID = 1;
-const SLOT_REPLACEMENT_PERCENTILE: Record<string, number> = {
-  C: 0.28,
-  "1B": 0.22,
-  "2B": 0.24,
-  "3B": 0.23,
-  SS: 0.24,
-  OF: 0.2,
-  CI: 0.26,
-  MI: 0.26,
-  UTIL: 0.32,
-  SP: 0.35,
-  RP: 0.34,
-  P: 0.35,
-  BN: 0.5,
-};
-
-function pid(p: LeanPlayer): string {
-  return p.mlbId != null ? String(p.mlbId) : String(p._id);
-}
-
-function compareCandidates(
-  a: SlotAssignmentCandidate,
-  b: SlotAssignmentCandidate,
-  deterministic: boolean,
-  seed: number
-): number {
-  const diff = b.baseline - a.baseline;
-  if (diff !== 0) return diff;
-  if (deterministic && Number.isFinite(seed)) {
-    let h = seed >>> 0;
-    for (const ch of a.player_id) h = Math.imul(31, h) + ch.charCodeAt(0);
-    const ha = h >>> 0;
-    h = seed >>> 0;
-    for (const ch of b.player_id) h = Math.imul(31, h) + ch.charCodeAt(0);
-    const hb = h >>> 0;
-    if (ha !== hb) return ha - hb;
-  }
-  return a.player_id.localeCompare(b.player_id);
-}
-
-export type ReplacementSlotsV2Result = {
-  inflation_raw: number;
-  /** Pre-clamp; equals `inflation_raw` until the inflation engine applies cap/floor. */
-  inflation_factor_precap: number;
-  pool_value_remaining: number;
-  playerIdToSurplusBasis: Map<string, number>;
-  draftablePoolSize: number;
-  remaining_slots: number;
-  min_bid: number;
-  surplus_cash: number;
-  total_surplus_mass: number;
-  replacement_values_by_slot_or_position: Record<string, number>;
-  fallback_reason: string | null;
-  baselineOnly: boolean;
-  /** When true, skip workflow cap/floor on the factor (already terminal). */
-  skip_inflation_clamp: boolean;
-};
+export type { ReplacementSlotsV2Result } from "./replacementSlotsV2Types";
 
 /**
  * Position/slot-aware surplus inflation (Draftroom preferred). No global_v1 fallback.
@@ -104,7 +55,7 @@ export function computeReplacementSlotsV2(
     tokens: playerTokensFromDrafted(d),
   }));
   rosteredCandidates.sort((a, b) =>
-    compareCandidates(a, b, deterministic, seed)
+    compareSlotAssignmentCandidates(a, b, deterministic, seed)
   );
 
   greedyAssignLeagueSlotsMutable(
@@ -125,8 +76,11 @@ export function computeReplacementSlotsV2(
       playerIdToSurplusBasis: new Map(),
       draftablePoolSize: 0,
       remaining_slots,
-      min_bid: MIN_BID,
-      surplus_cash: Math.max(0, budgetRemaining - remaining_slots * MIN_BID),
+      min_bid: REPLACEMENT_SLOTS_V2_MIN_BID,
+      surplus_cash: Math.max(
+        0,
+        budgetRemaining - remaining_slots * REPLACEMENT_SLOTS_V2_MIN_BID
+      ),
       total_surplus_mass: 0,
       replacement_values_by_slot_or_position: replacementLevelsFromSlotValues(
         slotValues,
@@ -143,7 +97,7 @@ export function computeReplacementSlotsV2(
     const m = new Map<string, number>();
     for (const p of undrafted) {
       m.set(
-        pid(p),
+        getPlayerId(p),
         maxSurplusOverSlots(
           p.value || 0,
           playerTokensFromLean(p),
@@ -159,7 +113,7 @@ export function computeReplacementSlotsV2(
       playerIdToSurplusBasis: m,
       draftablePoolSize: 0,
       remaining_slots: 0,
-      min_bid: MIN_BID,
+      min_bid: REPLACEMENT_SLOTS_V2_MIN_BID,
       surplus_cash: Math.max(0, budgetRemaining),
       total_surplus_mass: 0,
       replacement_values_by_slot_or_position: repl,
@@ -170,12 +124,12 @@ export function computeReplacementSlotsV2(
   }
 
   const undraftedCandidates: SlotAssignmentCandidate[] = undrafted.map((p) => ({
-    player_id: pid(p),
+    player_id: getPlayerId(p),
     baseline: p.value || 0,
     tokens: playerTokensFromLean(p),
   }));
   undraftedCandidates.sort((a, b) =>
-    compareCandidates(a, b, deterministic, seed)
+    compareSlotAssignmentCandidates(a, b, deterministic, seed)
   );
 
   const undraftedAssignedIds = new Set<string>();
@@ -208,12 +162,12 @@ export function computeReplacementSlotsV2(
       undraftedSlotValues,
       rosterSlotKeys,
       SLOT_REPLACEMENT_PERCENTILE,
-      0.24
+      SLOT_REPLACEMENT_DEFAULT_PERCENTILE
     );
 
   const surplus_cash = Math.max(
     0,
-    budgetRemaining - remaining_slots * MIN_BID
+    budgetRemaining - remaining_slots * REPLACEMENT_SLOTS_V2_MIN_BID
   );
 
   let total_surplus_mass = 0;
@@ -253,7 +207,7 @@ export function computeReplacementSlotsV2(
 
   const playerIdToSurplusBasis = new Map<string, number>();
   for (const p of undrafted) {
-    const id = pid(p);
+    const id = getPlayerId(p);
     const baseline = p.value || 0;
     const tokens = playerTokensFromLean(p);
     playerIdToSurplusBasis.set(
@@ -276,7 +230,7 @@ export function computeReplacementSlotsV2(
     playerIdToSurplusBasis,
     draftablePoolSize,
     remaining_slots,
-    min_bid: MIN_BID,
+    min_bid: REPLACEMENT_SLOTS_V2_MIN_BID,
     surplus_cash,
     total_surplus_mass,
     replacement_values_by_slot_or_position,
