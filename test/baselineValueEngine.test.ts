@@ -200,6 +200,42 @@ describe("scoringAwareBaselinePlayers", () => {
     expect(pSpread).toBeGreaterThan(hSpread * 0.85);
   });
 
+  it("treats two-way SP eligibility as pitcher for points baseline", () => {
+    const twoWay: LeanPlayer = {
+      _id: "tw",
+      mlbId: 999,
+      name: "TwoWay",
+      team: "LAA",
+      position: "DH",
+      positions: ["SP", "DH"],
+      adp: 1,
+      tier: 1,
+      value: 25,
+      projection: {
+        batting: { hr: 20, rbi: 60, runs: 70, sb: 10, avg: 0.28 },
+        /* Strong ace line so pointsBaseline takes the pitcher branch above DH-only hitting. */
+        pitching: { strikeouts: 260, wins: 16, saves: 0, era: 2.4, whip: 0.92 },
+      },
+    };
+    const dhOnly: LeanPlayer = {
+      ...twoWay,
+      _id: "dh",
+      mlbId: 998,
+      positions: [],
+      projection: { batting: { hr: 20, rbi: 60, runs: 70, sb: 10, avg: 0.28 } },
+    };
+    const out = scoringAwareBaselinePlayers(
+      [twoWay, dhOnly],
+      "points",
+      [{ name: "HR", type: "batting" }],
+      [{ position: "DH", count: 1 }]
+    );
+    const vTw = out.find((x) => x._id === "tw")!.value;
+    const vDh = out.find((x) => x._id === "dh")!.value;
+    expect(vTw).not.toBeCloseTo(vDh, 0);
+    expect(vTw).toBeGreaterThan(vDh);
+  });
+
   it("lifts very low catalog value when ADP and tier show real draft interest", () => {
     const spec: LeanPlayer = {
       _id: "s1",

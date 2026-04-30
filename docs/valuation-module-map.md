@@ -23,6 +23,11 @@ This map documents where each pricing responsibility lives after the refactor.
 - `src/lib/playerId.ts`
   - Canonical player id resolution (`mlbId` fallback to `_id`).
 
+## Baseline (catalog → list $ before inflation)
+
+- `src/services/baselineValueEngine.ts` — `scoringAwareBaselinePlayers` (roto z-score vs points vs scarcity-only fallback).
+- `src/services/baselineProjectionStats.ts` — projection field reads, category weights/directions, pooled mean/stddev helpers; pitcher detection uses `playerTokensFromLean` (aligned with slot logic / two-way eligibility).
+
 ## Request parsing (valuation calculate)
 
 - `src/lib/valuationRequestSchemas.ts` — Zod schemas for flat vs nested bodies.
