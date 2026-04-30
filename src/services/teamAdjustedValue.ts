@@ -6,29 +6,8 @@ import {
   sumDemand,
 } from "../lib/fantasyRosterSlots";
 import type { DraftedPlayer, LeanPlayer, RosterSlot, ValuedPlayer } from "../types/brain";
-
-const FLEX_SLOTS = new Set(["UTIL", "CI", "MI", "P"]);
-
-function isStartingSlot(slot: string): boolean {
-  return slot.toUpperCase() !== "BN";
-}
-
-function slotPriorityScore(slot: string): number {
-  const u = slot.toUpperCase();
-  if (u === "C") return 10;
-  if (u === "SS") return 20;
-  if (u === "2B") return 30;
-  if (u === "3B") return 40;
-  if (u === "1B") return 50;
-  if (u === "OF") return 60;
-  if (u === "SP") return 70;
-  if (u === "RP") return 80;
-  if (u === "UTIL") return 90;
-  if (u === "CI") return 100;
-  if (u === "MI") return 110;
-  if (u === "P") return 120;
-  return 200;
-}
+import { isStartingSlot, slotPriorityScore } from "./teamAdjustedConfig";
+import { positionalNeedMultiplier } from "./teamAdjustedNeed";
 
 export function buildOpenSlotsForUserTeam(
   rosterSlots: RosterSlot[],
@@ -58,34 +37,6 @@ export function buildOpenSlotsForUserTeam(
     }
   }
   return open;
-}
-
-function positionalNeedMultiplier(
-  p: LeanPlayer,
-  openSlots: Map<string, number>
-): number {
-  const tokens = playerTokensFromLean(p);
-  const slots = [...openSlots.keys()];
-  const hasOpenPrimary = slots.some((slot) => {
-    const u = slot.toUpperCase();
-    return (
-      !FLEX_SLOTS.has(u) &&
-      (openSlots.get(slot) ?? 0) > 0 &&
-      fitsRosterSlot(slot, tokens)
-    );
-  });
-  if (hasOpenPrimary) return 1.25;
-
-  const hasOpenFlex = slots.some((slot) => {
-    const u = slot.toUpperCase();
-    return FLEX_SLOTS.has(u) && (openSlots.get(slot) ?? 0) > 0 && fitsRosterSlot(u, tokens);
-  });
-  if (hasOpenFlex) return 1.1;
-
-  const fitsAnyStarting = slots.some((slot) => fitsRosterSlot(slot, tokens));
-  if (fitsAnyStarting) return 0.85;
-
-  return 1.0;
 }
 
 export function budgetPressureMultiplier(

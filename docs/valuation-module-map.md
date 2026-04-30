@@ -52,14 +52,17 @@ This map documents where each pricing responsibility lives after the refactor.
 
 ## Recommended bid heuristics
 
+- `src/services/recommendedBidConfig.ts` — heuristic/tuning constants for bid guidance.
+- `src/services/recommendedBidMath.ts` — shared math primitives (`baseLambdaClearingPrice`, isotonic smoothing, pitcher position check).
 - `src/services/recommendedBid.ts`
   - `computeRecommendedBid`
   - `smoothRecommendedBids`
-  - `baseLambdaClearingPrice`
-  - `isPitcherPosition`
+  - Re-exports `baseLambdaClearingPrice` / `isPitcherPosition` for import stability.
 
 ## Team-adjusted valuation economics
 
+- `src/services/teamAdjustedConfig.ts` — slot priority and starting-slot rules.
+- `src/services/teamAdjustedNeed.ts` — positional need multiplier from open-slot state.
 - `src/services/teamAdjustedValue.ts`
   - User-team open slot accounting (`buildOpenSlotsForUserTeam`)
   - Budget / slot pressure helpers
