@@ -722,6 +722,126 @@
       font-size: 13px;
       margin-bottom: 16px;
     }
+    .usage-info {
+      display: none;
+      background: rgba(96,165,250,0.08);
+      border: 1px solid rgba(96,165,250,0.25);
+      color: var(--blue);
+      border-radius: var(--radius);
+      padding: 12px 16px;
+      font-size: 13px;
+      margin-bottom: 16px;
+      line-height: 1.5;
+    }
+
+    #tab-account .section {
+      margin-bottom: 34px;
+    }
+    #tab-account .account-shell {
+      max-width: 920px;
+      margin: 0 auto;
+    }
+    #tab-account .account-card {
+      width: 100%;
+      max-width: none;
+      background:
+        radial-gradient(120% 100% at 0% 0%, rgba(139,92,246,0.10) 0%, rgba(19,19,31,0) 58%),
+        var(--surface);
+      border: 1px solid rgba(139,92,246,0.18);
+      box-shadow: 0 14px 36px rgba(9, 10, 22, 0.35);
+    }
+    .account-kicker {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      color: var(--muted);
+      margin-bottom: 10px;
+    }
+    .account-auth-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+    .account-auth-grid .portal-field:last-child {
+      grid-column: 1 / -1;
+    }
+    @media (max-width: 760px) {
+      .account-auth-grid {
+        grid-template-columns: 1fr;
+      }
+      .account-auth-grid .portal-field:last-child {
+        grid-column: auto;
+      }
+    }
+    .account-auth-note {
+      margin-top: 4px;
+      margin-bottom: 14px;
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+    .account-summary-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 10px;
+    }
+    .account-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      font-size: 11px;
+      color: var(--muted);
+      background: rgba(255,255,255,0.02);
+    }
+    .account-empty {
+      text-align: center;
+      padding: 24px 12px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.55;
+    }
+    .account-empty strong {
+      color: var(--text);
+      display: block;
+      margin-bottom: 6px;
+      font-size: 14px;
+    }
+    .account-key-table-wrap {
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+      margin-top: 10px;
+      background: rgba(0, 0, 0, 0.18);
+    }
+    .account-key-table-wrap .keys-table th {
+      background: rgba(255,255,255,0.02);
+    }
+    .account-key-table-wrap .keys-table tbody tr:hover td {
+      background: rgba(139,92,246,0.08);
+    }
+    .key-status-badge {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: capitalize;
+      padding: 2px 8px;
+      border-radius: 999px;
+      border: 1px solid transparent;
+    }
+    .key-status-active {
+      color: var(--green);
+      background: rgba(52,211,153,0.12);
+      border-color: rgba(52,211,153,0.3);
+    }
+    .key-status-inactive {
+      color: var(--red);
+      background: rgba(248,113,113,0.12);
+      border-color: rgba(248,113,113,0.3);
+    }
 
     #tab-usage .usage-form-card {
       max-width: 560px;
@@ -1212,18 +1332,6 @@
       .checkbox-grid {
         grid-template-columns: 1fr;
       }
-    }
-
-    .usage-info {
-      display: none;
-      background: rgba(96,165,250,0.08);
-      border: 1px solid rgba(96,165,250,0.25);
-      color: var(--blue);
-      border-radius: var(--radius);
-      padding: 12px 16px;
-      font-size: 13px;
-      margin-bottom: 16px;
-      line-height: 1.5;
     }
 
     /* Same width as main — keeps Get a key / My Usage aligned with API Reference */
@@ -2057,29 +2165,35 @@ player_id: player._id          <span class="t-cmt">// MongoDB ObjectId — not r
 
   <!-- ═══════════════════ ACCOUNT TAB ═══════════════════ -->
   <div class="tab-content" id="tab-account">
-    <div class="portal-shell">
+    <div class="portal-shell account-shell">
       <div class="section">
         <h2>Developer account</h2>
         <p class="section-desc">
-          Create an account once, then issue keys and monitor all keys tied to your account in one place.
+          Create an account once, then issue and monitor all keys tied to your organization in one place.
         </p>
       </div>
 
       <div class="usage-error" id="accountError"></div>
       <div class="usage-info" id="accountInfo"></div>
 
-      <div class="portal-card" id="accountAuthPanel">
-        <div class="portal-field">
-          <label class="portal-label" for="accountDisplayName">Team / product name</label>
-          <input class="portal-input" id="accountDisplayName" maxlength="200" placeholder="e.g. Draft Lab" />
-        </div>
-        <div class="portal-field">
-          <label class="portal-label" for="accountEmail">Email</label>
-          <input class="portal-input" id="accountEmail" type="email" maxlength="254" placeholder="you@company.com" />
-        </div>
-        <div class="portal-field">
-          <label class="portal-label" for="accountPassword">Password</label>
-          <input class="portal-input" id="accountPassword" type="password" placeholder="At least 10 chars, letters + number" />
+      <div class="portal-card account-card" id="accountAuthPanel">
+        <div class="account-kicker">Team account access</div>
+        <p class="account-auth-note">
+          Sign in with your team email to manage keys centrally. Sessions stay on this browser only (HTTP-only cookie).
+        </p>
+        <div class="account-auth-grid">
+          <div class="portal-field">
+            <label class="portal-label" for="accountDisplayName">Team / product name</label>
+            <input class="portal-input" id="accountDisplayName" maxlength="200" placeholder="e.g. Draft Lab" />
+          </div>
+          <div class="portal-field">
+            <label class="portal-label" for="accountEmail">Email</label>
+            <input class="portal-input" id="accountEmail" type="email" maxlength="254" placeholder="you@company.com" />
+          </div>
+          <div class="portal-field">
+            <label class="portal-label" for="accountPassword">Password</label>
+            <input class="portal-input" id="accountPassword" type="password" placeholder="At least 10 chars, letters + number" />
+          </div>
         </div>
         <div class="wizard-actions" style="margin-top:0">
           <button type="button" class="load-btn" id="accountRegisterBtn" onclick="accountRegister()">Create account</button>
@@ -2088,15 +2202,18 @@ player_id: player._id          <span class="t-cmt">// MongoDB ObjectId — not r
       </div>
 
       <div id="accountSignedInPanel" style="display:none">
-        <div class="portal-card" style="margin-bottom:16px">
+        <div class="portal-card account-card" style="margin-bottom:16px">
+          <div class="account-kicker">Signed-in context</div>
           <p class="portal-hint" id="accountWhoami" style="margin-top:0"></p>
+          <div class="account-summary-row" id="accountSummaryRow"></div>
           <div class="wizard-actions" style="margin-top:12px">
             <button type="button" class="btn-secondary" onclick="accountLogout()">Sign out</button>
             <button type="button" class="btn-secondary" onclick="accountRefresh()">Refresh</button>
           </div>
         </div>
 
-        <div class="portal-card" style="margin-bottom:16px">
+        <div class="portal-card account-card" style="margin-bottom:16px">
+          <div class="account-kicker">Issue a new key</div>
           <div class="portal-field">
             <label class="portal-label" for="accountIssueLabel">New key label</label>
             <input class="portal-input" id="accountIssueLabel" maxlength="200" placeholder="e.g. Production API" />
@@ -2121,22 +2238,24 @@ player_id: player._id          <span class="t-cmt">// MongoDB ObjectId — not r
           </div>
         </div>
 
-        <div class="portal-card">
+        <div class="portal-card account-card">
           <span class="portal-label">Keys in this account</span>
-          <table class="keys-table">
-            <thead>
-              <tr>
-                <th>Label</th>
-                <th>Tier</th>
-                <th>Prefix</th>
-                <th>Usage</th>
-                <th>Status</th>
-              </tr>
-            </thead>
-            <tbody id="accountKeysTableBody">
-              <tr><td colspan="5" style="color:var(--muted)">No keys yet.</td></tr>
-            </tbody>
-          </table>
+          <div class="account-key-table-wrap">
+            <table class="keys-table">
+              <thead>
+                <tr>
+                  <th>Label</th>
+                  <th>Tier</th>
+                  <th>Prefix</th>
+                  <th>Usage</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody id="accountKeysTableBody">
+                <tr><td colspan="5" class="account-empty"><strong>No keys yet</strong>Issue your first key above to activate this dashboard.</td></tr>
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
     </div>
@@ -2605,17 +2724,19 @@ player_id: player._id          <span class="t-cmt">// MongoDB ObjectId — not r
     const authPanel = document.getElementById('accountAuthPanel');
     const signed = document.getElementById('accountSignedInPanel');
     const chip = document.getElementById('accountChipBtn');
+    const summary = document.getElementById('accountSummaryRow');
     if (!profile) {
       authPanel.style.display = 'block';
       signed.style.display = 'none';
       chip.textContent = 'Account: signed out';
       chip.classList.remove('online');
       chip.classList.add('offline');
+      summary.replaceChildren();
       return;
     }
     authPanel.style.display = 'none';
     signed.style.display = 'block';
-    chip.textContent = 'Account: ' + profile.user.email;
+    chip.textContent = 'Account: ' + profile.user.displayName;
     chip.classList.remove('offline');
     chip.classList.add('online');
     const d = profile.developerAccount || {};
@@ -2624,6 +2745,18 @@ player_id: player._id          <span class="t-cmt">// MongoDB ObjectId — not r
       profile.user.displayName +
       ' (' + profile.user.email + ')' +
       ' · account: ' + (d.displayName || 'Unlinked');
+    summary.replaceChildren();
+    const pills = [
+      'Email: ' + profile.user.email,
+      'Organization: ' + (d.organization || '—'),
+      'Account status: ' + (d.isActive === false ? 'inactive' : 'active'),
+    ];
+    pills.forEach(text => {
+      const span = document.createElement('span');
+      span.className = 'account-pill';
+      span.textContent = text;
+      summary.appendChild(span);
+    });
     if (!document.getElementById('accountIssueLabel').value.trim()) {
       document.getElementById('accountIssueLabel').value = 'Production API';
     }
@@ -2636,20 +2769,21 @@ player_id: player._id          <span class="t-cmt">// MongoDB ObjectId — not r
       const tr = document.createElement('tr');
       const td = document.createElement('td');
       td.colSpan = 5;
-      td.style.color = 'var(--muted)';
-      td.textContent = 'No keys yet.';
+      td.className = 'account-empty';
+      td.innerHTML = '<strong>No keys yet</strong>Issue your first key above to activate this dashboard.';
       tr.appendChild(td);
       body.appendChild(tr);
       return;
     }
     rows.forEach(row => {
       const tr = document.createElement('tr');
+      const statusClass = row.isActive ? 'key-status-active' : 'key-status-inactive';
       tr.innerHTML =
         '<td>' + (row.label || '—') + '</td>' +
         '<td><span class="tier-badge tier-' + (row.tier || 'free') + '">' + (row.tier || 'free') + '</span></td>' +
         '<td><code style="font-size:11px;color:var(--muted)">' + (row.keyPrefix || '—') + '</code></td>' +
         '<td>' + Number(row.usageCount || 0).toLocaleString() + '</td>' +
-        '<td>' + (row.isActive ? 'active' : 'inactive') + '</td>';
+        '<td><span class="key-status-badge ' + statusClass + '">' + (row.isActive ? 'active' : 'inactive') + '</span></td>';
       body.appendChild(tr);
     });
   }
