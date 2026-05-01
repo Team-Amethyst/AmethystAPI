@@ -72,7 +72,39 @@ describe("GET /api/usage", () => {
       displayName: "Acme Draft",
       organization: "Acme Org",
       contactEmail: "contact@example.com",
+      isActive: true,
     });
+  });
+
+  it("returns developerAccount.isActive false when account is inactive", async () => {
+    findOneMock.mockReturnValue({
+      lean: vi.fn().mockResolvedValue({
+        owner: "O",
+        label: "L",
+        email: null,
+        developerAccountId: "507f1f77bcf86cd799439011",
+        tier: "free",
+        scopes: ["valuation"],
+        keyPrefix: "amethyst_live_x",
+        usageCount: 0,
+        lastUsed: null,
+        createdAt: null,
+        expiresAt: null,
+        isActive: true,
+      }),
+    });
+    findByIdMock.mockReturnValue({
+      lean: vi.fn().mockResolvedValue({
+        _id: "507f1f77bcf86cd799439011",
+        displayName: "Paused Co",
+        organization: null,
+        contactEmail: null,
+        isActive: false,
+      }),
+    });
+
+    const res = await request(app).get("/api/usage").set("x-api-key", validKey).expect(200);
+    expect(res.body.developerAccount?.isActive).toBe(false);
   });
 
   it("returns developerAccount null when account doc is missing", async () => {

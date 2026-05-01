@@ -48,6 +48,7 @@ const getUsage: RequestHandler = async (
     displayName: string;
     organization: string | null;
     contactEmail: string | null;
+    isActive: boolean;
   } | null = null;
 
   if (record.developerAccountId) {
@@ -59,6 +60,7 @@ const getUsage: RequestHandler = async (
           displayName: dev.displayName,
           organization: dev.organization ?? null,
           contactEmail: dev.contactEmail ?? null,
+          isActive: dev.isActive !== false,
         };
       }
     } catch (err) {
