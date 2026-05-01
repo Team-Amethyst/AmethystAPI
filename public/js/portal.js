@@ -60,7 +60,6 @@
   function setActiveTab(tabName, opts) {
     if (tabName === 'organization') tabName = 'keys';
     if (isConsoleProtected(tabName) && !accountProfile) {
-      accountShowInfo('Sign in to open Home and manage API keys. Usage and Playground only need your x-api-key.');
       tabName = 'keys';
     }
     document.querySelectorAll('.portal-tab-trigger').forEach(b => b.classList.remove('active'));
@@ -74,7 +73,17 @@
     document.body.classList.toggle('console-view', CONSOLE_TAB_NAMES.includes(tabName));
 
     if (tabName === 'home' && accountProfile) accountRefresh();
-    if (tabName === 'keys') keysEnsureStatus();
+    if (tabName === 'keys') {
+      accountHideInfo();
+      keysEnsureStatus();
+      if (!accountProfile) {
+        requestAnimationFrame(() => {
+          const tab = document.getElementById('tab-keys');
+          const email = document.getElementById('accountEmail');
+          if (tab && tab.classList.contains('active') && email) email.focus();
+        });
+      }
+    }
     if (tabName === 'sandbox') sandboxEnsureLoaded();
 
     if (!opts || !opts.skipHash) {
@@ -248,6 +257,8 @@
       chip.classList.remove('online');
       chip.classList.add('offline');
       summary.replaceChildren();
+      const intro = document.getElementById('keysWizardIntro');
+      if (intro) intro.hidden = true;
       syncChromeUi();
       return;
     }
@@ -275,6 +286,8 @@
       span.textContent = text;
       summary.appendChild(span);
     });
+    const intro = document.getElementById('keysWizardIntro');
+    if (intro) intro.hidden = false;
     syncChromeUi();
   }
 
