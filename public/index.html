@@ -23,14 +23,20 @@
       --red:        #f87171;
       --code-bg:    #0d0d1a;
       --radius:     8px;
-      /* One column for header, tabs, and all tab bodies (incl. long API keys) */
+      /* Main column width (sidebar sits beside this max width in .app-body) */
       --content-max: 1120px;
       --scrollbar-track:  #12121c;
       --scrollbar-thumb:  #3a3a52;
       --scrollbar-thumb-hover: #55556f;
     }
 
-    html { scroll-behavior: smooth; }
+    html {
+      scroll-behavior: smooth;
+      height: 100%;
+    }
+    @media (prefers-reduced-motion: reduce) {
+      html { scroll-behavior: auto; }
+    }
 
     /* Scrollbars — thin track, rounded thumb (Firefox + WebKit) */
     * {
@@ -67,6 +73,13 @@
       font-size: 14px;
       line-height: 1.6;
       min-height: 100vh;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    body.nav-drawer-open {
+      overflow: hidden;
     }
 
     a { color: var(--accent); text-decoration: none; }
@@ -74,35 +87,83 @@
 
     /* ── Header ── */
     header {
-      position: sticky;
-      top: 0;
-      z-index: 100;
-      background: rgba(11,11,18,0.92);
+      flex-shrink: 0;
+      z-index: 150;
+      background: rgba(11,11,18,0.96);
       backdrop-filter: blur(12px);
       border-bottom: 1px solid var(--border);
-      padding: 0 32px;
+      padding: 0 28px 0 24px;
     }
     .header-inner {
       width: 100%;
-      max-width: var(--content-max);
+      max-width: min(1360px, 100%);
       margin-left: auto;
       margin-right: auto;
       display: flex;
       align-items: center;
       justify-content: space-between;
       height: 56px;
-      gap: 16px;
+      gap: 12px;
     }
-    .logo {
+    .header-brand-wrap {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      min-width: 0;
+    }
+    .nav-menu-btn {
+      display: none;
+      align-items: center;
+      justify-content: center;
+      width: 40px;
+      height: 40px;
+      margin-right: 4px;
+      margin-left: -8px;
+      padding: 0;
+      border: none;
+      border-radius: var(--radius);
+      background: transparent;
+      color: var(--muted);
+      cursor: pointer;
+      transition: color 0.15s, background 0.15s;
+    }
+    .nav-menu-btn:hover {
+      color: var(--text);
+      background: rgba(139, 92, 246, 0.1);
+    }
+    .nav-menu-btn:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 2px;
+    }
+    .nav-menu-btn svg {
+      width: 22px;
+      height: 22px;
+      display: block;
+    }
+    .logo-btn {
       display: flex;
       align-items: center;
       gap: 10px;
+      font: inherit;
       font-weight: 600;
       font-size: 15px;
       color: var(--text);
       letter-spacing: -0.01em;
+      background: none;
+      border: none;
+      padding: 4px 8px 4px 4px;
+      margin: 0;
+      border-radius: var(--radius);
+      cursor: pointer;
+      transition: background 0.15s;
     }
-    .logo svg { flex-shrink: 0; }
+    .logo-btn:hover {
+      background: rgba(255,255,255,0.04);
+    }
+    .logo-btn:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 2px;
+    }
     .header-meta {
       display: flex;
       align-items: center;
@@ -143,6 +204,10 @@
       color: var(--text);
       border-color: rgba(139, 92, 246, 0.45);
     }
+    .account-chip:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 2px;
+    }
     .account-chip.online {
       color: var(--green);
       border-color: rgba(52, 211, 153, 0.35);
@@ -160,59 +225,185 @@
     .dot.online { background: var(--green); box-shadow: 0 0 6px var(--green); }
     .dot.offline { background: var(--red); }
 
-    /* ── Tabs ── */
-    .tabs-bar {
-      background: var(--bg);
-      border-bottom: 1px solid var(--border);
-      padding: 0 32px;
+    .nav-backdrop {
+      display: none;
+      pointer-events: none;
     }
-    .tabs-inner {
-      width: 100%;
-      max-width: var(--content-max);
-      margin-left: auto;
-      margin-right: auto;
+    @media (min-width: 901px) {
+      .nav-menu-btn {
+        display: none !important;
+      }
+    }
+
+    /* ── App shell: fixed chrome, scroll only main + sidebar ── */
+    .app-body {
+      flex: 1;
       display: flex;
+      align-items: stretch;
+      width: 100%;
+      min-height: 0;
+      max-width: min(1360px, 100%);
+      margin: 0 auto;
+      padding: 0 28px 0 24px;
+      box-sizing: border-box;
       gap: 0;
     }
-    .tab-btn {
-      flex: 1;
-      min-width: 0;
+    .app-sidebar {
+      flex-shrink: 0;
+      width: 232px;
+      align-self: stretch;
+      overflow-x: hidden;
+      overflow-y: auto;
+      padding: 16px 14px 24px 6px;
+      border-right: 1px solid var(--border);
+      background: linear-gradient(180deg, rgba(19, 19, 31, 0.65) 0%, rgba(11, 11, 18, 0.35) 100%);
+    }
+    .sidebar-nav {
+      display: flex;
+      flex-direction: column;
+      gap: 22px;
+    }
+    .sidebar-section {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .sidebar-kicker {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 6px;
+      padding: 0 10px;
+    }
+    .sidebar-link {
+      display: block;
+      width: 100%;
+      text-align: left;
       background: none;
       border: none;
+      border-radius: 6px;
       color: var(--muted);
       font-size: 13px;
       font-weight: 500;
-      padding: 12px 16px;
+      padding: 9px 12px;
       cursor: pointer;
-      border-bottom: 2px solid transparent;
-      transition: color 0.15s, border-color 0.15s;
-      letter-spacing: 0.01em;
-      text-align: center;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
+      transition: color 0.15s, background 0.15s;
     }
-    .tab-btn:not(:last-child) {
-      box-shadow: 1px 0 0 var(--border);
-    }
-    .tab-btn:hover { color: var(--text); }
-    .tab-btn.active {
+    .sidebar-link:hover {
       color: var(--text);
-      border-bottom-color: var(--accent);
+      background: rgba(139, 92, 246, 0.08);
     }
-    .private-tab {
-      display: none;
+    .sidebar-link:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 1px;
     }
-    .private-tab.unlocked {
+    .sidebar-link.active {
+      color: var(--text);
+      background: rgba(139, 92, 246, 0.18);
+      box-shadow: inset 3px 0 0 var(--accent);
+      font-weight: 600;
+    }
+    .sidebar-console-stack {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .sidebar-gate {
+      padding: 12px 12px 14px;
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      background: var(--surface);
+    }
+    .sidebar-gate-text {
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.5;
+      margin-bottom: 12px;
+    }
+    .sidebar-gate-btn {
+      width: 100%;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: var(--radius);
+      font-size: 12px;
+      font-weight: 600;
+      padding: 9px 12px;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .sidebar-gate-btn:hover {
+      background: var(--accent-glow);
+    }
+    .sidebar-gate-btn:focus-visible {
+      outline: 2px solid #fff;
+      outline-offset: 2px;
+    }
+    .main-area {
+      flex: 1;
+      min-width: 0;
+      min-height: 0;
+      overflow-x: hidden;
+      overflow-y: auto;
+      overscroll-behavior: contain;
+      padding: 28px 8px 80px 20px;
+      scroll-padding-top: 12px;
+    }
+    .dashboard-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 14px;
+      margin-bottom: 8px;
+      text-align: left;
+    }
+    .dashboard-card {
       display: block;
+      width: 100%;
+      text-align: left;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 18px 20px;
+      cursor: pointer;
+      transition: border-color 0.15s, background 0.15s;
+      font: inherit;
+      color: inherit;
     }
-
-    /* ── Main layout ── */
-    main {
-      max-width: var(--content-max);
-      margin: 0 auto;
-      padding: 40px 32px 80px;
+    .dashboard-card:hover {
+      border-color: rgba(139, 92, 246, 0.45);
+      background: var(--surface-2);
     }
+    .dashboard-card-title {
+      display: block;
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 6px;
+    }
+    .dashboard-card-desc {
+      display: block;
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+    .course-billing-details {
+      margin-top: 14px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 0 14px 12px;
+      background: rgba(0,0,0,0.15);
+    }
+    .course-billing-details summary {
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--muted);
+      padding: 12px 0;
+      list-style: none;
+    }
+    .course-billing-details summary::-webkit-details-marker { display: none; }
     .tab-content { display: none; }
     .tab-content.active { display: block; }
 
@@ -239,21 +430,23 @@
       max-width: 600px;
     }
 
-    /* Centered intros across tabs (match Get a key) */
+    /* Docs-style: left-aligned narrative (easier to scan than centered walls of text) */
     main .section {
-      text-align: center;
+      text-align: left;
     }
     main h2 {
-      text-align: center;
+      text-align: left;
+      font-size: 22px;
+      letter-spacing: -0.03em;
     }
     main h3 {
-      text-align: center;
+      text-align: left;
     }
     main .section-desc {
-      max-width: 38rem;
-      margin-left: auto;
-      margin-right: auto;
-      text-align: center;
+      max-width: 42rem;
+      margin-left: 0;
+      margin-right: 0;
+      text-align: left;
     }
     main .endpoint,
     main .endpoint-header,
@@ -740,14 +933,14 @@
       line-height: 1.5;
     }
 
-    #tab-account .section {
+    #tab-organization .section {
       margin-bottom: 34px;
     }
-    #tab-account .account-shell {
+    #tab-organization .account-shell {
       max-width: 920px;
       margin: 0 auto;
     }
-    #tab-account .account-card {
+    #tab-organization .account-card {
       width: 100%;
       max-width: none;
       background:
@@ -1418,6 +1611,12 @@
       box-shadow: inset 0 -2px 0 var(--accent);
     }
     .step-pill.done { color: var(--green); }
+    .step-pill.skipped {
+      opacity: 0.5;
+      color: var(--muted);
+      text-decoration: line-through;
+      font-size: 10px;
+    }
     .portal-card {
       background: var(--surface);
       border: 1px solid var(--border);
@@ -1674,13 +1873,83 @@
     }
     .axios-note strong { color: var(--text); }
 
+    @media (max-width: 900px) {
+      header {
+        padding: 0 12px 0 8px;
+      }
+      .nav-menu-btn {
+        display: inline-flex;
+      }
+      .nav-backdrop {
+        pointer-events: auto;
+      }
+      body.nav-drawer-open .nav-backdrop {
+        display: block;
+        position: fixed;
+        inset: 56px 0 0 0;
+        z-index: 160;
+        background: rgba(0, 0, 0, 0.42);
+        backdrop-filter: blur(2px);
+      }
+      .app-body {
+        flex-direction: row;
+        padding: 0;
+        max-width: 100%;
+      }
+      .app-sidebar {
+        position: fixed;
+        top: 56px;
+        left: 0;
+        bottom: 0;
+        width: min(300px, 88vw);
+        z-index: 200;
+        transform: translate3d(-105%, 0, 0);
+        transition: transform 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+        border-right: 1px solid var(--border);
+        border-bottom: none;
+        background: var(--bg);
+        box-shadow: 16px 0 48px rgba(0, 0, 0, 0.35);
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .app-sidebar {
+          transition: none;
+        }
+      }
+      body.nav-drawer-open .app-sidebar {
+        transform: translate3d(0, 0, 0);
+      }
+      .sidebar-nav {
+        flex-direction: column;
+        gap: 22px;
+      }
+      .sidebar-section {
+        flex: none;
+        min-width: 0;
+      }
+      .sidebar-console-stack {
+        flex-direction: column;
+      }
+      .sidebar-console-stack .sidebar-link {
+        text-align: left;
+        font-size: 13px;
+        padding: 9px 12px;
+      }
+      .sidebar-gate {
+        min-width: 0;
+      }
+      .main-area {
+        width: 100%;
+        padding: 20px 16px 64px 16px;
+      }
+    }
     @media (max-width: 600px) {
-      header, .tabs-bar { padding: 0 16px; }
-      main { padding: 24px 16px 60px; }
+      header { padding: 0 16px; }
+      .app-body { padding: 0 12px; }
+      .main-area { padding: 16px 0 48px; }
       .endpoint-desc { display: none; }
       .key-form { flex-direction: column; }
       .stats-grid { grid-template-columns: 1fr 1fr; }
-      .tab-btn { font-size: 12px; padding: 10px 6px; }
+      .sidebar-link { font-size: 12px; padding: 8px 10px; }
     }
   </style>
 </head>
@@ -1688,35 +1957,61 @@
 
 <header>
   <div class="header-inner">
-    <div class="logo">
-      <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
-        <path d="M11 2L3 7.5V14.5L11 20L19 14.5V7.5L11 2Z" fill="#8b5cf6" fill-opacity="0.3" stroke="#8b5cf6" stroke-width="1.5" stroke-linejoin="round"/>
-        <path d="M11 2L11 20M3 7.5L19 7.5M3 14.5L19 14.5" stroke="#8b5cf6" stroke-width="1" stroke-opacity="0.5"/>
-      </svg>
-      Amethyst Engine
+    <div class="header-brand-wrap">
+      <button type="button" class="nav-menu-btn" id="navMenuBtn" aria-label="Open menu" aria-expanded="false" aria-controls="appSidebar">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+          <line x1="4" y1="6" x2="20" y2="6"/>
+          <line x1="4" y1="12" x2="20" y2="12"/>
+          <line x1="4" y1="18" x2="20" y2="18"/>
+        </svg>
+      </button>
+      <button type="button" class="logo-btn" id="logoHomeBtn" onclick="navGoHome()">
+        <svg width="22" height="22" viewBox="0 0 22 22" fill="none" aria-hidden="true">
+          <path d="M11 2L3 7.5V14.5L11 20L19 14.5V7.5L11 2Z" fill="#8b5cf6" fill-opacity="0.3" stroke="#8b5cf6" stroke-width="1.5" stroke-linejoin="round"/>
+          <path d="M11 2L11 20M3 7.5L19 7.5M3 14.5L19 14.5" stroke="#8b5cf6" stroke-width="1" stroke-opacity="0.5"/>
+        </svg>
+        Amethyst Engine
+      </button>
     </div>
     <div class="header-meta">
       <div class="status-dot">
         <span class="dot" id="statusDot"></span>
         <span id="statusText">checking...</span>
       </div>
-      <button type="button" class="account-chip offline" id="accountChipBtn" onclick="setActiveTab('account')">Account: signed out</button>
+      <button type="button" class="account-chip offline" id="accountChipBtn" onclick="accountChipNavigate()" aria-label="Open console or sign in">Sign in</button>
       <span class="version-badge">v1.0.0</span>
     </div>
   </div>
 </header>
 
-<div class="tabs-bar">
-  <div class="tabs-inner">
-    <button class="tab-btn active" data-tab="reference">API Reference</button>
-    <button class="tab-btn" data-tab="licensing">Licensing</button>
-    <button class="tab-btn" data-tab="account">Account</button>
-    <button class="tab-btn private-tab" data-tab="keys" data-protected-tab="1">Keys</button>
-    <button class="tab-btn private-tab" data-tab="sandbox" data-protected-tab="1">Sample draft</button>
-  </div>
-</div>
+<div class="nav-backdrop" id="navBackdrop" hidden aria-hidden="true"></div>
 
-<main>
+<div class="app-body">
+  <aside class="app-sidebar" id="appSidebar" aria-label="Developer portal">
+    <nav class="sidebar-nav">
+      <div class="sidebar-section">
+        <div class="sidebar-kicker">Documentation</div>
+        <button type="button" class="sidebar-link portal-tab-trigger active" data-tab="reference">API Reference</button>
+        <button type="button" class="sidebar-link portal-tab-trigger" data-tab="licensing">Licensing</button>
+      </div>
+      <div class="sidebar-section">
+        <div class="sidebar-kicker">Console</div>
+        <div class="sidebar-gate" id="sidebarConsoleGate">
+          <p class="sidebar-gate-text">Sign in to manage API keys, usage, and the playground.</p>
+          <button type="button" class="sidebar-gate-btn" onclick="setActiveTab('organization')">Sign in to console</button>
+        </div>
+        <div class="sidebar-console-stack" id="sidebarConsoleNav" hidden>
+          <button type="button" class="sidebar-link portal-tab-trigger" data-tab="home">Home</button>
+          <button type="button" class="sidebar-link portal-tab-trigger" data-tab="keys">API keys</button>
+          <button type="button" class="sidebar-link portal-tab-trigger" data-tab="usage">Usage</button>
+          <button type="button" class="sidebar-link portal-tab-trigger" data-tab="sandbox">Playground</button>
+          <button type="button" class="sidebar-link portal-tab-trigger" data-tab="organization">Organization</button>
+        </div>
+      </div>
+    </nav>
+  </aside>
+
+<main class="main-area">
 
   <!-- ═══════════════════ REFERENCE TAB ═══════════════════ -->
   <div class="tab-content active" id="tab-reference">
@@ -2202,14 +2497,48 @@ player_id: player._id          <span class="t-cmt">// MongoDB ObjectId — not r
 
   </div><!-- /tab-licensing -->
 
+  <!-- ═══════════════════ CONSOLE HOME ═══════════════════ -->
+  <div class="tab-content" id="tab-home">
+    <div class="portal-shell">
+      <div class="section">
+        <h2>Dashboard</h2>
+        <p class="section-desc">
+          Use the Documentation links in the sidebar for integration reference and licensing. The Console section holds credentials, usage, and the playground — issue keys only under <strong>API keys</strong>.
+        </p>
+      </div>
 
-  <!-- ═══════════════════ ACCOUNT TAB ═══════════════════ -->
-  <div class="tab-content" id="tab-account">
+      <div class="dashboard-grid">
+        <button type="button" class="dashboard-card" onclick="setActiveTab('keys')">
+          <span class="dashboard-card-title">Create API key</span>
+          <span class="dashboard-card-desc">Issue an x-api-key and copy it once into your secrets or environment.</span>
+        </button>
+        <button type="button" class="dashboard-card" onclick="setActiveTab('sandbox')">
+          <span class="dashboard-card-title">Open playground</span>
+          <span class="dashboard-card-desc">Run sample fixture requests against the valuation API with your key.</span>
+        </button>
+        <button type="button" class="dashboard-card" onclick="setActiveTab('usage')">
+          <span class="dashboard-card-title">View usage</span>
+          <span class="dashboard-card-desc">Paste a key to load tiers, scopes, and request totals from GET /api/usage.</span>
+        </button>
+      </div>
+
+      <div class="portal-card" style="max-width:none;margin-top:8px">
+        <span class="portal-label">Keys snapshot</span>
+        <p class="portal-hint" style="margin-top:4px">Summary of keys on your developer account. Full table and issuance live under API keys.</p>
+        <div id="homeKeysSnapshot" class="account-key-table-wrap" style="margin-top:14px">
+          <p class="portal-hint" style="margin:0">Sign in to load keys.</p>
+        </div>
+      </div>
+    </div>
+  </div><!-- /tab-home -->
+
+  <!-- ═══════════════════ ORGANIZATION (identity / settings) ═══════════════════ -->
+  <div class="tab-content" id="tab-organization">
     <div class="portal-shell account-shell">
       <div class="section">
-        <h2>Developer account</h2>
+        <h2>Organization</h2>
         <p class="section-desc">
-          Create an account once, then issue and monitor all keys tied to your organization in one place.
+          Profile and team identity for this browser session. API credentials are created only under <strong>API keys</strong> — not here.
         </p>
       </div>
 
@@ -2217,7 +2546,7 @@ player_id: player._id          <span class="t-cmt">// MongoDB ObjectId — not r
       <div class="usage-info" id="accountInfo"></div>
 
       <div class="portal-card account-card" id="accountAuthPanel">
-        <div class="account-kicker">Team account access</div>
+        <div class="account-kicker">Console access</div>
         <div class="account-auth-mode">
           <button type="button" class="account-mode-btn active" id="accountModeSignInBtn" onclick="accountSetMode('signin')">Sign in</button>
           <button type="button" class="account-mode-btn" id="accountModeCreateBtn" onclick="accountSetMode('create')">Create account</button>
@@ -2255,63 +2584,18 @@ player_id: player._id          <span class="t-cmt">// MongoDB ObjectId — not r
           <p class="portal-hint" id="accountWhoami" style="margin-top:0"></p>
           <div class="account-summary-row" id="accountSummaryRow"></div>
           <div class="account-quick-actions">
-            <button type="button" class="btn-secondary" onclick="setActiveTab('keys')">Open keys</button>
-            <button type="button" class="btn-secondary" onclick="setActiveTab('sandbox')">Open sample draft</button>
+            <button type="button" class="btn-secondary" onclick="setActiveTab('home')">Dashboard home</button>
+            <button type="button" class="btn-secondary" onclick="setActiveTab('keys')">API keys</button>
           </div>
+          <p class="portal-hint" style="margin-top:12px">Need an x-api-key? Use <strong>API keys</strong> — this screen does not issue secrets.</p>
           <div class="wizard-actions" style="margin-top:12px">
             <button type="button" class="btn-secondary" onclick="accountLogout()">Sign out</button>
             <button type="button" class="btn-secondary" onclick="accountRefresh()">Refresh</button>
           </div>
         </div>
-
-        <div class="portal-card account-card" style="margin-bottom:16px">
-          <div class="account-kicker">Issue a new key</div>
-          <div class="portal-field">
-            <label class="portal-label" for="accountIssueLabel">New key label</label>
-            <input class="portal-input" id="accountIssueLabel" maxlength="200" placeholder="e.g. Production API" />
-          </div>
-          <div class="portal-field">
-            <label class="portal-label" for="accountIssueTier">Tier</label>
-            <select class="portal-select" id="accountIssueTier">
-              <option value="free">free</option>
-              <option value="standard">standard</option>
-              <option value="premium">premium</option>
-            </select>
-          </div>
-          <div class="wizard-actions" style="margin-top:0">
-            <button type="button" class="load-btn" id="accountIssueBtn" onclick="accountIssueKey()">Issue key</button>
-          </div>
-          <div id="accountIssueReveal" style="display:none;margin-top:14px">
-            <span class="portal-label">Copy new key now</span>
-            <div class="key-reveal-wrap">
-              <button type="button" class="copy-btn" id="accountIssueCopyBtn" onclick="accountCopyIssuedKey()">Copy</button>
-              <pre id="accountIssueKeyPre"></pre>
-            </div>
-          </div>
-        </div>
-
-        <div class="portal-card account-card">
-          <span class="portal-label">Keys in this account</span>
-          <div class="account-key-table-wrap">
-            <table class="keys-table">
-              <thead>
-                <tr>
-                  <th>Label</th>
-                  <th>Tier</th>
-                  <th>Prefix</th>
-                  <th>Usage</th>
-                  <th>Status</th>
-                </tr>
-              </thead>
-              <tbody id="accountKeysTableBody">
-                <tr><td colspan="5" class="account-empty"><strong>No keys yet</strong>Issue your first key above to activate this dashboard.</td></tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
       </div>
     </div>
-  </div><!-- /tab-account -->
+  </div><!-- /tab-organization -->
 
 
   <!-- ═══════════════════ GET A KEY TAB ═══════════════════ -->
@@ -2319,9 +2603,9 @@ player_id: player._id          <span class="t-cmt">// MongoDB ObjectId — not r
     <div class="portal-shell">
 
     <div class="section">
-      <h2>Issue an API key</h2>
+      <h2>API keys</h2>
       <p class="section-desc">
-        Generate a new <code style="color:var(--orange);background:rgba(251,146,60,0.1);padding:1px 6px;border-radius:3px;font-size:12px;">x-api-key</code> for this environment.
+        Issue your <code style="color:var(--orange);background:rgba(251,146,60,0.1);padding:1px 6px;border-radius:3px;font-size:12px;">x-api-key</code> here — the only primary issuance path in the console.
         Keys are tied to your signed-in <strong>developer account</strong> (team / product identity).
         Copy the key when it appears and store it in your secrets manager or <code style="font-size:12px">.env</code>. The server never shows the key again.
       </p>
@@ -2358,7 +2642,7 @@ player_id: player._id          <span class="t-cmt">// MongoDB ObjectId — not r
         <div class="portal-field">
           <label class="portal-label" for="keysAccountName">Developer account name <span style="color:var(--red)">*</span></label>
           <input class="portal-input" id="keysAccountName" maxlength="200" placeholder="e.g. Draftroom, Acme Fantasy Labs" autocomplete="organization" />
-          <p class="portal-hint">Pre-filled from your signed-in account. Use Account tab to manage profile identity.</p>
+          <p class="portal-hint">Pre-filled from your signed-in account. Use <strong>Organization</strong> for profile identity only.</p>
         </div>
         <div class="portal-field">
           <label class="portal-label" for="keysOrganization">Organization (optional)</label>
@@ -2398,31 +2682,36 @@ player_id: player._id          <span class="t-cmt">// MongoDB ObjectId — not r
 
       <div class="portal-card" id="keysStep2" style="display:none">
         <p id="keysLinkedAccountPreview" class="portal-hint" style="margin:0 0 14px;font-size:13px;color:var(--text)"></p>
-        <p style="font-size:13px;color:var(--muted);margin-bottom:16px;line-height:1.6">
-          In production, activating a paid tier would collect payment through a PCI-compliant provider.
-          This step is a placeholder for your course submission — no card data is sent or stored.
+        <p style="font-size:13px;color:var(--muted);margin-bottom:12px;line-height:1.6">
+          Standard and premium tiers acknowledge a <strong>non-billing</strong> simulation before key generation. No card data is sent or stored.
         </p>
-        <div class="billing-mock">
-          <div class="billing-row">
-            <div>
-              <span class="portal-label">Card (simulated)</span>
-              <input class="portal-input" value="4242 4242 4242 4242" readonly tabindex="-1" aria-readonly="true" />
+        <details class="course-billing-details">
+          <summary>Course / assignment: expand for billing UI mock (not production)</summary>
+          <p style="font-size:12px;color:var(--muted);margin:0 0 12px;line-height:1.55">
+            In production, payment would be collected by a PCI-compliant provider. The fields below are read-only placeholders.
+          </p>
+          <div class="billing-mock">
+            <div class="billing-row">
+              <div>
+                <span class="portal-label">Card (simulated)</span>
+                <input class="portal-input" value="4242 4242 4242 4242" readonly tabindex="-1" aria-readonly="true" />
+              </div>
+              <div>
+                <span class="portal-label">CVC / Expiry</span>
+                <input class="portal-input" value="Demo only — not validated" readonly tabindex="-1" aria-readonly="true" />
+              </div>
             </div>
-            <div>
-              <span class="portal-label">CVC / Expiry</span>
-              <input class="portal-input" value="Demo only — not validated" readonly tabindex="-1" aria-readonly="true" />
+            <div class="billing-row">
+              <div>
+                <span class="portal-label">Plan</span>
+                <input class="portal-input" id="keysBillingPlanPreview" readonly tabindex="-1" />
+              </div>
             </div>
           </div>
-          <div class="billing-row">
-            <div>
-              <span class="portal-label">Plan</span>
-              <input class="portal-input" id="keysBillingPlanPreview" readonly tabindex="-1" />
-            </div>
-          </div>
-        </div>
+        </details>
         <div class="chk-row">
           <input type="checkbox" id="keysBillingAck" />
-          <label for="keysBillingAck">I understand billing is not processed here; I am only simulating checkout for this assignment.</label>
+          <label for="keysBillingAck">I understand billing is not processed in this portal; I am only acknowledging the course simulation for paid tiers.</label>
         </div>
         <div class="wizard-actions">
           <button type="button" class="btn-secondary" onclick="keysGoStep(1)">Back</button>
@@ -2435,7 +2724,7 @@ player_id: player._id          <span class="t-cmt">// MongoDB ObjectId — not r
           <strong>One-time display.</strong> After you leave this screen, this portal cannot recover your key. Copy it to a password manager or environment variable first.
         </div>
         <div class="wizard-actions" id="keysGenerateRow">
-          <button type="button" class="btn-secondary" onclick="keysGoStep(2)">Back</button>
+          <button type="button" class="btn-secondary" onclick="keysGoStepFromKeyBack()">Back</button>
           <button type="button" class="load-btn" id="keysGenerateBtn" onclick="keysIssue()">Generate API key</button>
         </div>
         <div id="keysRevealBlock" style="display:none">
@@ -2465,10 +2754,10 @@ player_id: player._id          <span class="t-cmt">// MongoDB ObjectId — not r
     <div class="portal-shell">
 
     <div class="section">
-      <h2>My Usage</h2>
+      <h2>Usage</h2>
       <p class="section-desc">
         Inspect the key tied to your <strong>developer account</strong> — usage totals, tier, scopes, and renewal dates.
-        This is the same account record you create under <strong>Get a key</strong>. Nothing here lists other keys or teams.
+        Keys issued from the console share the same developer account as <strong>API keys</strong>. Nothing here lists other organizations’ keys.
       </p>
     </div>
 
@@ -2559,7 +2848,7 @@ player_id: player._id          <span class="t-cmt">// MongoDB ObjectId — not r
         </div>
       </div>
       <div class="usage-dev-account" id="usageLegacyAccount">
-        <p class="portal-hint" style="margin:0;font-size:13px">No developer account is linked to this key (older issuance). Issue your next key from <strong>Get a key</strong> so usage and support stay organized under one account.</p>
+        <p class="portal-hint" style="margin:0;font-size:13px">No developer account is linked to this key (older issuance). Issue your next key from <strong>API keys</strong> so usage and support stay organized under one account.</p>
       </div>
       <div class="stats-grid">
         <div class="stat-item">
@@ -2593,9 +2882,9 @@ player_id: player._id          <span class="t-cmt">// MongoDB ObjectId — not r
   <div class="tab-content" id="tab-sandbox">
     <div class="portal-shell">
       <div class="section">
-        <h2>Sample draft — single player</h2>
+        <h2>Playground — sample draft</h2>
         <p class="section-desc">
-          Five presupplied <strong>league / draft context</strong> JSON files (Activity #9 style) live under <code style="font-size:12px">/fixtures/checkpoints/</code>.
+          Non-billing experimentation: five presupplied <strong>league / draft context</strong> JSON files (Activity #9 style) live under <code style="font-size:12px">/fixtures/checkpoints/</code>.
           Pick a checkpoint to preview the context, copy it for your own tools, then enter one <code style="font-size:12px">player_id</code> (MLB id string, or a synthetic id from the fixture) to call
           <code style="color:var(--orange);background:rgba(251,146,60,0.1);padding:1px 6px;border-radius:3px;font-size:12px;">POST /valuation/player</code> — same body as <code style="font-size:12px">/valuation/calculate</code> plus <code style="font-size:12px">player_id</code>. See <code style="font-size:12px">docs/draft-2026-xlsx-mapping.md</code> for how fixtures were built.
         </p>
@@ -2650,7 +2939,7 @@ player_id: player._id          <span class="t-cmt">// MongoDB ObjectId — not r
           />
         </div>
         <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center">
-          <button type="button" class="btn-secondary" onclick="sandboxCopyKeyFromUsage()">Use key from My Usage</button>
+          <button type="button" class="btn-secondary" onclick="sandboxCopyKeyFromUsage()">Use key from Usage</button>
           <button type="button" class="load-btn" id="sandboxRunBtn" onclick="sandboxRunPlayerValuation()">POST /valuation/player</button>
         </div>
       </div>
@@ -2663,41 +2952,125 @@ player_id: player._id          <span class="t-cmt">// MongoDB ObjectId — not r
   </div><!-- /tab-sandbox -->
 
 </main>
+</div><!-- /.app-body -->
 
 <script>
-  // ── Tab switching ──────────────────────────────────────────────
-  function isProtectedTab(tabName) {
-    return tabName === 'keys' || tabName === 'sandbox';
+  // ── Tab switching (public docs + authenticated console) ───────
+  const CONSOLE_TAB_NAMES = ['home', 'keys', 'usage', 'sandbox', 'organization'];
+  const ROUTE_LABELS = {
+    reference: 'API Reference',
+    licensing: 'Licensing',
+    home: 'Home',
+    keys: 'API keys',
+    usage: 'Usage',
+    sandbox: 'Playground',
+    organization: 'Organization',
+  };
+
+  function updatePageMeta(tabName) {
+    const label = ROUTE_LABELS[tabName] || 'Portal';
+    document.title = label + ' — Amethyst Engine';
   }
 
-  function updateProtectedTabsVisibility() {
-    const unlocked = Boolean(accountProfile);
-    document.querySelectorAll('.private-tab').forEach(btn => {
-      btn.classList.toggle('unlocked', unlocked);
+  function updateNavAriaCurrent(tabName) {
+    document.querySelectorAll('.sidebar-link.portal-tab-trigger').forEach(btn => {
+      if (btn.dataset.tab === tabName) btn.setAttribute('aria-current', 'page');
+      else btn.removeAttribute('aria-current');
     });
   }
 
-  function setActiveTab(tabName) {
-    if (isProtectedTab(tabName) && !accountProfile) {
-      accountShowInfo('Sign in to access your private workspace (Keys and Sample draft).');
-      tabName = 'account';
+  function navDrawerOpen() {
+    return document.body.classList.contains('nav-drawer-open');
+  }
+
+  function setNavDrawerOpen(open) {
+    document.body.classList.toggle('nav-drawer-open', Boolean(open));
+    const menuBtn = document.getElementById('navMenuBtn');
+    if (menuBtn) menuBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
+  }
+
+  function closeNavDrawer() {
+    setNavDrawerOpen(false);
+  }
+
+  function navGoHome() {
+    setActiveTab('reference');
+    closeNavDrawer();
+  }
+
+  function isConsoleProtected(tabName) {
+    return tabName === 'home' || tabName === 'keys' || tabName === 'usage' || tabName === 'sandbox';
+  }
+
+  function syncChromeUi() {
+    const unlocked = Boolean(accountProfile);
+    document.body.classList.toggle('logged-in', unlocked);
+    const gate = document.getElementById('sidebarConsoleGate');
+    const nav = document.getElementById('sidebarConsoleNav');
+    if (gate) gate.hidden = unlocked;
+    if (nav) nav.hidden = !unlocked;
+  }
+
+  function accountChipNavigate() {
+    if (accountProfile) setActiveTab('home');
+    else setActiveTab('organization');
+  }
+
+  function setActiveTab(tabName, opts) {
+    if (isConsoleProtected(tabName) && !accountProfile) {
+      accountShowInfo('Sign in to open the developer console (Home, API keys, Usage, and Playground).');
+      tabName = 'organization';
     }
-    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.portal-tab-trigger').forEach(b => b.classList.remove('active'));
     document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-    const btn = document.querySelector('.tab-btn[data-tab="' + tabName + '"]');
-    if (btn) btn.classList.add('active');
-    const tabId = 'tab-' + tabName;
-    const tab = document.getElementById(tabId);
+    document.querySelectorAll('.portal-tab-trigger[data-tab="' + tabName + '"]').forEach(b => {
+      b.classList.add('active');
+    });
+    const tab = document.getElementById('tab-' + tabName);
     if (tab) tab.classList.add('active');
-    if (tabName === 'account') accountEnsureLoaded();
+
+    document.body.classList.toggle('console-view', CONSOLE_TAB_NAMES.includes(tabName));
+
+    if (tabName === 'organization') accountEnsureLoaded();
+    if (tabName === 'home' && accountProfile) accountRefresh();
     if (tabName === 'keys') keysEnsureStatus();
     if (tabName === 'sandbox') sandboxEnsureLoaded();
+
+    if (!opts || !opts.skipHash) {
+      try {
+        if (window.history && window.history.replaceState) {
+          window.history.replaceState(null, '', '#' + tabName);
+        }
+      } catch (_) { /* ignore */ }
+    }
+
+    updatePageMeta(tabName);
+    updateNavAriaCurrent(tabName);
+    closeNavDrawer();
   }
 
-  document.querySelectorAll('.tab-btn').forEach(btn => {
+  document.querySelectorAll('.portal-tab-trigger').forEach(btn => {
     btn.addEventListener('click', () => {
-      setActiveTab(btn.dataset.tab);
+      if (btn.dataset.tab) setActiveTab(btn.dataset.tab);
     });
+  });
+
+  window.addEventListener('hashchange', () => {
+    const raw = (window.location.hash || '').replace(/^#/, '');
+    if (!raw || !/^[\w-]+$/.test(raw)) return;
+    const el = document.getElementById('tab-' + raw);
+    if (el) setActiveTab(raw, { skipHash: true });
+  });
+
+  document.getElementById('navMenuBtn')?.addEventListener('click', () => {
+    setNavDrawerOpen(!navDrawerOpen());
+  });
+  document.getElementById('navBackdrop')?.addEventListener('click', closeNavDrawer);
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && navDrawerOpen()) {
+      e.preventDefault();
+      closeNavDrawer();
+    }
   });
 
   // ── Endpoint expand/collapse ──────────────────────────────────
@@ -2764,9 +3137,8 @@ player_id: player._id          <span class="t-cmt">// MongoDB ObjectId — not r
   // ── Portal account auth + key dashboard ──────────────────────
   let accountBooted = false;
   let accountProfile = null;
-  let accountIssuedSecret = '';
   let accountAuthMode = 'signin';
-  updateProtectedTabsVisibility();
+  syncChromeUi();
 
   function accountShowErr(msg) {
     const el = document.getElementById('accountError');
@@ -2820,16 +3192,16 @@ player_id: player._id          <span class="t-cmt">// MongoDB ObjectId — not r
     if (!profile) {
       authPanel.style.display = 'block';
       signed.style.display = 'none';
-      chip.textContent = 'Account: signed out';
+      chip.textContent = 'Sign in';
       chip.classList.remove('online');
       chip.classList.add('offline');
       summary.replaceChildren();
-      updateProtectedTabsVisibility();
+      syncChromeUi();
       return;
     }
     authPanel.style.display = 'none';
     signed.style.display = 'block';
-    chip.textContent = 'Account: ' + profile.user.displayName;
+    chip.textContent = profile.user.displayName;
     chip.classList.remove('offline');
     chip.classList.add('online');
     const d = profile.developerAccount || {};
@@ -2850,25 +3222,26 @@ player_id: player._id          <span class="t-cmt">// MongoDB ObjectId — not r
       span.textContent = text;
       summary.appendChild(span);
     });
-    if (!document.getElementById('accountIssueLabel').value.trim()) {
-      document.getElementById('accountIssueLabel').value = 'Production API';
-    }
-    updateProtectedTabsVisibility();
+    syncChromeUi();
   }
 
-  function accountRenderKeys(rows) {
-    const body = document.getElementById('accountKeysTableBody');
-    body.replaceChildren();
+  function homeRenderKeysSnapshot(rows) {
+    const mount = document.getElementById('homeKeysSnapshot');
+    if (!mount) return;
+    mount.replaceChildren();
     if (!Array.isArray(rows) || rows.length === 0) {
-      const tr = document.createElement('tr');
-      const td = document.createElement('td');
-      td.colSpan = 5;
-      td.className = 'account-empty';
-      td.innerHTML = '<strong>No keys yet</strong>Issue your first key above to activate this dashboard.';
-      tr.appendChild(td);
-      body.appendChild(tr);
+      const p = document.createElement('p');
+      p.className = 'portal-hint';
+      p.style.margin = '0';
+      p.innerHTML = '<strong>No keys yet.</strong> Go to <strong>API keys</strong> to create your first key, copy it once, then use the header <code style="font-size:11px">x-api-key</code>.';
+      mount.appendChild(p);
       return;
     }
+    const table = document.createElement('table');
+    table.className = 'keys-table';
+    table.innerHTML =
+      '<thead><tr><th>Label</th><th>Tier</th><th>Prefix</th><th>Usage</th><th>Status</th></tr></thead><tbody></tbody>';
+    const body = table.querySelector('tbody');
     rows.forEach(row => {
       const tr = document.createElement('tr');
       const statusClass = row.isActive ? 'key-status-active' : 'key-status-inactive';
@@ -2880,6 +3253,12 @@ player_id: player._id          <span class="t-cmt">// MongoDB ObjectId — not r
         '<td><span class="key-status-badge ' + statusClass + '">' + (row.isActive ? 'active' : 'inactive') + '</span></td>';
       body.appendChild(tr);
     });
+    mount.appendChild(table);
+    const note = document.createElement('p');
+    note.className = 'table-note';
+    note.style.marginTop = '12px';
+    note.innerHTML = 'Rotate or revoke flows will appear here when the API adds them. Issuance stays under <strong>API keys</strong>.';
+    mount.appendChild(note);
   }
 
   async function accountFetchMe() {
@@ -2901,7 +3280,7 @@ player_id: player._id          <span class="t-cmt">// MongoDB ObjectId — not r
       accountShowErr(portalApiMessage(data));
       return;
     }
-    accountRenderKeys(data);
+    homeRenderKeysSnapshot(data);
   }
 
   async function accountEnsureLoaded() {
@@ -2942,6 +3321,7 @@ player_id: player._id          <span class="t-cmt">// MongoDB ObjectId — not r
       accountShowInfo('Account created. You are now signed in.');
       await accountRefresh();
       keysStatusLoaded = false;
+      setActiveTab('home');
     } catch {
       accountShowErr('Network error while creating account.');
     } finally {
@@ -2974,6 +3354,7 @@ player_id: player._id          <span class="t-cmt">// MongoDB ObjectId — not r
       accountShowInfo('Signed in.');
       await accountRefresh();
       keysStatusLoaded = false;
+      setActiveTab('home');
     } catch {
       accountShowErr('Network error while signing in.');
     } finally {
@@ -2988,61 +3369,13 @@ player_id: player._id          <span class="t-cmt">// MongoDB ObjectId — not r
     await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
     accountProfile = null;
     accountRenderSignedIn(null);
-    accountRenderKeys([]);
+    homeRenderKeysSnapshot([]);
     accountShowInfo('Signed out.');
     keysStatusLoaded = false;
-    const activeTab = document.querySelector('.tab-btn.active')?.dataset.tab || '';
-    if (isProtectedTab(activeTab)) {
-      setActiveTab('account');
+    const activeTab = document.querySelector('.portal-tab-trigger.active')?.dataset.tab || '';
+    if (isConsoleProtected(activeTab)) {
+      setActiveTab('reference');
     }
-  }
-
-  async function accountIssueKey() {
-    accountHideErr();
-    accountHideInfo();
-    const btn = document.getElementById('accountIssueBtn');
-    btn.disabled = true;
-    btn.textContent = 'Creating…';
-    try {
-      const r = await fetch('/api/account/keys/issue', {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          label: document.getElementById('accountIssueLabel').value.trim(),
-          tier: document.getElementById('accountIssueTier').value,
-        }),
-      });
-      const data = await r.json();
-      if (!r.ok) {
-        accountShowErr(portalApiMessage(data));
-        return;
-      }
-      accountIssuedSecret = data.secret || '';
-      document.getElementById('accountIssueKeyPre').textContent = accountIssuedSecret;
-      document.getElementById('accountIssueReveal').style.display = 'block';
-      accountShowInfo('Key issued. Copy it now; it will not be shown again.');
-      await accountRefresh();
-      keysStatusLoaded = false;
-    } catch {
-      accountShowErr('Network error while issuing key.');
-    } finally {
-      btn.disabled = false;
-      btn.textContent = 'Issue key';
-    }
-  }
-
-  function accountCopyIssuedKey() {
-    if (!accountIssuedSecret) return;
-    const btn = document.getElementById('accountIssueCopyBtn');
-    navigator.clipboard.writeText(accountIssuedSecret).then(() => {
-      btn.textContent = 'Copied!';
-      btn.classList.add('copied');
-      setTimeout(() => {
-        btn.textContent = 'Copy';
-        btn.classList.remove('copied');
-      }, 2000);
-    });
   }
 
   let usageLastDeveloperAccountId = '';
@@ -3184,7 +3517,7 @@ player_id: player._id          <span class="t-cmt">// MongoDB ObjectId — not r
           expNote.textContent =
             'Expired ' +
             exp.toLocaleDateString() +
-            ' — the API may reject this key. Issue a replacement from Get a key.';
+            ' — the API may reject this key. Issue a replacement from API keys.';
         } else if (days <= 30) {
           expNote.textContent =
             'Expires ' + exp.toLocaleDateString() + ' · ' + days + ' day' + (days === 1 ? '' : 's') + ' remaining.';
@@ -3435,7 +3768,7 @@ player_id: player._id          <span class="t-cmt">// MongoDB ObjectId — not r
     const raw = sandboxFixtureRaw[sandboxActiveFile];
 
     if (!key) {
-      sandboxShowErr('Paste an x-api-key (or click “Use key from My Usage”).');
+      sandboxShowErr('Paste an x-api-key (or click “Use key from Usage”).');
       return;
     }
     if (!pid) {
@@ -3524,8 +3857,8 @@ player_id: player._id          <span class="t-cmt">// MongoDB ObjectId — not r
 
       if (!accountProfile || !accountProfile.developerAccount) {
         keysShow(errBanner);
-        errBanner.textContent = 'Create/sign in to your account in the Account tab before issuing a key.';
-        setActiveTab('account');
+        errBanner.textContent = 'Create or sign in under Organization before issuing a key.';
+        setActiveTab('organization');
         return;
       }
 
@@ -3553,7 +3886,7 @@ player_id: player._id          <span class="t-cmt">// MongoDB ObjectId — not r
       infoBanner.textContent =
         'Signed in as ' +
         (accountProfile.user?.email || 'account user') +
-        '. Account identity fields are locked here; edit them in the Account tab.';
+        '. Identity fields are locked here; edit them under Organization.';
       const tokenWrap = document.getElementById('keysIssuanceTokenWrap');
       if (keysRequiresToken) {
         keysShow(tokenWrap);
@@ -3568,12 +3901,24 @@ player_id: player._id          <span class="t-cmt">// MongoDB ObjectId — not r
   }
 
   function keysSetStepIndicator(step) {
+    const tier = document.querySelector('input[name="keysTier"]:checked')?.value || 'free';
     document.querySelectorAll('[data-step-indicator]').forEach(pill => {
       const n = +pill.dataset.stepIndicator;
-      pill.classList.remove('active', 'done');
+      pill.classList.remove('active', 'done', 'skipped');
       if (n < step) pill.classList.add('done');
       if (n === step) pill.classList.add('active');
     });
+    const pill2 = document.querySelector('[data-step-indicator="2"]');
+    if (pill2 && step >= 3 && tier === 'free') {
+      pill2.classList.remove('active', 'done');
+      pill2.classList.add('skipped');
+    }
+  }
+
+  function keysGoStepFromKeyBack() {
+    const tier = document.querySelector('input[name="keysTier"]:checked')?.value || 'free';
+    if (tier === 'free') keysGoStep(1);
+    else keysGoStep(2);
   }
 
   function keysGoStep(step) {
@@ -3609,9 +3954,10 @@ player_id: player._id          <span class="t-cmt">// MongoDB ObjectId — not r
     }
 
     if (step === 3) {
-      if (!document.getElementById('keysBillingAck').checked) {
+      const tier = document.querySelector('input[name="keysTier"]:checked')?.value || 'free';
+      if (tier !== 'free' && !document.getElementById('keysBillingAck').checked) {
         keysShow(errBanner);
-        errBanner.textContent = 'Confirm the billing simulation checkbox to continue.';
+        errBanner.textContent = 'Confirm the course billing simulation checkbox to continue.';
         return;
       }
     }
@@ -3633,8 +3979,8 @@ player_id: player._id          <span class="t-cmt">// MongoDB ObjectId — not r
     const btn = document.getElementById('keysStep1ContinueBtn');
     if (!accountProfile || !accountProfile.developerAccount) {
       keysShow(errBanner);
-      errBanner.textContent = 'Sign in on the Account tab first.';
-      setActiveTab('account');
+      errBanner.textContent = 'Sign in under Organization first.';
+      setActiveTab('organization');
       return;
     }
     const accountName = document.getElementById('keysAccountName').value.trim();
@@ -3650,6 +3996,7 @@ player_id: player._id          <span class="t-cmt">// MongoDB ObjectId — not r
     }
     const email = accountProfile.user?.email || document.getElementById('keysEmail').value.trim();
     const org = accountProfile.developerAccount?.organization || document.getElementById('keysOrganization').value.trim();
+    const tier = document.querySelector('input[name="keysTier"]:checked')?.value || 'free';
     btn.disabled = true;
     btn.textContent = 'Confirming account…';
     try {
@@ -3657,7 +4004,8 @@ player_id: player._id          <span class="t-cmt">// MongoDB ObjectId — not r
       keysLastAccountDisplayName = accountProfile.developerAccount.displayName || accountName;
       if (email) document.getElementById('keysEmail').value = email;
       if (org) document.getElementById('keysOrganization').value = org;
-      keysGoStep(2);
+      if (tier === 'free') keysGoStep(3);
+      else keysGoStep(2);
     } finally {
       btn.disabled = false;
       btn.textContent = 'Continue';
@@ -3786,6 +4134,20 @@ player_id: player._id          <span class="t-cmt">// MongoDB ObjectId — not r
     if (sec < 86400) return Math.floor(sec / 3600) + ' hours ago';
     return Math.floor(sec / 86400) + ' days ago';
   }
+
+  (async function portalApplySessionAndHash() {
+    try {
+      accountSetMode('signin');
+      await accountRefresh();
+      accountBooted = true;
+    } catch (_) {}
+    const h = (window.location.hash || '').replace(/^#/, '');
+    if (h && document.getElementById('tab-' + h)) {
+      setActiveTab(h, { skipHash: true });
+    } else if (accountProfile && !h) {
+      setActiveTab('home', { skipHash: true });
+    }
+  })();
 </script>
 
 </body>
