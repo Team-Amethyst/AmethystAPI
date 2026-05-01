@@ -8,7 +8,7 @@
   <!-- Relative paths so opening public/index.html as a file (file://) still loads assets; /css/... breaks on file:// -->
   <link rel="stylesheet" href="css/portal.css" />
 </head>
-<body>
+<body data-portal-tab="reference">
 
 <header>
   <div class="header-inner">
@@ -44,33 +44,29 @@
 <div class="app-body">
   <aside class="app-sidebar" id="appSidebar" aria-label="Developer portal">
     <nav class="sidebar-nav">
-      <div class="sidebar-section">
-        <div class="sidebar-panel sidebar-panel--docs">
-          <div class="sidebar-kicker">Product docs</div>
-          <button type="button" class="sidebar-link portal-tab-trigger active" data-tab="reference">API Reference</button>
-          <button type="button" class="sidebar-link portal-tab-trigger" data-tab="licensing">Licensing</button>
+      <div class="sidebar-rail">
+        <div class="sidebar-kicker">Product docs</div>
+        <button type="button" class="sidebar-link portal-tab-trigger active" data-tab="reference">API Reference</button>
+        <button type="button" class="sidebar-link portal-tab-trigger" data-tab="licensing">Licensing</button>
+
+        <div class="sidebar-divider" role="presentation"></div>
+
+        <div class="sidebar-kicker">Try the API</div>
+        <p class="sidebar-section-hint sidebar-hint-tools">Paste your x-api-key — no account required.</p>
+        <button type="button" class="sidebar-link portal-tab-trigger" data-tab="usage">Usage</button>
+        <button type="button" class="sidebar-link portal-tab-trigger" data-tab="sandbox">Playground</button>
+
+        <div class="sidebar-divider" role="presentation"></div>
+
+        <div id="sidebarKeysGate" class="sidebar-keys-gate">
+          <div class="sidebar-kicker">Account</div>
+          <p class="sidebar-section-hint">Sign in to issue keys. Usage and Playground work with a key only.</p>
+          <button type="button" class="sidebar-link portal-tab-trigger" data-tab="keys">API keys</button>
         </div>
-      </div>
-      <div class="sidebar-section">
-        <div class="sidebar-panel sidebar-panel--tools">
-          <div class="sidebar-kicker">Try the API</div>
-          <p class="sidebar-section-hint sidebar-hint-tools">Paste your x-api-key — no account required.</p>
-          <button type="button" class="sidebar-link portal-tab-trigger" data-tab="usage">Usage</button>
-          <button type="button" class="sidebar-link portal-tab-trigger" data-tab="sandbox">Playground</button>
-        </div>
-      </div>
-      <div class="sidebar-section">
-        <div class="sidebar-panel sidebar-panel--keys">
-          <div id="sidebarKeysGate" class="sidebar-keys-gate">
-            <div class="sidebar-kicker">API keys</div>
-            <p class="sidebar-keys-gate-text">Sign in to create and revoke keys for your team.</p>
-            <button type="button" class="sidebar-keys-cta" onclick="setActiveTab('keys')">Manage API keys</button>
-          </div>
-          <div id="sidebarKeysSignedIn" class="sidebar-keys-signed" hidden>
-            <div class="sidebar-kicker">Account</div>
-            <button type="button" class="sidebar-link portal-tab-trigger" data-tab="home">Home</button>
-            <button type="button" class="sidebar-link portal-tab-trigger" data-tab="keys">API keys</button>
-          </div>
+        <div id="sidebarKeysSignedIn" class="sidebar-keys-signed" hidden>
+          <div class="sidebar-kicker">Account</div>
+          <button type="button" class="sidebar-link portal-tab-trigger" data-tab="home">Home</button>
+          <button type="button" class="sidebar-link portal-tab-trigger" data-tab="keys">API keys</button>
         </div>
       </div>
     </nav>

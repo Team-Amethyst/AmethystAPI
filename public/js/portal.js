@@ -87,6 +87,7 @@
 
     updatePageMeta(tabName);
     updateNavAriaCurrent(tabName);
+    document.body.dataset.portalTab = tabName;
     closeNavDrawer();
   }
 
@@ -1217,5 +1218,8 @@
       setActiveTab(h, { skipHash: true });
     } else if (accountProfile && !h) {
       setActiveTab('home', { skipHash: true });
+    } else {
+      const active = document.querySelector('.portal-tab-trigger.active');
+      document.body.dataset.portalTab = active && active.dataset.tab ? active.dataset.tab : 'reference';
     }
   })();
