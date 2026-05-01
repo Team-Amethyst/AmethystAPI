@@ -34,6 +34,24 @@ jobs:
           MONGO_URI: ${{ secrets.MONGO_URI }}
         run: pnpm sync-players
 
+      # Optional: repo secret CI_FAILURE_WEBHOOK (Slack incoming webhook or Discord;
+      # payload sets both `text` and `content` so either accepts the message.)
+      - name: Notify on sync failure (optional webhook)
+        if: failure()
+        env:
+          WEBHOOK_URL: ${{ secrets.CI_FAILURE_WEBHOOK }}
+          GH_REPO: ${{ github.repository }}
+          GH_RUN: ${{ github.run_id }}
+        run: |
+          if [ -z "${WEBHOOK_URL}" ]; then
+            echo "No CI_FAILURE_WEBHOOK secret; skipping external notify."
+            exit 0
+          fi
+          msg="sync-players failed in ${GH_REPO} (run ${GH_RUN})"
+          payload=$(jq -n --arg text "$msg" --arg content "$msg" '{text: $text, content: $content}')
+          curl -fsS -X POST -H 'Content-Type: application/json' \
+            -d "$payload" "$WEBHOOK_URL"
+
   deploy:
     runs-on: ubuntu-latest
     if: github.event_name == 'push'

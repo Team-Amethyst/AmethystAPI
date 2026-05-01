@@ -1,0 +1,55 @@
+# Same gates as deploy (build → types → lint → test → replay-eval), without AWS.
+# Runs on PRs and on pushes to non-main branches so main is not double-tested with deploy.
+
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches-ignore:
+      - main
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    services:
+      mongo:
+        image: mongo:7
+        ports:
+          - 27017:27017
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install Dependencies
+        run: pnpm install
+
+      - name: Build API
+        run: pnpm build
+
+      - name: Check Types
+        run: pnpm check-types
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Test
+        env:
+          KEY_ISSUANCE_INTEGRATION_MONGO_URI: mongodb://127.0.0.1:27017/key_issue_ci
+        run: pnpm test
+
+      - name: Replay evaluator (checkpoint smoke)
+        run: pnpm replay-eval
