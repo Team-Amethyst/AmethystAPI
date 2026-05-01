@@ -125,6 +125,31 @@
       font-size: 12px;
       color: var(--muted);
     }
+    .account-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: 3px 10px;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--muted);
+      background: var(--surface);
+      cursor: pointer;
+      transition: border-color 0.15s, color 0.15s;
+    }
+    .account-chip:hover {
+      color: var(--text);
+      border-color: rgba(139, 92, 246, 0.45);
+    }
+    .account-chip.online {
+      color: var(--green);
+      border-color: rgba(52, 211, 153, 0.35);
+    }
+    .account-chip.offline {
+      color: var(--muted);
+    }
     .dot {
       width: 7px;
       height: 7px;
@@ -1526,6 +1551,7 @@
         <span class="dot" id="statusDot"></span>
         <span id="statusText">checking...</span>
       </div>
+      <button type="button" class="account-chip offline" id="accountChipBtn" onclick="setActiveTab('account')">Account: signed out</button>
       <span class="version-badge">v1.0.0</span>
     </div>
   </div>
@@ -1535,6 +1561,7 @@
   <div class="tabs-inner">
     <button class="tab-btn active" data-tab="reference">API Reference</button>
     <button class="tab-btn" data-tab="licensing">Licensing</button>
+    <button class="tab-btn" data-tab="account">Account</button>
     <button class="tab-btn" data-tab="keys">Get a key</button>
     <button class="tab-btn" data-tab="usage">My Usage</button>
     <button class="tab-btn" data-tab="sandbox">Sample draft</button>
@@ -2028,6 +2055,94 @@ player_id: player._id          <span class="t-cmt">// MongoDB ObjectId — not r
   </div><!-- /tab-licensing -->
 
 
+  <!-- ═══════════════════ ACCOUNT TAB ═══════════════════ -->
+  <div class="tab-content" id="tab-account">
+    <div class="portal-shell">
+      <div class="section">
+        <h2>Developer account</h2>
+        <p class="section-desc">
+          Create an account once, then issue keys and monitor all keys tied to your account in one place.
+        </p>
+      </div>
+
+      <div class="usage-error" id="accountError"></div>
+      <div class="usage-info" id="accountInfo"></div>
+
+      <div class="portal-card" id="accountAuthPanel">
+        <div class="portal-field">
+          <label class="portal-label" for="accountDisplayName">Team / product name</label>
+          <input class="portal-input" id="accountDisplayName" maxlength="200" placeholder="e.g. Draft Lab" />
+        </div>
+        <div class="portal-field">
+          <label class="portal-label" for="accountEmail">Email</label>
+          <input class="portal-input" id="accountEmail" type="email" maxlength="254" placeholder="you@company.com" />
+        </div>
+        <div class="portal-field">
+          <label class="portal-label" for="accountPassword">Password</label>
+          <input class="portal-input" id="accountPassword" type="password" placeholder="At least 10 chars, letters + number" />
+        </div>
+        <div class="wizard-actions" style="margin-top:0">
+          <button type="button" class="load-btn" id="accountRegisterBtn" onclick="accountRegister()">Create account</button>
+          <button type="button" class="btn-secondary" id="accountLoginBtn" onclick="accountLogin()">Sign in</button>
+        </div>
+      </div>
+
+      <div id="accountSignedInPanel" style="display:none">
+        <div class="portal-card" style="margin-bottom:16px">
+          <p class="portal-hint" id="accountWhoami" style="margin-top:0"></p>
+          <div class="wizard-actions" style="margin-top:12px">
+            <button type="button" class="btn-secondary" onclick="accountLogout()">Sign out</button>
+            <button type="button" class="btn-secondary" onclick="accountRefresh()">Refresh</button>
+          </div>
+        </div>
+
+        <div class="portal-card" style="margin-bottom:16px">
+          <div class="portal-field">
+            <label class="portal-label" for="accountIssueLabel">New key label</label>
+            <input class="portal-input" id="accountIssueLabel" maxlength="200" placeholder="e.g. Production API" />
+          </div>
+          <div class="portal-field">
+            <label class="portal-label" for="accountIssueTier">Tier</label>
+            <select class="portal-select" id="accountIssueTier">
+              <option value="free">free</option>
+              <option value="standard">standard</option>
+              <option value="premium">premium</option>
+            </select>
+          </div>
+          <div class="wizard-actions" style="margin-top:0">
+            <button type="button" class="load-btn" id="accountIssueBtn" onclick="accountIssueKey()">Issue key</button>
+          </div>
+          <div id="accountIssueReveal" style="display:none;margin-top:14px">
+            <span class="portal-label">Copy new key now</span>
+            <div class="key-reveal-wrap">
+              <button type="button" class="copy-btn" id="accountIssueCopyBtn" onclick="accountCopyIssuedKey()">Copy</button>
+              <pre id="accountIssueKeyPre"></pre>
+            </div>
+          </div>
+        </div>
+
+        <div class="portal-card">
+          <span class="portal-label">Keys in this account</span>
+          <table class="keys-table">
+            <thead>
+              <tr>
+                <th>Label</th>
+                <th>Tier</th>
+                <th>Prefix</th>
+                <th>Usage</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="accountKeysTableBody">
+              <tr><td colspan="5" style="color:var(--muted)">No keys yet.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div><!-- /tab-account -->
+
+
   <!-- ═══════════════════ GET A KEY TAB ═══════════════════ -->
   <div class="tab-content" id="tab-keys">
     <div class="portal-shell">
@@ -2036,7 +2151,7 @@ player_id: player._id          <span class="t-cmt">// MongoDB ObjectId — not r
       <h2>Issue an API key</h2>
       <p class="section-desc">
         Generate a new <code style="color:var(--orange);background:rgba(251,146,60,0.1);padding:1px 6px;border-radius:3px;font-size:12px;">x-api-key</code> for this environment.
-        Keys are tied to a <strong>developer account</strong> record (team / product identity, optional email) — there is <strong>no password login</strong> here; treat the key like a secret.
+        Keys are tied to your signed-in <strong>developer account</strong> (team / product identity).
         Copy the key when it appears and store it in your secrets manager or <code style="font-size:12px">.env</code>. The server never shows the key again.
       </p>
     </div>
@@ -2072,7 +2187,7 @@ player_id: player._id          <span class="t-cmt">// MongoDB ObjectId — not r
         <div class="portal-field">
           <label class="portal-label" for="keysAccountName">Developer account name <span style="color:var(--red)">*</span></label>
           <input class="portal-input" id="keysAccountName" maxlength="200" placeholder="e.g. Draftroom, Acme Fantasy Labs" autocomplete="organization" />
-          <p class="portal-hint">Creates or reuses a <code style="font-size:11px">DeveloperAccount</code> via <code style="font-size:11px">POST /api/developers</code> (deduped by email or name). Used for licensing / support — not a login.</p>
+          <p class="portal-hint">Pre-filled from your signed-in account. Use Account tab to manage profile identity.</p>
         </div>
         <div class="portal-field">
           <label class="portal-label" for="keysOrganization">Organization (optional)</label>
@@ -2380,15 +2495,22 @@ player_id: player._id          <span class="t-cmt">// MongoDB ObjectId — not r
 
 <script>
   // ── Tab switching ──────────────────────────────────────────────
+  function setActiveTab(tabName) {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+    const btn = document.querySelector('.tab-btn[data-tab="' + tabName + '"]');
+    if (btn) btn.classList.add('active');
+    const tabId = 'tab-' + tabName;
+    const tab = document.getElementById(tabId);
+    if (tab) tab.classList.add('active');
+    if (tabName === 'account') accountEnsureLoaded();
+    if (tabName === 'keys') keysEnsureStatus();
+    if (tabName === 'sandbox') sandboxEnsureLoaded();
+  }
+
   document.querySelectorAll('.tab-btn').forEach(btn => {
     btn.addEventListener('click', () => {
-      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-      document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-      btn.classList.add('active');
-      const tabId = 'tab-' + btn.dataset.tab;
-      document.getElementById(tabId).classList.add('active');
-      if (btn.dataset.tab === 'keys') keysEnsureStatus();
-      if (btn.dataset.tab === 'sandbox') sandboxEnsureLoaded();
+      setActiveTab(btn.dataset.tab);
     });
   });
 
@@ -2451,6 +2573,242 @@ player_id: player._id          <span class="t-cmt">// MongoDB ObjectId — not r
     }
     if (typeof data.error === 'string') return data.error;
     return 'Request failed';
+  }
+
+  // ── Portal account auth + key dashboard ──────────────────────
+  let accountBooted = false;
+  let accountProfile = null;
+  let accountIssuedSecret = '';
+
+  function accountShowErr(msg) {
+    const el = document.getElementById('accountError');
+    el.textContent = msg;
+    el.style.display = 'block';
+  }
+  function accountHideErr() {
+    const el = document.getElementById('accountError');
+    el.style.display = 'none';
+    el.textContent = '';
+  }
+  function accountShowInfo(msg) {
+    const el = document.getElementById('accountInfo');
+    el.textContent = msg;
+    el.style.display = 'block';
+  }
+  function accountHideInfo() {
+    const el = document.getElementById('accountInfo');
+    el.style.display = 'none';
+    el.textContent = '';
+  }
+
+  function accountRenderSignedIn(profile) {
+    const authPanel = document.getElementById('accountAuthPanel');
+    const signed = document.getElementById('accountSignedInPanel');
+    const chip = document.getElementById('accountChipBtn');
+    if (!profile) {
+      authPanel.style.display = 'block';
+      signed.style.display = 'none';
+      chip.textContent = 'Account: signed out';
+      chip.classList.remove('online');
+      chip.classList.add('offline');
+      return;
+    }
+    authPanel.style.display = 'none';
+    signed.style.display = 'block';
+    chip.textContent = 'Account: ' + profile.user.email;
+    chip.classList.remove('offline');
+    chip.classList.add('online');
+    const d = profile.developerAccount || {};
+    document.getElementById('accountWhoami').textContent =
+      'Signed in as ' +
+      profile.user.displayName +
+      ' (' + profile.user.email + ')' +
+      ' · account: ' + (d.displayName || 'Unlinked');
+    if (!document.getElementById('accountIssueLabel').value.trim()) {
+      document.getElementById('accountIssueLabel').value = 'Production API';
+    }
+  }
+
+  function accountRenderKeys(rows) {
+    const body = document.getElementById('accountKeysTableBody');
+    body.replaceChildren();
+    if (!Array.isArray(rows) || rows.length === 0) {
+      const tr = document.createElement('tr');
+      const td = document.createElement('td');
+      td.colSpan = 5;
+      td.style.color = 'var(--muted)';
+      td.textContent = 'No keys yet.';
+      tr.appendChild(td);
+      body.appendChild(tr);
+      return;
+    }
+    rows.forEach(row => {
+      const tr = document.createElement('tr');
+      tr.innerHTML =
+        '<td>' + (row.label || '—') + '</td>' +
+        '<td><span class="tier-badge tier-' + (row.tier || 'free') + '">' + (row.tier || 'free') + '</span></td>' +
+        '<td><code style="font-size:11px;color:var(--muted)">' + (row.keyPrefix || '—') + '</code></td>' +
+        '<td>' + Number(row.usageCount || 0).toLocaleString() + '</td>' +
+        '<td>' + (row.isActive ? 'active' : 'inactive') + '</td>';
+      body.appendChild(tr);
+    });
+  }
+
+  async function accountFetchMe() {
+    const r = await fetch('/api/auth/me', { credentials: 'include' });
+    if (!r.ok) return null;
+    return await r.json();
+  }
+
+  async function accountRefresh() {
+    accountHideErr();
+    accountHideInfo();
+    const profile = await accountFetchMe();
+    accountProfile = profile;
+    accountRenderSignedIn(profile);
+    if (!profile) return;
+    const r = await fetch('/api/account/keys', { credentials: 'include' });
+    const data = await r.json();
+    if (!r.ok) {
+      accountShowErr(portalApiMessage(data));
+      return;
+    }
+    accountRenderKeys(data);
+  }
+
+  async function accountEnsureLoaded() {
+    if (accountBooted) return;
+    accountBooted = true;
+    try {
+      await accountRefresh();
+    } catch {
+      accountShowErr('Could not load account state.');
+    }
+  }
+
+  async function accountRegister() {
+    accountHideErr();
+    accountHideInfo();
+    const btn = document.getElementById('accountRegisterBtn');
+    const payload = {
+      displayName: document.getElementById('accountDisplayName').value.trim(),
+      email: document.getElementById('accountEmail').value.trim(),
+      password: document.getElementById('accountPassword').value,
+    };
+    btn.disabled = true;
+    btn.textContent = 'Creating…';
+    try {
+      const r = await fetch('/api/auth/register', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const data = await r.json();
+      if (!r.ok) {
+        accountShowErr(portalApiMessage(data));
+        return;
+      }
+      accountShowInfo('Account created. You are now signed in.');
+      await accountRefresh();
+      keysStatusLoaded = false;
+    } catch {
+      accountShowErr('Network error while creating account.');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Create account';
+    }
+  }
+
+  async function accountLogin() {
+    accountHideErr();
+    accountHideInfo();
+    const btn = document.getElementById('accountLoginBtn');
+    btn.disabled = true;
+    btn.textContent = 'Signing in…';
+    try {
+      const r = await fetch('/api/auth/login', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: document.getElementById('accountEmail').value.trim(),
+          password: document.getElementById('accountPassword').value,
+        }),
+      });
+      const data = await r.json();
+      if (!r.ok) {
+        accountShowErr(portalApiMessage(data));
+        return;
+      }
+      accountShowInfo('Signed in.');
+      await accountRefresh();
+      keysStatusLoaded = false;
+    } catch {
+      accountShowErr('Network error while signing in.');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Sign in';
+    }
+  }
+
+  async function accountLogout() {
+    accountHideErr();
+    accountHideInfo();
+    await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
+    accountProfile = null;
+    accountRenderSignedIn(null);
+    accountRenderKeys([]);
+    accountShowInfo('Signed out.');
+    keysStatusLoaded = false;
+  }
+
+  async function accountIssueKey() {
+    accountHideErr();
+    accountHideInfo();
+    const btn = document.getElementById('accountIssueBtn');
+    btn.disabled = true;
+    btn.textContent = 'Creating…';
+    try {
+      const r = await fetch('/api/account/keys/issue', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          label: document.getElementById('accountIssueLabel').value.trim(),
+          tier: document.getElementById('accountIssueTier').value,
+        }),
+      });
+      const data = await r.json();
+      if (!r.ok) {
+        accountShowErr(portalApiMessage(data));
+        return;
+      }
+      accountIssuedSecret = data.secret || '';
+      document.getElementById('accountIssueKeyPre').textContent = accountIssuedSecret;
+      document.getElementById('accountIssueReveal').style.display = 'block';
+      accountShowInfo('Key issued. Copy it now; it will not be shown again.');
+      await accountRefresh();
+      keysStatusLoaded = false;
+    } catch {
+      accountShowErr('Network error while issuing key.');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Issue key';
+    }
+  }
+
+  function accountCopyIssuedKey() {
+    if (!accountIssuedSecret) return;
+    const btn = document.getElementById('accountIssueCopyBtn');
+    navigator.clipboard.writeText(accountIssuedSecret).then(() => {
+      btn.textContent = 'Copied!';
+      btn.classList.add('copied');
+      setTimeout(() => {
+        btn.textContent = 'Copy';
+        btn.classList.remove('copied');
+      }, 2000);
+    });
   }
 
   let usageLastDeveloperAccountId = '';
@@ -2911,6 +3269,7 @@ player_id: player._id          <span class="t-cmt">// MongoDB ObjectId — not r
 
   async function keysEnsureStatus() {
     if (keysStatusLoaded) return;
+    await accountEnsureLoaded();
     const loading = document.getElementById('keysLoading');
     const errBanner = document.getElementById('keysErrorBanner');
     const infoBanner = document.getElementById('keysInfoBanner');
@@ -2929,6 +3288,13 @@ player_id: player._id          <span class="t-cmt">// MongoDB ObjectId — not r
       keysHide(loading);
       keysStatusLoaded = true;
 
+      if (!accountProfile || !accountProfile.developerAccount) {
+        keysShow(errBanner);
+        errBanner.textContent = 'Create/sign in to your account in the Account tab before issuing a key.';
+        setActiveTab('account');
+        return;
+      }
+
       if (!data.issuanceEnabled) {
         disabledPanel.classList.add('visible');
         return;
@@ -2936,6 +3302,13 @@ player_id: player._id          <span class="t-cmt">// MongoDB ObjectId — not r
 
       wizardPanel.classList.add('visible');
       keysRequiresToken = Boolean(data.requiresToken);
+      keysDeveloperAccountId = accountProfile.developerAccount.id || null;
+      keysLastAccountDisplayName = accountProfile.developerAccount.displayName || '';
+      document.getElementById('keysAccountName').value = keysLastAccountDisplayName;
+      document.getElementById('keysEmail').value = accountProfile.user?.email || '';
+      if (accountProfile.developerAccount.organization) {
+        document.getElementById('keysOrganization').value = accountProfile.developerAccount.organization;
+      }
       const tokenWrap = document.getElementById('keysIssuanceTokenWrap');
       if (keysRequiresToken) {
         keysShow(tokenWrap);
@@ -3013,6 +3386,12 @@ player_id: player._id          <span class="t-cmt">// MongoDB ObjectId — not r
     const errBanner = document.getElementById('keysErrorBanner');
     keysHide(errBanner);
     const btn = document.getElementById('keysStep1ContinueBtn');
+    if (!accountProfile || !accountProfile.developerAccount) {
+      keysShow(errBanner);
+      errBanner.textContent = 'Sign in on the Account tab first.';
+      setActiveTab('account');
+      return;
+    }
     const accountName = document.getElementById('keysAccountName').value.trim();
     if (!accountName) {
       keysShow(errBanner);
@@ -3024,32 +3403,16 @@ player_id: player._id          <span class="t-cmt">// MongoDB ObjectId — not r
       owner = accountName + ' — API key';
       document.getElementById('keysOwner').value = owner;
     }
-    const email = document.getElementById('keysEmail').value.trim();
-    const org = document.getElementById('keysOrganization').value.trim();
+    const email = accountProfile.user?.email || document.getElementById('keysEmail').value.trim();
+    const org = accountProfile.developerAccount?.organization || document.getElementById('keysOrganization').value.trim();
     btn.disabled = true;
-    btn.textContent = 'Linking account…';
+    btn.textContent = 'Confirming account…';
     try {
-      const r = await fetch('/api/developers', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          displayName: accountName,
-          ...(email ? { contactEmail: email } : {}),
-          ...(org ? { organization: org } : {}),
-        }),
-      });
-      const data = await r.json();
-      if (!r.ok) {
-        keysShow(errBanner);
-        errBanner.textContent = portalApiMessage(data) || 'Could not register developer account.';
-        return;
-      }
-      keysDeveloperAccountId = data.id;
-      keysLastAccountDisplayName = data.displayName || accountName;
+      keysDeveloperAccountId = accountProfile.developerAccount.id;
+      keysLastAccountDisplayName = accountProfile.developerAccount.displayName || accountName;
+      if (email) document.getElementById('keysEmail').value = email;
+      if (org) document.getElementById('keysOrganization').value = org;
       keysGoStep(2);
-    } catch {
-      keysShow(errBanner);
-      errBanner.textContent = 'Network error while registering developer account.';
     } finally {
       btn.disabled = false;
       btn.textContent = 'Continue';
@@ -3078,7 +3441,6 @@ player_id: player._id          <span class="t-cmt">// MongoDB ObjectId — not r
     }
 
     const owner = document.getElementById('keysOwner').value.trim();
-    const email = document.getElementById('keysEmail').value.trim();
     const tier = document.querySelector('input[name="keysTier"]:checked')?.value || 'free';
     const btn = document.getElementById('keysGenerateBtn');
     btn.disabled = true;
@@ -3089,13 +3451,12 @@ player_id: player._id          <span class="t-cmt">// MongoDB ObjectId — not r
 
     try {
       const issueBody = {
-        owner,
+        label: owner,
         tier,
-        ...(email ? { email } : {}),
-        ...(keysDeveloperAccountId ? { developerAccountId: keysDeveloperAccountId } : {}),
       };
-      const r = await fetch('/api/keys/issue', {
+      const r = await fetch('/api/account/keys/issue', {
         method: 'POST',
+        credentials: 'include',
         headers,
         body: JSON.stringify(issueBody),
       });

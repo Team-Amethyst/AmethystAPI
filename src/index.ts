@@ -14,6 +14,8 @@ import keyIssuanceRoutes from "./routes/keyIssuance";
 import catalogRoutes from "./routes/catalog";
 import apiKeysRoutes from "./routes/apiKeys";
 import developersRoutes from "./routes/developers";
+import portalAuthRoutes from "./routes/portalAuth";
+import accountRoutes from "./routes/account";
 
 // Licensing middleware
 import apiKeyMiddleware from "./middleware/apiKey";
@@ -94,6 +96,8 @@ app.use("/api/keys", apiKeysRoutes);
 app.use("/api/keys", keyIssuanceRoutes);
 app.use("/api/developers", developersRoutes);
 app.use("/api/usage", usageRoutes);
+app.use("/api/auth", portalAuthRoutes);
+app.use("/api/account", accountRoutes);
 
 // ── Amethyst Engine — licensed analytical endpoints (require x-api-key) ────────
 //
