@@ -200,6 +200,12 @@
       color: var(--text);
       border-bottom-color: var(--accent);
     }
+    .private-tab {
+      display: none;
+    }
+    .private-tab.unlocked {
+      display: block;
+    }
 
     /* ── Main layout ── */
     main {
@@ -1705,9 +1711,8 @@
     <button class="tab-btn active" data-tab="reference">API Reference</button>
     <button class="tab-btn" data-tab="licensing">Licensing</button>
     <button class="tab-btn" data-tab="account">Account</button>
-    <button class="tab-btn" data-tab="keys">Get a key</button>
-    <button class="tab-btn" data-tab="usage">My Usage</button>
-    <button class="tab-btn" data-tab="sandbox">Sample draft</button>
+    <button class="tab-btn private-tab" data-tab="keys" data-protected-tab="1">Keys</button>
+    <button class="tab-btn private-tab" data-tab="sandbox" data-protected-tab="1">Sample draft</button>
   </div>
 </div>
 
@@ -2250,8 +2255,8 @@ player_id: player._id          <span class="t-cmt">// MongoDB ObjectId — not r
           <p class="portal-hint" id="accountWhoami" style="margin-top:0"></p>
           <div class="account-summary-row" id="accountSummaryRow"></div>
           <div class="account-quick-actions">
-            <button type="button" class="btn-secondary" onclick="setActiveTab('keys')">Open key wizard</button>
-            <button type="button" class="btn-secondary" onclick="setActiveTab('usage')">Open usage dashboard</button>
+            <button type="button" class="btn-secondary" onclick="setActiveTab('keys')">Open keys</button>
+            <button type="button" class="btn-secondary" onclick="setActiveTab('sandbox')">Open sample draft</button>
           </div>
           <div class="wizard-actions" style="margin-top:12px">
             <button type="button" class="btn-secondary" onclick="accountLogout()">Sign out</button>
@@ -2661,7 +2666,22 @@ player_id: player._id          <span class="t-cmt">// MongoDB ObjectId — not r
 
 <script>
   // ── Tab switching ──────────────────────────────────────────────
+  function isProtectedTab(tabName) {
+    return tabName === 'keys' || tabName === 'sandbox';
+  }
+
+  function updateProtectedTabsVisibility() {
+    const unlocked = Boolean(accountProfile);
+    document.querySelectorAll('.private-tab').forEach(btn => {
+      btn.classList.toggle('unlocked', unlocked);
+    });
+  }
+
   function setActiveTab(tabName) {
+    if (isProtectedTab(tabName) && !accountProfile) {
+      accountShowInfo('Sign in to access your private workspace (Keys and Sample draft).');
+      tabName = 'account';
+    }
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
     document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
     const btn = document.querySelector('.tab-btn[data-tab="' + tabName + '"]');
@@ -2746,6 +2766,7 @@ player_id: player._id          <span class="t-cmt">// MongoDB ObjectId — not r
   let accountProfile = null;
   let accountIssuedSecret = '';
   let accountAuthMode = 'signin';
+  updateProtectedTabsVisibility();
 
   function accountShowErr(msg) {
     const el = document.getElementById('accountError');
@@ -2803,6 +2824,7 @@ player_id: player._id          <span class="t-cmt">// MongoDB ObjectId — not r
       chip.classList.remove('online');
       chip.classList.add('offline');
       summary.replaceChildren();
+      updateProtectedTabsVisibility();
       return;
     }
     authPanel.style.display = 'none';
@@ -2831,6 +2853,7 @@ player_id: player._id          <span class="t-cmt">// MongoDB ObjectId — not r
     if (!document.getElementById('accountIssueLabel').value.trim()) {
       document.getElementById('accountIssueLabel').value = 'Production API';
     }
+    updateProtectedTabsVisibility();
   }
 
   function accountRenderKeys(rows) {
@@ -2968,6 +2991,10 @@ player_id: player._id          <span class="t-cmt">// MongoDB ObjectId — not r
     accountRenderKeys([]);
     accountShowInfo('Signed out.');
     keysStatusLoaded = false;
+    const activeTab = document.querySelector('.tab-btn.active')?.dataset.tab || '';
+    if (isProtectedTab(activeTab)) {
+      setActiveTab('account');
+    }
   }
 
   async function accountIssueKey() {
