@@ -1159,11 +1159,6 @@
       align-items: center;
       justify-content: space-between;
     }
-    .stats-owner {
-      font-size: 16px;
-      font-weight: 600;
-      color: var(--text);
-    }
     .stats-active {
       font-size: 11px;
       font-weight: 600;
@@ -1175,6 +1170,89 @@
     .stats-active.inactive {
       background: rgba(248,113,113,0.15);
       color: var(--red);
+    }
+    .stats-header-text {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      min-width: 0;
+    }
+    .stats-key-label {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--text);
+      line-height: 1.25;
+    }
+    .stats-owner-line {
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.35;
+    }
+    .stats-key-prefix {
+      font-size: 11px;
+      color: var(--muted);
+      font-family: ui-monospace, monospace;
+      word-break: break-all;
+    }
+    .usage-dev-account {
+      display: none;
+      padding: 14px 20px 16px;
+      border-bottom: 1px solid var(--border);
+      background: rgba(99, 102, 241, 0.06);
+    }
+    .usage-dev-account.visible {
+      display: block;
+    }
+    .usage-dev-account-title {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 10px;
+    }
+    .usage-dev-account-rows {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      font-size: 13px;
+      color: var(--text);
+    }
+    .usage-dev-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px 12px;
+      align-items: baseline;
+    }
+    .usage-dev-k {
+      color: var(--muted);
+      font-size: 12px;
+      min-width: 7.5rem;
+    }
+    .usage-dev-v { flex: 1; min-width: 0; word-break: break-word; }
+    .usage-dev-id-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+      margin-top: 4px;
+    }
+    .usage-copy-id {
+      font-size: 12px;
+      padding: 4px 10px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--accent);
+      cursor: pointer;
+      font-weight: 600;
+    }
+    .usage-copy-id:hover {
+      border-color: var(--accent);
+    }
+    .usage-copy-id.copied {
+      color: var(--green);
+      border-color: rgba(52,211,153,0.4);
     }
     .stats-grid {
       display: grid;
@@ -1899,7 +1977,7 @@ player_id: player._id          <span class="t-cmt">// MongoDB ObjectId — not r
 
     <div class="section">
       <h2>My Usage</h2>
-      <p class="section-desc">Paste an API key you already have to view request counts, tier, and status. Keys are not listed here for security.</p>
+      <p class="section-desc">Paste an <code style="font-size:12px">x-api-key</code> to see usage, tier, the key label, and the <strong>developer account</strong> this key is tied to (same record as <strong>Get a key</strong>). Keys are never listed in bulk for security.</p>
     </div>
 
     <div class="key-form">
@@ -1921,8 +1999,28 @@ player_id: player._id          <span class="t-cmt">// MongoDB ObjectId — not r
 
     <div class="stats-card" id="statsCard">
       <div class="stats-header">
-        <span class="stats-owner" id="statsOwner"></span>
+        <div class="stats-header-text">
+          <span class="stats-key-label" id="statsKeyLabel"></span>
+          <span class="stats-owner-line" id="statsOwnerLine"></span>
+          <span class="stats-key-prefix" id="statsKeyPrefix"></span>
+        </div>
         <span class="stats-active" id="statsActive"></span>
+      </div>
+      <div class="usage-dev-account" id="usageDevAccount">
+        <div class="usage-dev-account-title">Developer account</div>
+        <div class="usage-dev-account-rows">
+          <div class="usage-dev-row"><span class="usage-dev-k">Display name</span><span class="usage-dev-v" id="usageDevDisplayName"></span></div>
+          <div class="usage-dev-row" id="usageDevOrgRow" style="display:none"><span class="usage-dev-k">Organization</span><span class="usage-dev-v" id="usageDevOrg"></span></div>
+          <div class="usage-dev-row" id="usageDevEmailRow" style="display:none"><span class="usage-dev-k">Contact email</span><span class="usage-dev-v" id="usageDevEmail"></span></div>
+          <div class="usage-dev-id-row">
+            <span class="usage-dev-k" style="min-width:auto;margin:0">Account id</span>
+            <code class="stats-key-prefix" id="usageDevId" style="flex:1"></code>
+            <button type="button" class="usage-copy-id" id="usageCopyDevIdBtn" onclick="usageCopyDeveloperAccountId()">Copy id</button>
+          </div>
+        </div>
+      </div>
+      <div class="usage-dev-account" id="usageLegacyAccount">
+        <p class="portal-hint" style="margin:0;font-size:13px">This key has no developer account on file (older issuance). New keys from <strong>Get a key</strong> are always linked to an account.</p>
       </div>
       <div class="stats-grid">
         <div class="stat-item">
@@ -2091,6 +2189,25 @@ player_id: player._id          <span class="t-cmt">// MongoDB ObjectId — not r
     return 'Request failed';
   }
 
+  let usageLastDeveloperAccountId = '';
+
+  function usageCopyDeveloperAccountId() {
+    const id = usageLastDeveloperAccountId;
+    if (!id) return;
+    const btn = document.getElementById('usageCopyDevIdBtn');
+    navigator.clipboard.writeText(id).then(() => {
+      btn.textContent = 'Copied';
+      btn.classList.add('copied');
+      setTimeout(() => {
+        btn.textContent = 'Copy id';
+        btn.classList.remove('copied');
+      }, 2000);
+    }).catch(() => {
+      btn.textContent = 'Copy failed';
+      setTimeout(() => { btn.textContent = 'Copy id'; }, 2000);
+    });
+  }
+
   // ── Load usage stats ─────────────────────────────────────────
   async function loadUsage() {
     const key = document.getElementById('keyInput').value.trim();
@@ -2122,8 +2239,21 @@ player_id: player._id          <span class="t-cmt">// MongoDB ObjectId — not r
         return;
       }
 
-      // Populate card
-      document.getElementById('statsOwner').textContent = data.owner;
+      // Populate card — key label + owner + prefix
+      const label = typeof data.label === 'string' && data.label.trim() ? data.label.trim() : data.owner;
+      document.getElementById('statsKeyLabel').textContent = label;
+      const ownerLine = document.getElementById('statsOwnerLine');
+      if (data.label && String(data.label).trim() && data.owner && String(data.owner).trim() !== String(data.label).trim()) {
+        ownerLine.textContent = 'Owner / contact on key record: ' + data.owner;
+        ownerLine.style.display = '';
+      } else {
+        ownerLine.textContent = '';
+        ownerLine.style.display = 'none';
+      }
+      const prefix = data.keyPrefix ? String(data.keyPrefix) : '';
+      document.getElementById('statsKeyPrefix').textContent = prefix
+        ? 'Key prefix: ' + prefix + '… (full secret never shown)'
+        : '';
 
       const activeEl = document.getElementById('statsActive');
       activeEl.textContent = data.isActive ? 'Active' : 'Inactive';
@@ -2145,7 +2275,39 @@ player_id: player._id          <span class="t-cmt">// MongoDB ObjectId — not r
         data.createdAt
           ? new Date(data.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
           : 'N/A';
-      document.getElementById('statEmail').textContent = data.email || '';
+      const keyEmail = data.email ? String(data.email) : '';
+      const synthetic = keyEmail.includes('@amethyst-api.local');
+      document.getElementById('statEmail').textContent = synthetic
+        ? 'Internal key id (not a mailbox)'
+        : keyEmail;
+
+      const dev = data.developerAccount && typeof data.developerAccount === 'object' ? data.developerAccount : null;
+      const devPanel = document.getElementById('usageDevAccount');
+      const legPanel = document.getElementById('usageLegacyAccount');
+      usageLastDeveloperAccountId = dev && dev.id ? String(dev.id) : '';
+      if (dev && dev.displayName) {
+        devPanel.classList.add('visible');
+        legPanel.classList.remove('visible');
+        document.getElementById('usageDevDisplayName').textContent = dev.displayName;
+        const orgRow = document.getElementById('usageDevOrgRow');
+        if (dev.organization) {
+          orgRow.style.display = '';
+          document.getElementById('usageDevOrg').textContent = dev.organization;
+        } else {
+          orgRow.style.display = 'none';
+        }
+        const emRow = document.getElementById('usageDevEmailRow');
+        if (dev.contactEmail) {
+          emRow.style.display = '';
+          document.getElementById('usageDevEmail').textContent = dev.contactEmail;
+        } else {
+          emRow.style.display = 'none';
+        }
+        document.getElementById('usageDevId').textContent = usageLastDeveloperAccountId;
+      } else {
+        devPanel.classList.remove('visible');
+        legPanel.classList.add('visible');
+      }
 
       cardEl.style.display = 'block';
     } catch {

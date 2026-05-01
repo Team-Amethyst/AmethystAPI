@@ -1,5 +1,6 @@
 import { Router, Request, Response, RequestHandler, NextFunction } from "express";
 import ApiKey from "../models/ApiKey";
+import DeveloperAccount from "../models/DeveloperAccount";
 import { UnauthorizedError } from "../lib/appError";
 import { hashApiKey, validateApiKeyFormat } from "../lib/apiKey";
 
@@ -42,7 +43,31 @@ const getUsage: RequestHandler = async (
     throw new UnauthorizedError("API key not found.", 401, "API_KEY_NOT_FOUND");
   }
 
+  let developerAccount: {
+    id: string;
+    displayName: string;
+    organization: string | null;
+    contactEmail: string | null;
+  } | null = null;
+
+  if (record.developerAccountId) {
+    try {
+      const dev = await DeveloperAccount.findById(record.developerAccountId).lean();
+      if (dev && dev._id) {
+        developerAccount = {
+          id: String(dev._id),
+          displayName: dev.displayName,
+          organization: dev.organization ?? null,
+          contactEmail: dev.contactEmail ?? null,
+        };
+      }
+    } catch (err) {
+      return next(err);
+    }
+  }
+
   res.json({
+    label: record.label,
     owner: record.owner,
     email: record.email ?? null,
     tier: record.tier,
@@ -53,6 +78,7 @@ const getUsage: RequestHandler = async (
     createdAt: record.createdAt ?? null,
     expiresAt: record.expiresAt || null,
     isActive: record.isActive,
+    developerAccount,
   });
 };
 
