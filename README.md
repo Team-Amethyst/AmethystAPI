@@ -1,6 +1,8 @@
 # Amethyst Engine
 
-Stateless analytical API for fantasy baseball. Receives draft state and league settings, returns mathematical valuations. No user accounts or league state are stored — every request is self-contained.
+Stateless analytical **Engine** for fantasy baseball: each request carries the current draft/league payload and returns valuations (and related analytics). **League draft state is not persisted as a server session**—callers send the full context on every call.
+
+**Developer portal** (`public/`, same origin as the API in dev): **email + password** sign-in (`PortalUser`) with an **HTTP-only session cookie**, used to manage **developer accounts** and **mint API keys** tied to `DeveloperAccount` (`/api/auth/*`, `/api/account/*`). That is separate from **product UI** in [AmethystDraft](https://github.com/Team-Amethyst/AmethystDraft), which must attach **`x-api-key` only on its server** when calling this Engine—see [docs/draft-kit-license-runbook.md](docs/draft-kit-license-runbook.md) and [docs/amethystdraft-engine-integration.md](docs/amethystdraft-engine-integration.md).
 
 ---
 
@@ -26,6 +28,7 @@ Stateless analytical API for fantasy baseball. Receives draft state and league s
 
 | Artifact | Role |
 |---|---|
+| [docs/RUBRIC_SUBMISSION_INDEX.md](docs/RUBRIC_SUBMISSION_INDEX.md) | **Grader / reviewer index** — links rubric matrices, runbooks, OpenAPI, fixtures, Draft↔Engine integration. |
 | [ENGINE_AGENT_BRIEF.md](ENGINE_AGENT_BRIEF.md) | **Handoff for agents / new contributors** — Draft ↔ Engine HTTP contract, headers, flat valuation body, fixtures, checklist. |
 | [docs/valuation-response-field-audit.md](docs/valuation-response-field-audit.md) | **Response-field semantics & QA** — what each valuation field means, known decomposition gaps, `pnpm run audit:valuation-response`. |
 | [docs/valuation-inflation-semantics.md](docs/valuation-inflation-semantics.md) | **Inflation contract** — `inflation_model` (`global_v1` vs `surplus_slots_v1`), `player_ids` as output filter, `inflation_raw` / cap-floor, aggregates. |
@@ -215,15 +218,23 @@ x-api-key: <your-key>
 
 Keys are stored in the `apikeys` MongoDB collection.
 
-### One-off keys (developer portal)
+### Developer portal (sign-in, keys, usage)
 
-The bundled developer portal (**Get a key** tab) registers a **developer account** with **`POST /api/developers`** (display name, optional email and organization), then mints a key with **`POST /api/keys/issue`** including **`developerAccountId`**, unless issuance is explicitly turned off. There is **no password login**; the plaintext key is returned **once** in the JSON body (no key recovery).
+The static portal under **`public/`** uses **session-based portal auth** and **account-scoped key issuance**:
 
-- **`GET /api/keys/status`** — `{ "issuanceEnabled": boolean, "requiresToken": boolean }` for the UI. Issuance defaults to **on**; set **`KEY_ISSUANCE_ENABLED=0`**, **`false`**, or **`off`** to disable.
-- **`POST /api/developers`** — `{ "displayName": string, "contactEmail"?: string, "organization"?: string }` — create or return an existing active account (deduped by email or normalized name).
-- **`POST /api/keys/issue`** — JSON body `{ "owner": string (required), "email"?: string, "tier"?: "free" | "standard" | "premium", "developerAccountId"?: string }`. If **`KEY_ISSUANCE_SECRET`** is set in the environment, clients must send header **`X-Key-Issuance-Token`** with the same value.
+- **`POST /api/auth/register`** — `{ "displayName", "email", "password", "organization"? }` — creates `PortalUser`, links/creates `DeveloperAccount`, sets HTTP-only session cookie.
+- **`POST /api/auth/login`** — `{ "email", "password" }` — session cookie for subsequent portal calls.
+- **`POST /api/auth/logout`** — clears session cookie.
+- **`GET /api/auth/me`** (session) — current user + developer account summary.
+- **`GET /api/account/me`**, **`GET /api/account/keys`**, **`POST /api/account/keys/issue`** (session) — list keys and mint a new key for the signed-in developer account (`tier`: `free` | `standard` | `premium`). Plaintext secret returned **once** in JSON (`secret`).
 
-Example (local, issuance enabled, no secret):
+**Programmatic / operator paths (no portal session):**
+
+- **`GET /api/keys/status`** — `{ "issuanceEnabled": boolean, "requiresToken": boolean }` for UIs. Issuance defaults **on**; set **`KEY_ISSUANCE_ENABLED=0`**, **`false`**, or **`off`** to disable.
+- **`POST /api/developers`** — `{ "displayName", "contactEmail"?, "organization"? }` — create or return an existing active developer account (deduped by email or normalized name).
+- **`POST /api/keys/issue`** — body `{ "owner" (required), "email"?, "tier"?, "developerAccountId"? }`; if **`KEY_ISSUANCE_SECRET`** is set, send **`X-Key-Issuance-Token`**. Returns **`apiKey`** once (use as `x-api-key`).
+
+Example (local, issuance enabled, no secret — operator shortcut):
 
 ```bash
 curl -sS -X POST "http://localhost:3002/api/keys/issue" \
@@ -231,7 +242,7 @@ curl -sS -X POST "http://localhost:3002/api/keys/issue" \
   -d '{"owner":"local-dev","tier":"free"}' | jq .
 ```
 
-Successful issue responses include **`apiKey`** (use as `x-api-key`), **`developerAccountId`**, and metadata. **`POST /api/keys`** is the full programmatic create (label, owner, tier, scopes, optional expiry); **`POST /api/keys/issue`** is the portal-oriented shortcut (all scopes, no expiry).
+**`POST /api/keys`** remains the full programmatic create (label, owner, tier, scopes, optional expiry) for admin tooling; portal minting prefers **`POST /api/account/keys/issue`** when signed in, or **`POST /api/keys/issue`** for scripted flows.
 
 For **CI / pre-deploy smoke tests** that call both **Engine** (`x-api-key`) and **Draft** (`x-player-api-key` / Bearer), use the same step-by-step tone as your runbooks: [docs/pre-deploy-testing-keys.md](docs/pre-deploy-testing-keys.md).
 

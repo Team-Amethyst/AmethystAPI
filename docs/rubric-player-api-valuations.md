@@ -12,7 +12,7 @@ Maps rubric language to **concrete behavior** and **automated tests** in this re
 | Depth chart | Sync sets `depthChartPosition`; same baseline module. | Heuristic from volume; override via Mongo if needed. |
 | Injury | Optional `injurySeverity` (1–3) on catalog row; [`baselineInjuryAdjustments.ts`](../src/services/baselineInjuryAdjustments.ts) after age/depth. | Also [`/signals`](../src/routes/signals.ts) for news-style injury feeds (separate from catalog field). |
 | Scarcity | [`scarcityEngine.ts`](../src/services/scarcityEngine.ts), replacement v2 / inflation in [`docs/valuation-module-map.md`](valuation-module-map.md). | |
-| Fresh values after edits | **`POST /valuation/calculate` is not Redis-cached** (see [README](../README.md)). | Draft Kit should debounce and re-call on each meaningful draft edit. |
+| Fresh values after edits | **`POST /valuation/calculate` is not Redis-cached** (see [README](../README.md)). | [AmethystDraft](https://github.com/Team-Amethyst/AmethystDraft) should debounce and re-call on each meaningful draft edit (see [amethystdraft-engine-integration.md](amethystdraft-engine-integration.md)). |
 
 ## Test cases (TC1–TC5)
 
