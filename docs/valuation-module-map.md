@@ -1,5 +1,7 @@
 # Valuation module map
 
+**User-facing story for the four dollar fields + edge:** [valuation-dollar-ladder.md](valuation-dollar-ladder.md).
+
 This map documents where each pricing responsibility lives after the refactor.
 
 ## Licensing gates (HTTP stack)

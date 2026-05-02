@@ -4,6 +4,8 @@
 
 Copy or adapt sections below into the Draft repo **README** or `docs/engine.md` so integration knowledge lives beside Draft code.
 
+**Valuation UI (which dollar to headline, tooltips):** [valuation-dollar-ladder.md](valuation-dollar-ladder.md) in this repo.
+
 ## Architecture (complete mediation)
 
 ```mermaid

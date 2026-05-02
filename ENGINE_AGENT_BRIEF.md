@@ -52,6 +52,10 @@ The Engine also mounts **the same licensed routers** under a **`/v1` prefix** (s
 
 **Deprecation policy:** Legacy unprefixed paths remain supported for existing Draft deployments. If a breaking change is ever required, ship **`/v1`** behavior first, update Draft’s `amethyst` client, then remove legacy routes in a coordinated release (and bump `ENGINE_CONTRACT_VERSION` / OpenAPI).
 
+## Per-row dollar ladder (baseline → bid)
+
+Four dollar fields are a **pipeline**, not interchangeable prices: **`baseline_value`** → **`adjusted_value`** (league model) → **`recommended_bid`** (bid UX + smoothing) → **`team_adjusted_value`** (requesting team); **`edge`** = team − recommended. Product copy and UI primaries: **`docs/valuation-dollar-ladder.md`** in AmethystAPI.
+
 ## Frontend migration notes (explainability v2)
 
 - Existing valuation fields remain unchanged (`inflation_factor`, `players_remaining`, `valuations[]`, `why`, etc.).

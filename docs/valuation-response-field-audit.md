@@ -1,5 +1,7 @@
 # Valuation API response fields — meaning, correctness, and follow-ups
 
+**Product ladder (what to show users):** [valuation-dollar-ladder.md](valuation-dollar-ladder.md).
+
 This document tracks **code-path semantics** plus **`pnpm run audit:valuation-response`** (mock catalog + `test-fixtures/player-api/checkpoints/*.json`). Re-run after pricing or fixture changes.
 
 ---

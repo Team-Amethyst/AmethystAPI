@@ -30,6 +30,7 @@ Stateless analytical **Engine** for fantasy baseball: each request carries the c
 |---|---|
 | [docs/RUBRIC_SUBMISSION_INDEX.md](docs/RUBRIC_SUBMISSION_INDEX.md) | **Grader / reviewer index** — links rubric matrices, runbooks, OpenAPI, fixtures, Draft↔Engine integration. |
 | [ENGINE_AGENT_BRIEF.md](ENGINE_AGENT_BRIEF.md) | **Handoff for agents / new contributors** — Draft ↔ Engine HTTP contract, headers, flat valuation body, fixtures, checklist. |
+| [docs/valuation-dollar-ladder.md](docs/valuation-dollar-ladder.md) | **Product mental model** — ladder for baseline → adjusted → recommended_bid → team_adjusted → `edge`, UI primaries, honest positioning vs single-number tools. |
 | [docs/valuation-response-field-audit.md](docs/valuation-response-field-audit.md) | **Response-field semantics & QA** — what each valuation field means, known decomposition gaps, `pnpm run audit:valuation-response`. |
 | [docs/valuation-inflation-semantics.md](docs/valuation-inflation-semantics.md) | **Inflation contract** — `inflation_model` (`global_v1` vs `surplus_slots_v1`), `player_ids` as output filter, `inflation_raw` / cap-floor, aggregates. |
 | [docs/valuation-module-map.md](docs/valuation-module-map.md) | **Code ownership map** — which valuation module owns inflation branch logic, recommended-bid heuristics, and team-adjusted economics. |

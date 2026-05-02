@@ -26,6 +26,7 @@ Maps rubric language to **concrete behavior** and **automated tests** in this re
 
 ### Supporting unit tests (valuation building blocks)
 
+- Dollar ladder (identities + symmetric team collapse + isotonic bids): [`test/valuationDollarLadder.test.ts`](../test/valuationDollarLadder.test.ts); UX story: [valuation-dollar-ladder.md](valuation-dollar-ladder.md).
 - Age / depth: [`test/baselineAgeDepthAdjustments.test.ts`](../test/baselineAgeDepthAdjustments.test.ts), [`test/baselineValueEngine.test.ts`](../test/baselineValueEngine.test.ts).
 - Injury: [`test/baselineInjuryAdjustments.test.ts`](../test/baselineInjuryAdjustments.test.ts).
 - Multi-year blend math: [`test/mlbProjectionBlend.test.ts`](../test/mlbProjectionBlend.test.ts).

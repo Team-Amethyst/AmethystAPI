@@ -305,6 +305,7 @@ components:
     ValuedPlayer:
       type: object
       description: |
+        Per-row dollars follow a **pipeline** (list → league → bid → roster); see `docs/valuation-dollar-ladder.md`.
         `scarcity_adjustment` is always 0 (roster scarcity is inside `baseline_value`).
         `inflation_adjustment` is the full delta `adjusted_value - baseline_value`.
       properties:
@@ -322,19 +323,28 @@ components:
           type: integer
         baseline_value:
           type: number
-          description: Post–baseline-engine list price (includes embedded scarcity when applicable).
+          description: >-
+            Post–baseline-engine “list-adjacent” dollars for this scoring/build (not raw Mongo `value`;
+            scarcity may already be embedded).
         adjusted_value:
           type: number
-          description: baseline_value × league inflation_factor (same factor on every row).
+          description: >-
+            League-wide auction target from `inflation_model`: `global_v1` uses baseline × inflation_factor;
+            surplus models use replacement/slot surplus formulas (see `docs/valuation-inflation-semantics.md`).
         recommended_bid:
           type: number
-          description: Phase-aware expected clearing price (may lie outside adjusted_value/baseline_value band).
+          description: >-
+            Phase- and depth-aware bid anchor from baseline + adjusted, then isotonic smoothing within
+            hitters and within pitchers (UX discipline; not a second copy of adjusted_value).
         team_adjusted_value:
           type: number
-          description: Team-specific marginal value (adjusted_value scaled by need, dollars per open slot vs league, slot scarcity, replacement drop-off; not capped to max bid). Equals adjusted_value when the league snapshot is symmetric (no auction picks, no keeper/minors/taxi off-board ids, equal per-team budgets when budget_by_team_id is provided, equal rostered counts per team).
+          description: >-
+            Marginal value to the requesting team (need, budget vs peers, slot scarcity, replacement drop-off).
+            Equals adjusted_value in a symmetric pre-auction snapshot (no picks, no off-board asymmetry,
+            equal per-team budgets when budget_by_team_id is set, equal rostered counts per team).
         edge:
           type: number
-          description: team_adjusted_value minus recommended_bid.
+          description: team_adjusted_value minus recommended_bid (room vs suggested bid).
         indicator:
           type: string
           enum: [Steal, Reach, Fair Value]

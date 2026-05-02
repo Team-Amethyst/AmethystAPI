@@ -17,6 +17,12 @@ One-page **table of contents** for reviewers. **AmethystAPI** = Engine; **[Ameth
 | [rubric-player-api-licensing.md](rubric-player-api-licensing.md) | Keys, scopes, tiers, throttling, IP gate, portal vs Draft UI. |
 | [rubric-player-api-valuations.md](rubric-player-api-valuations.md) | Aggregator→engine path, TC1–TC5, valuation quality tests. |
 
+## Valuation UX (multi-dollar fields)
+
+| Doc | Purpose |
+|-----|---------|
+| [valuation-dollar-ladder.md](valuation-dollar-ladder.md) | How the four dollar columns + `edge` relate; suggested UI headline by context. |
+
 ## API contract artifacts
 
 | Artifact | Path |
