@@ -1,16 +1,12 @@
 import crypto from "crypto";
+import { env } from "../config/env";
 import { UnauthorizedError, ValidationError } from "./appError";
 
 export const PORTAL_SESSION_COOKIE = "amethyst_portal_session";
 const SESSION_TTL_SECONDS = 60 * 60 * 24 * 14; // 14 days
 
 function authSecret(): string {
-  return (
-    process.env.PORTAL_SESSION_SECRET ||
-    process.env.APP_SECRET ||
-    process.env.API_KEY_PEPPER ||
-    "amethyst_portal_dev_secret_2026"
-  );
+  return env.portalSessionSecret;
 }
 
 function b64url(input: string): string {
@@ -115,7 +111,7 @@ export function parseCookieValue(rawCookieHeader: string | undefined, name: stri
 
 export function sessionCookieOptions() {
   const secure =
-    process.env.NODE_ENV === "production" || process.env.FORCE_SECURE_COOKIES === "1";
+    env.nodeEnv === "production" || env.forceSecureCookies;
   return {
     httpOnly: true,
     sameSite: "lax" as const,

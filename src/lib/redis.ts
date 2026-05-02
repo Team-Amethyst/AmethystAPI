@@ -1,11 +1,12 @@
 import { Redis } from "ioredis";
+import { env } from "../config/env";
 import { logger } from "./logger";
 
 let redisClient: Redis | null = null;
 
 export function getRedisClient(): Redis {
   if (!redisClient) {
-    const redisUrl = process.env.REDIS_URL || "redis://localhost:6379";
+    const redisUrl = env.redisUrl;
     redisClient = new Redis(redisUrl, {
       maxRetriesPerRequest: 3,
       lazyConnect: true,

@@ -12,6 +12,12 @@ This map documents where each pricing responsibility lives after the refactor.
 - `src/middleware/tierRateLimits.ts` — tier-derived ceilings consumed by `engineRateLimit`.
 - `src/middleware/engineRateLimit.ts` — express-rate-limit on `/valuation` and `/catalog` mounts.
 
+## Configuration and HTTP wiring
+
+- `src/config/env.ts` — `dotenv` + Zod snapshot for stable server config. Per-tier rate **ceilings** still read `process.env` on each call in `tierRateLimits.ts` (Vitest `vi.stubEnv` compatibility).
+- `src/http/mountLicensedEngines.ts` — registers licensed Brain routes at **legacy** and **`/v1/...`** with the same IP → key → scope → (optional) rate limit → handler stack.
+- `src/services/valuationCatalogRun.ts` — loads lean Mongo catalog and calls `executeValuationWorkflow` (keeps `routes/valuation` thin).
+
 ## Core orchestrator
 
 - `src/services/inflationEngine.ts`
@@ -68,6 +74,7 @@ This map documents where each pricing responsibility lives after the refactor.
 
 - `src/services/recommendedBidConfig.ts` — heuristic/tuning constants for bid guidance.
 - `src/services/recommendedBidMath.ts` — shared math primitives (`baseLambdaClearingPrice`, isotonic smoothing, pitcher position check).
+- `src/services/recommendedBidSteps.ts` — named pipeline steps (floors, caps, phase rules) composed by `computeRecommendedBid`.
 - `src/services/recommendedBid.ts`
   - `computeRecommendedBid`
   - `smoothRecommendedBids`

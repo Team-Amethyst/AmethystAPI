@@ -1,4 +1,5 @@
 import crypto from "crypto";
+import { env } from "../config/env";
 import { ApiKeyTier } from "../models/ApiKey";
 
 export const API_KEY_PREFIX = "amethyst_live";
@@ -14,10 +15,8 @@ export const ALLOWED_API_KEY_SCOPES = [
 ] as const;
 export type ApiKeyScope = (typeof ALLOWED_API_KEY_SCOPES)[number];
 
-const DEFAULT_API_KEY_PEPPER = "amethyst_dev_pepper_2026";
-
 function resolveApiKeyPepper(): string {
-  return process.env.API_KEY_PEPPER || process.env.APP_SECRET || DEFAULT_API_KEY_PEPPER;
+  return env.apiKeyPepper;
 }
 
 export function hashApiKey(secret: string): string {

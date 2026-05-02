@@ -1,5 +1,6 @@
 import { readFileSync } from "fs";
 import { join } from "path";
+import { env } from "../config/env";
 
 let cached: string | null = null;
 
@@ -11,15 +12,12 @@ export function getValuationModelVersion(): string {
   if (cached !== null) {
     return cached;
   }
-  const explicit = process.env.VALUATION_MODEL_VERSION?.trim();
+  const explicit = env.valuationModelVersion;
   if (explicit) {
     cached = explicit;
     return cached;
   }
-  const sha =
-    process.env.GITHUB_SHA?.trim() ||
-    process.env.VERCEL_GIT_COMMIT_SHA?.trim() ||
-    process.env.GIT_COMMIT?.trim();
+  const sha = env.gitSha?.trim() || undefined;
   if (sha) {
     cached = sha.length > 12 ? sha.slice(0, 12) : sha;
     return cached;

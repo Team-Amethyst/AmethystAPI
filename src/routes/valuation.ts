@@ -1,15 +1,11 @@
 import { Router, Request, Response, RequestHandler } from "express";
 import { z } from "zod";
-import Player from "../models/Player";
+import { env } from "../config/env";
 import { getRequestId } from "../lib/requestContext";
 import { logger } from "../lib/logger";
-import { normalizeCatalogPlayers } from "../lib/playerCatalog";
-import { PLAYER_CATALOG_LEAN_SELECT } from "../lib/playerCatalogProjection";
 import { parseValuationRequest } from "../lib/valuationRequest";
-import {
-  executeValuationWorkflow,
-  resolveScoringMode,
-} from "../services/valuationWorkflow";
+import { runValuationWithMongoCatalog } from "../services/valuationCatalogRun";
+import { resolveScoringMode } from "../services/valuationWorkflow";
 
 const router: Router = Router();
 const singlePlayerSchema = z.object({
@@ -47,19 +43,14 @@ async function runValuation(
     "valuation request"
   );
 
-  const rawDocs = await Player.find({}).select(PLAYER_CATALOG_LEAN_SELECT).lean();
-  const players = normalizeCatalogPlayers(rawDocs, (msg) =>
-    reqLog.warn({ msg }, "catalog field coerced")
-  );
-
-  const outcome = executeValuationWorkflow(players, n, scope);
+  const outcome = await runValuationWithMongoCatalog(n, scope, reqLog);
   if (!outcome.ok) {
     res.status(422).json({
       errors: outcome.issues.map((message) => ({ field: "", message })),
     });
     return null;
   }
-  if (process.env.VALUATION_AGGREGATE_LOG === "1") {
+  if (env.valuationAggregateLog) {
     reqLog.info(
       {
         inflation_model: outcome.response.inflation_model,

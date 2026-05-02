@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import { env } from "../config/env";
 import { getRedisClient } from "./redis";
 
 const REDIS_PING_MS = 750;
@@ -20,7 +21,7 @@ export async function getReadiness(): Promise<ReadinessBody> {
   const mongoUp = mongoose.connection.readyState === 1;
 
   let redis: "up" | "down" | "skipped" = "skipped";
-  if (process.env.HEALTHCHECK_REDIS !== "0") {
+  if (env.healthcheckRedisEnabled) {
     try {
       await Promise.race([
         getRedisClient().ping(),

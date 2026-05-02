@@ -1,13 +1,14 @@
 import pino from "pino";
+import { env } from "../config/env";
 
 function resolveLogLevel(): string {
-  if (process.env.LOG_LEVEL) {
-    return process.env.LOG_LEVEL;
+  if (env.logLevel) {
+    return env.logLevel;
   }
-  if (process.env.VITEST === "true" || process.env.NODE_ENV === "test") {
+  if (env.isVitest || env.nodeEnv === "test") {
     return "silent";
   }
-  return process.env.NODE_ENV === "production" ? "info" : "debug";
+  return env.nodeEnv === "production" ? "info" : "debug";
 }
 
 /**

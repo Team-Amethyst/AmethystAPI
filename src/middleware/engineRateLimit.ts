@@ -1,5 +1,6 @@
 import rateLimit from "express-rate-limit";
 import type { Request, RequestHandler } from "express";
+import { env } from "../config/env";
 import type { ApiKeyRequest } from "./apiKey";
 import { catalogLimitForTier, valuationLimitForTier } from "./tierRateLimits";
 
@@ -9,12 +10,6 @@ function apiKeyOrIpKey(req: Request): string {
     return `k:${raw.trim().slice(0, 128)}`;
   }
   return `ip:${req.ip ?? "unknown"}`;
-}
-
-function parsePositiveInt(raw: string | undefined, fallback: number): number {
-  if (raw == null || raw === "") return fallback;
-  const n = Number.parseInt(raw, 10);
-  return Number.isFinite(n) && n > 0 ? n : fallback;
 }
 
 /**
@@ -29,7 +24,7 @@ export function isEngineRateLimitingEnabled(): boolean {
   if (v === "1" || v === "true" || v === "on" || v === "yes") {
     return true;
   }
-  if (process.env.VITEST === "true") {
+  if (env.isVitest) {
     return false;
   }
   return true;
@@ -66,12 +61,8 @@ export function valuationRateLimiter(): RequestHandler {
   if (!isEngineRateLimitingEnabled()) {
     return noop;
   }
-  const windowMs = parsePositiveInt(
-    process.env.RATE_LIMIT_VALUATION_WINDOW_MS,
-    60_000
-  );
   return createLimiter({
-    windowMs,
+    windowMs: env.rateLimit.valuationWindowMs,
     limit: (req) =>
       valuationLimitForTier((req as ApiKeyRequest).apiKeyTier),
     message:
@@ -88,10 +79,7 @@ export function catalogRateLimiter(): RequestHandler {
   if (!isEngineRateLimitingEnabled()) {
     return noop;
   }
-  const windowMs = parsePositiveInt(
-    process.env.RATE_LIMIT_CATALOG_WINDOW_MS,
-    60_000
-  );
+  const windowMs = env.rateLimit.catalogWindowMs;
   return createLimiter({
     windowMs,
     limit: (req) => catalogLimitForTier((req as ApiKeyRequest).apiKeyTier),

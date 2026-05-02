@@ -14,6 +14,7 @@ function normalizeTier(t: string | undefined): ApiKeyTier {
 /**
  * Tier-aware valuation request ceiling per rolling window.
  * Standard tier uses `RATE_LIMIT_VALUATION_MAX` as baseline; free is lower, premium higher.
+ * Reads `process.env` on each call so tests can `vi.stubEnv` tier ceilings.
  */
 export function valuationLimitForTier(tier: string | undefined): number {
   const standard = parsePositiveInt(
