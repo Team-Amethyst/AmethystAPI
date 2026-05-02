@@ -21,9 +21,9 @@
         </svg>
       </button>
       <button type="button" class="logo-btn" id="logoHomeBtn" onclick="navGoHome()">
-        <svg width="22" height="22" viewBox="0 0 22 22" fill="none" aria-hidden="true">
-          <path d="M11 2L3 7.5V14.5L11 20L19 14.5V7.5L11 2Z" fill="#8b5cf6" fill-opacity="0.3" stroke="#8b5cf6" stroke-width="1.5" stroke-linejoin="round"/>
-          <path d="M11 2L11 20M3 7.5L19 7.5M3 14.5L19 14.5" stroke="#8b5cf6" stroke-width="1" stroke-opacity="0.5"/>
+        <svg class="logo-mark" width="22" height="22" viewBox="0 0 22 22" fill="none" aria-hidden="true">
+          <path d="M11 2L3 7.5V14.5L11 20L19 14.5V7.5L11 2Z" fill="#5b21b6" stroke="#7c3aed" stroke-width="1.5" stroke-linejoin="round"/>
+          <path d="M11 2L11 20M3 7.5L19 7.5M3 14.5L19 14.5" stroke="#a78bfa" stroke-width="1" stroke-opacity="0.45"/>
         </svg>
         Amethyst Engine
       </button>
@@ -52,7 +52,7 @@
         <div class="sidebar-divider" role="presentation"></div>
 
         <div class="sidebar-kicker">Try the API</div>
-        <p class="sidebar-section-hint sidebar-hint-tools">Paste your x-api-key — no account required.</p>
+        <p class="sidebar-section-hint sidebar-hint-tools">Key in header only.</p>
         <button type="button" class="sidebar-link portal-tab-trigger" data-tab="usage">Usage</button>
         <button type="button" class="sidebar-link portal-tab-trigger" data-tab="sandbox">Playground</button>
 
@@ -60,7 +60,7 @@
 
         <div id="sidebarKeysGate" class="sidebar-keys-gate">
           <div class="sidebar-kicker">Account</div>
-          <p class="sidebar-section-hint">Sign in to issue keys. Usage and Playground work with a key only.</p>
+          <p class="sidebar-section-hint">Session for issuing keys.</p>
           <button type="button" class="sidebar-link portal-tab-trigger" data-tab="keys">API keys</button>
         </div>
         <div id="sidebarKeysSignedIn" class="sidebar-keys-signed" hidden>
@@ -76,6 +76,7 @@
 
   <!-- ═══════════════════ REFERENCE TAB ═══════════════════ -->
   <div class="tab-content active" id="tab-reference">
+    <div class="portal-shell">
 
     <!-- Overview -->
     <div class="section">
@@ -446,11 +447,13 @@ player_id: player._id          <span class="t-cmt">// MongoDB ObjectId — not r
       </div>
     </div>
 
+    </div><!-- /.portal-shell -->
   </div><!-- /tab-reference -->
 
 
   <!-- ═══════════════════ LICENSING TAB ═══════════════════ -->
   <div class="tab-content" id="tab-licensing">
+    <div class="portal-shell">
 
     <div class="section">
       <h2>Licensing</h2>
@@ -556,6 +559,7 @@ player_id: player._id          <span class="t-cmt">// MongoDB ObjectId — not r
       </div>
     </div>
 
+    </div><!-- /.portal-shell -->
   </div><!-- /tab-licensing -->
 
   <!-- ═══════════════════ CONSOLE HOME ═══════════════════ -->
@@ -597,13 +601,13 @@ player_id: player._id          <span class="t-cmt">// MongoDB ObjectId — not r
   <div class="tab-content" id="tab-keys">
     <div class="portal-shell account-shell keys-shell">
 
-    <header class="keys-page-head">
-      <h1 class="keys-page-title">API keys</h1>
-      <p class="keys-page-lede">
-        Sign in below to create and revoke keys. <strong>Usage</strong> and <strong>Playground</strong> only need your
-        <code class="inline-code">x-api-key</code> header — no session required.
+    <div class="section page-hero">
+      <h2>API keys</h2>
+      <p class="section-desc">
+        <strong>Usage</strong> and <strong>Playground</strong>: paste <code class="inline-code">x-api-key</code>.
+        <strong>Keys</strong>: sign in below.
       </p>
-    </header>
+    </div>
 
     <div class="keys-status-panel keys-messages" id="keysMessages" aria-live="polite">
       <div class="usage-error" id="accountError"></div>
@@ -613,7 +617,6 @@ player_id: player._id          <span class="t-cmt">// MongoDB ObjectId — not r
 
     <div class="keys-auth-stack">
     <div class="portal-card account-card keys-auth-card" id="accountAuthPanel">
-      <div class="account-kicker">Sign in</div>
       <div class="account-auth-mode">
         <button type="button" class="account-mode-btn active" id="accountModeSignInBtn" onclick="accountSetMode('signin')">Sign in</button>
         <button type="button" class="account-mode-btn" id="accountModeCreateBtn" onclick="accountSetMode('create')">Create account</button>
@@ -640,7 +643,7 @@ player_id: player._id          <span class="t-cmt">// MongoDB ObjectId — not r
         </div>
       </div>
       <p class="account-inline-hint" id="accountAuthInlineHint">Enter your email and password to manage keys.</p>
-      <div class="wizard-actions" style="margin-top:0">
+      <div class="wizard-actions keys-auth-actions">
         <button type="button" class="load-btn" id="accountPrimaryBtn" onclick="accountSubmitAuth()">Sign in</button>
       </div>
     </div>
@@ -658,9 +661,9 @@ player_id: player._id          <span class="t-cmt">// MongoDB ObjectId — not r
     </div>
     </div><!-- /.keys-auth-stack -->
 
-    <div class="keys-wizard-intro" id="keysWizardIntro" hidden>
-      <h2 class="keys-wizard-intro-title">Issue a key</h2>
-      <p class="keys-wizard-intro-desc">
+    <div class="section section--tight keys-wizard-intro" id="keysWizardIntro" hidden>
+      <h3>Issue a key</h3>
+      <p class="section-desc">
         The wizard uses your signed-in developer account. Copy the secret once — it is not shown again.
       </p>
     </div>
@@ -817,9 +820,11 @@ player_id: player._id          <span class="t-cmt">// MongoDB ObjectId — not r
       </p>
     </div>
 
-    <p class="usage-privacy-note">
-      Your secret is sent only to <code style="font-size:11px">GET /api/usage</code> over HTTPS and is not stored in the browser after you close the tab. Prefer a staging key over production when checking from a shared machine.
-    </p>
+    <div class="section">
+      <h3>Paste your key</h3>
+      <p class="section-desc usage-privacy-note">
+        Your secret is sent only to <code style="font-size:11px">GET /api/usage</code> over HTTPS and is not stored in the browser after you close the tab. Prefer a staging key over production when checking from a shared machine.
+      </p>
 
     <div class="portal-card usage-form-card">
       <label class="portal-label" for="keyInput">API key</label>
@@ -859,6 +864,7 @@ player_id: player._id          <span class="t-cmt">// MongoDB ObjectId — not r
       <p class="portal-hint" id="usageKeyHint" style="margin-bottom:0;margin-top:12px">
         This call does not increment your usage counter — safe to refresh any time.
       </p>
+    </div>
     </div>
 
     <div class="usage-sr-only" id="usageLiveRegion" aria-live="polite"></div>
@@ -946,7 +952,9 @@ player_id: player._id          <span class="t-cmt">// MongoDB ObjectId — not r
         </p>
       </div>
 
-      <p class="sandbox-context-hint" id="sandboxContextMeta">Loading fixtures…</p>
+      <div class="section">
+      <h3>Fixture &amp; run</h3>
+      <p class="section-desc sandbox-context-hint" id="sandboxContextMeta">Loading fixtures…</p>
 
       <div class="sandbox-case-tabs" role="tablist" aria-label="Checkpoint fixture">
         <button type="button" class="sandbox-case-tab active" role="tab" aria-selected="true" data-sandbox-file="pre_draft.json">Pre-draft</button>
@@ -956,7 +964,7 @@ player_id: player._id          <span class="t-cmt">// MongoDB ObjectId — not r
         <button type="button" class="sandbox-case-tab" role="tab" aria-selected="false" data-sandbox-file="after_pick_130.json">After 130 picks</button>
       </div>
 
-      <div class="portal-card" style="margin-bottom:14px">
+      <div class="portal-card portal-card--stack">
         <span class="portal-label">League context (read-only)</span>
         <p class="portal-hint" style="margin-top:4px;margin-bottom:10px">Hover the panel and use the clipboard control to copy this checkpoint JSON exactly as stored.</p>
         <div class="sandbox-context-shell">
@@ -994,16 +1002,19 @@ player_id: player._id          <span class="t-cmt">// MongoDB ObjectId — not r
             spellcheck="false"
           />
         </div>
-        <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center">
+        <div class="sandbox-key-actions">
           <button type="button" class="btn-secondary" onclick="sandboxCopyKeyFromUsage()">Use key from Usage</button>
           <button type="button" class="load-btn" id="sandboxRunBtn" onclick="sandboxRunPlayerValuation()">POST /valuation/player</button>
         </div>
       </div>
 
       <div class="usage-error" id="sandboxError" style="margin-top:12px"></div>
+      </div>
 
-      <h3 class="sandbox-response-heading">Response</h3>
+      <div class="section">
+      <h3>Response</h3>
       <pre class="sandbox-out" id="sandboxOut">Choose a checkpoint, enter player_id and x-api-key, then run.</pre>
+      </div>
     </div>
   </div><!-- /tab-sandbox -->
 
