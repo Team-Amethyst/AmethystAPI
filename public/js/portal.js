@@ -194,9 +194,50 @@
 
   function portalAuthTransportHint() {
     if (window.location.protocol === 'file:') {
-      return 'Open the portal from the API server URL (for example http://localhost:3001) instead of file:// so session cookies can be set.';
+      return 'Open the portal from the API server URL (for example http://localhost:3002) instead of file:// so session cookies can be set.';
     }
     return 'Check your API server and network connection, then try again.';
+  }
+
+  function portalLikelyWrongLocalOriginHint() {
+    const host = String(window.location.hostname || '').toLowerCase();
+    const port = String(window.location.port || '');
+    const isLocal = host === 'localhost' || host === '127.0.0.1';
+    if (!isLocal) return '';
+    if (port && port !== '3002') {
+      return 'This project expects the local API + portal at http://localhost:3002. You appear to be on ' + window.location.origin + '.';
+    }
+    if (!port) {
+      return 'Use the explicit local API + portal URL http://localhost:3002 for sign-in.';
+    }
+    return '';
+  }
+
+  async function portalHealthMismatchHint() {
+    try {
+      const r = await fetch('/api/health', { cache: 'no-store' });
+      if (!r.ok) return '';
+      const body = await portalReadResponseBody(r);
+      const looksLikeAmethyst =
+        body &&
+        typeof body === 'object' &&
+        typeof body.service === 'string' &&
+        String(body.service).toLowerCase().includes('amethyst');
+      if (!looksLikeAmethyst) {
+        return 'The current origin responded to /api/health but does not look like this Amethyst API service. Open http://localhost:3002 instead.';
+      }
+    } catch {
+      // ignore; fallback to generic hint
+    }
+    return '';
+  }
+
+  async function portalBuildAuthFailureMessage(prefix) {
+    const mismatch = await portalHealthMismatchHint();
+    if (mismatch) return prefix + ' ' + mismatch;
+    const originHint = portalLikelyWrongLocalOriginHint();
+    if (originHint) return prefix + ' ' + originHint;
+    return prefix + ' ' + portalAuthTransportHint();
   }
 
   async function portalReadResponseBody(res) {
@@ -432,7 +473,7 @@
       keysStatusLoaded = false;
       setActiveTab('home');
     } catch {
-      accountShowErr('Network error while creating account. ' + portalAuthTransportHint());
+      accountShowErr(await portalBuildAuthFailureMessage('Network error while creating account.'));
     } finally {
       btn.disabled = false;
       btn.textContent = 'Create account';
@@ -471,7 +512,7 @@
       keysStatusLoaded = false;
       setActiveTab('home');
     } catch {
-      accountShowErr('Network error while signing in. ' + portalAuthTransportHint());
+      accountShowErr(await portalBuildAuthFailureMessage('Network error while signing in.'));
     } finally {
       btn.disabled = false;
       btn.textContent = 'Sign in';
