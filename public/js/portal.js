@@ -343,7 +343,11 @@
     const profile = await accountFetchMe();
     accountProfile = profile;
     accountRenderSignedIn(profile);
-    if (!profile) return;
+    if (!profile) {
+      sandboxAccountKeys = [];
+      sandboxUpdateAccountKeyButton();
+      return;
+    }
     try {
       const r = await fetch('/api/account/keys', { credentials: 'include' });
       const data = await r.json();
@@ -352,8 +356,12 @@
         return;
       }
       homeRenderKeysSnapshot(data);
+      sandboxAccountKeys = Array.isArray(data) ? data : [];
+      sandboxUpdateAccountKeyButton();
     } catch {
       accountShowErr('Could not load account keys. Check your connection and try again.');
+      sandboxAccountKeys = [];
+      sandboxUpdateAccountKeyButton();
     }
   }
 
@@ -442,6 +450,11 @@
     homeRenderKeysSnapshot([]);
     accountShowInfo('Signed out.');
     keysStatusLoaded = false;
+    
+    // Clear sandbox keys on logout
+    sandboxAccountKeys = [];
+    sandboxUpdateAccountKeyButton();
+    
     const activeTab = document.querySelector('.portal-tab-trigger.active')?.dataset.tab || '';
     if (isConsoleProtected(activeTab)) {
       setActiveTab('reference');
@@ -829,6 +842,34 @@
     if (u && u.value.trim()) s.value = u.value.trim();
   }
 
+  let sandboxAccountKeys = [];
+
+  function sandboxUpdateAccountKeyButton() {
+    const btn = document.getElementById('sandboxUseAccountKeyBtn');
+    if (!btn) return;
+    
+    if (sandboxAccountKeys.length > 0 && accountProfile && accountProfile.developerAccount) {
+      btn.style.display = 'block';
+      btn.textContent = 'Use account key';
+    } else {
+      btn.style.display = 'none';
+    }
+  }
+
+  function sandboxUseAccountKey() {
+    if (sandboxAccountKeys.length === 0) {
+      sandboxShowErr('No keys found in your account. Go to API keys to create one.');
+      return;
+    }
+    const key = sandboxAccountKeys[0].fullKey || '';
+    if (!key) {
+      sandboxShowErr('Key secret not available. You may need to create a new key.');
+      return;
+    }
+    document.getElementById('sandboxApiKey').value = key;
+    sandboxHideErr();
+  }
+
   async function sandboxRunPlayerValuation() {
     sandboxHideErr();
     const key = document.getElementById('sandboxApiKey').value.trim();
@@ -1108,7 +1149,7 @@
     const tokenInput = document.getElementById('keysIssuanceToken');
     if (keysRequiresToken && !tokenInput.value.trim()) {
       keysShow(errBanner);
-      errBanner.textContent = 'Enter the issuance token provided by your operator.';
+      errBanner.textContent = 'Enter issuance token provided by your operator.';
       return;
     }
 
@@ -1155,9 +1196,21 @@
       document.getElementById('keysDoneBtn').disabled = true;
       document.getElementById('keysDoneBtn').style.opacity = '0.5';
       keysSetStepIndicator(3);
+      
+      // Store the full key for playground use
+      if (keysIssuedValue) {
+        const newKey = {
+          label: owner,
+          tier: tier,
+          fullKey: keysIssuedValue,
+          isActive: true,
+        };
+        sandboxAccountKeys.unshift(newKey);
+        sandboxUpdateAccountKeyButton();
+      }
     } catch {
       keysShow(errBanner);
-      errBanner.textContent = 'Network error while creating the key.';
+      errBanner.textContent = 'Network error while creating key.';
     } finally {
       btn.disabled = false;
       btn.textContent = 'Generate API key';
@@ -1203,6 +1256,10 @@
     keysShow(info);
     info.textContent = 'Wizard reset. You can issue another key when needed.';
     setTimeout(() => keysHide(info), 5000);
+    
+    // Clear sandbox keys when finishing wizard
+    sandboxAccountKeys = [];
+    sandboxUpdateAccountKeyButton();
   }
 
   // ── Relative time helper ──────────────────────────────────────

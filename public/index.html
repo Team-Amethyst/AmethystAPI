@@ -518,8 +518,8 @@ player_id: player._id          <span class="t-cmt">// MongoDB ObjectId — not r
           </div>
         </div>
         <div style="padding:16px 24px;font-size:13px;color:var(--muted);line-height:1.7">
-          Under the Reuse Clause of the Amethyst Industries Product Contract, the founding customer
-          receives a <strong style="color:var(--text)">5% royalty on net licensing revenue</strong> for a period of
+          Under the Reuse Clause of the Amethyst Engine license agreement, founding customers
+          receive a <strong style="color:var(--text)">5% royalty on net licensing revenue</strong> for a period of
           five years following the first commercial sale. This royalty is calculated and reported quarterly
           based on cumulative API key usage tracked per licensee.
         </div>
@@ -811,132 +811,97 @@ player_id: player._id          <span class="t-cmt">// MongoDB ObjectId — not r
   <!-- ═══════════════════ USAGE TAB ═══════════════════ -->
   <div class="tab-content" id="tab-usage">
     <div class="portal-shell">
-
     <div class="section">
-      <h2>Usage</h2>
+      <h2>API usage</h2>
       <p class="section-desc">
-        Inspect the key tied to your <strong>developer account</strong> — usage totals, tier, scopes, and renewal dates.
-        Keys issued from the console share the same developer account as <strong>API keys</strong>. Nothing here lists other organizations’ keys.
+        Enter an API key to view usage statistics, tier, scope, and developer account information.
+        Usage is tracked per key and updated in real time.
       </p>
     </div>
 
     <div class="section">
-      <h3>Paste your key</h3>
-      <p class="section-desc usage-privacy-note">
-        Your secret is sent only to <code style="font-size:11px">GET /api/usage</code> over HTTPS and is not stored in the browser after you close the tab. Prefer a staging key over production when checking from a shared machine.
-      </p>
-
-    <div class="portal-card usage-form-card">
-      <label class="portal-label" for="keyInput">API key</label>
-      <div class="key-form usage-key-row">
-        <div class="key-input-wrap">
-          <input
-            class="key-input"
-            id="keyInput"
-            type="password"
-            placeholder="amethyst_live_…"
-            autocomplete="off"
-            spellcheck="false"
-            aria-describedby="usageKeyHint"
-          />
-          <button
-            type="button"
-            class="toggle-key"
-            id="toggleKeyVisBtn"
-            aria-label="Show API key"
-            aria-pressed="false"
-            title="Show or hide key"
-            onclick="toggleKeyVisibility()"
-          >
-            <svg class="ic-eye-open" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-              <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/>
-              <circle cx="12" cy="12" r="3"/>
-            </svg>
-            <svg class="ic-eye-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none" aria-hidden="true">
-              <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a21.77 21.77 0 0 1 5.06-7.94"/>
-              <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a21.5 21.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/>
-              <line x1="1" y1="1" x2="23" y2="23"/>
-            </svg>
-          </button>
+      <div class="portal-card usage-form-card">
+        <div class="usage-key-row">
+          <div class="key-input-wrap">
+            <input
+              class="key-input"
+              id="usageKeyInput"
+              type="password"
+              placeholder="Paste your x-api-key or select from account"
+              autocomplete="off"
+              spellcheck="false"
+            />
+            <button
+              type="button"
+              class="load-btn"
+              id="usageUseAccountKeyBtn"
+              onclick="usageUseAccountKey()"
+              style="display:none"
+            >
+              Use account key
+            </button>
+          </div>
+          <button type="button" class="load-btn" id="usageLoadBtn" onclick="usageLoadKey()">Load usage</button>
         </div>
-        <button type="button" class="load-btn" id="loadBtn" onclick="loadUsage()">Load usage</button>
+        <p class="portal-hint usage-privacy-note">Your key is used only to fetch its usage metadata. It is not stored or logged.</p>
       </div>
-      <p class="portal-hint" id="usageKeyHint" style="margin-bottom:0;margin-top:12px">
-        This call does not increment your usage counter — safe to refresh any time.
-      </p>
-    </div>
-    </div>
 
-    <div class="usage-sr-only" id="usageLiveRegion" aria-live="polite"></div>
-    <div class="usage-success" id="usageSuccess" role="status"></div>
-    <div class="usage-error" id="usageError" role="alert"></div>
+      <div class="usage-success" id="usageSuccess" aria-live="polite"></div>
+      <div class="usage-error" id="usageError" aria-live="polite"></div>
 
-    <div class="stats-card" id="statsCard">
-      <div class="stats-header">
-        <div class="stats-header-text">
-          <span class="stats-key-label" id="statsKeyLabel"></span>
-          <span class="stats-owner-line" id="statsOwnerLine"></span>
-          <div class="usage-key-meta" id="usagePrefixWrap" style="display:none">
-            <code id="usagePrefixCode"></code>
-            <button type="button" class="usage-mini-btn" id="usageCopyPrefixBtn" onclick="usageCopyKeyPrefix()">Copy prefix</button>
+      <div class="stats-card" id="usageStatsCard">
+        <div class="stats-header">
+          <div class="stats-header-text">
+            <div class="stats-key-label" id="statsKeyLabel">Key</div>
+            <div class="stats-owner-line" id="statsOwnerLine">Owner</div>
+          </div>
+          <span class="stats-active" id="statsActive">Active</span>
+        </div>
+
+        <div class="usage-dev-account" id="usageDevAccount">
+          <div class="usage-dev-account-title">Developer account</div>
+          <div class="usage-dev-inactive-banner" id="usageDevInactiveBanner">
+            This developer account is marked inactive in our records. Keys may still work until revoked — contact support if this is unexpected.
+          </div>
+          <div class="usage-dev-account-rows">
+            <div class="usage-dev-row"><span class="usage-dev-k">Display name</span><span class="usage-dev-v" id="usageDevDisplayName"></span></div>
+            <div class="usage-dev-row" id="usageDevOrgRow" style="display:none"><span class="usage-dev-k">Organization</span><span class="usage-dev-v" id="usageDevOrg"></span></div>
+            <div class="usage-dev-row" id="usageDevEmailRow" style="display:none"><span class="usage-dev-k">Contact email</span><span class="usage-dev-v" id="usageDevEmail"></span></div>
+            <div class="usage-dev-id-row">
+              <span class="usage-dev-k">Account id</span>
+              <code class="stats-key-prefix" id="usageDevId"></code>
+              <button type="button" class="usage-copy-id" id="usageCopyDevIdBtn" onclick="usageCopyDeveloperAccountId()">Copy id</button>
+            </div>
           </div>
         </div>
-        <span class="stats-active" id="statsActive" role="status"></span>
-      </div>
-      <div class="usage-chips-row" id="usageChipsRow">
-        <div>
-          <span class="usage-chips-label">Allowed scopes</span>
-          <div class="usage-scope-list" id="usageScopeList"></div>
+        <div class="usage-dev-account" id="usageLegacyAccount">
+          <p class="portal-hint" style="margin:0;font-size:13px">No developer account is linked to this key (older issuance). Issue your next key from <strong>API keys</strong> so usage and support stay organized under one account.</p>
         </div>
-        <div id="usageExpiresCol" style="display:none">
-          <span class="usage-chips-label">Key expiration</span>
-          <div class="usage-expires-note" id="usageExpiresNote"></div>
-        </div>
-      </div>
-      <div class="usage-dev-account" id="usageDevAccount">
-        <div class="usage-dev-account-title">Developer account</div>
-        <div class="usage-dev-inactive-banner" id="usageDevInactiveBanner">
-          This developer account is marked inactive in our records. Keys may still work until revoked — contact support if this is unexpected.
-        </div>
-        <div class="usage-dev-account-rows">
-          <div class="usage-dev-row"><span class="usage-dev-k">Display name</span><span class="usage-dev-v" id="usageDevDisplayName"></span></div>
-          <div class="usage-dev-row" id="usageDevOrgRow" style="display:none"><span class="usage-dev-k">Organization</span><span class="usage-dev-v" id="usageDevOrg"></span></div>
-          <div class="usage-dev-row" id="usageDevEmailRow" style="display:none"><span class="usage-dev-k">Contact email</span><span class="usage-dev-v" id="usageDevEmail"></span></div>
-          <div class="usage-dev-id-row">
-            <span class="usage-dev-k">Account id</span>
-            <code class="stats-key-prefix" id="usageDevId"></code>
-            <button type="button" class="usage-copy-id" id="usageCopyDevIdBtn" onclick="usageCopyDeveloperAccountId()">Copy id</button>
+        <div class="stats-grid">
+          <div class="stat-item">
+            <div class="stat-label">Total requests</div>
+            <div class="stat-value" id="statRequests">—</div>
+            <div class="stat-sub">Counted on protected API calls</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-label">Tier</div>
+            <div class="stat-value" id="statTier">—</div>
+            <div class="stat-sub" id="statTierSub"></div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-label">Last used</div>
+            <div class="stat-value" id="statLastUsed" style="font-size:15px;padding-top:4px">—</div>
+            <div class="stat-sub" id="statLastUsedSub"></div>
+          </div>
+          <div class="stat-item" style="border-right:none">
+            <div class="stat-label">Key created</div>
+            <div class="stat-value" id="statSince" style="font-size:15px;padding-top:4px">—</div>
+            <div class="stat-sub" id="statSinceSub"></div>
+            <div class="stat-sub" id="statEmail" style="margin-top:6px"></div>
           </div>
         </div>
       </div>
-      <div class="usage-dev-account" id="usageLegacyAccount">
-        <p class="portal-hint" style="margin:0;font-size:13px">No developer account is linked to this key (older issuance). Issue your next key from <strong>API keys</strong> so usage and support stay organized under one account.</p>
       </div>
-      <div class="stats-grid">
-        <div class="stat-item">
-          <div class="stat-label">Total requests</div>
-          <div class="stat-value" id="statRequests">—</div>
-          <div class="stat-sub">Counted on protected API calls</div>
-        </div>
-        <div class="stat-item">
-          <div class="stat-label">Tier</div>
-          <div class="stat-value" id="statTier">—</div>
-          <div class="stat-sub" id="statTierSub"></div>
-        </div>
-        <div class="stat-item">
-          <div class="stat-label">Last used</div>
-          <div class="stat-value" id="statLastUsed" style="font-size:15px;padding-top:4px">—</div>
-          <div class="stat-sub" id="statLastUsedSub"></div>
-        </div>
-        <div class="stat-item" style="border-right:none">
-          <div class="stat-label">Key created</div>
-          <div class="stat-value" id="statSince" style="font-size:15px;padding-top:4px">—</div>
-          <div class="stat-sub" id="statSinceSub"></div>
-          <div class="stat-sub" id="statEmail" style="margin-top:6px"></div>
-        </div>
-      </div>
-    </div>
-
     </div><!-- /.portal-shell -->
   </div><!-- /tab-usage -->
 
@@ -947,73 +912,85 @@ player_id: player._id          <span class="t-cmt">// MongoDB ObjectId — not r
         <h2>Playground — sample draft</h2>
         <p class="section-desc">
           Non-billing experimentation: five presupplied <strong>league / draft context</strong> JSON files (Activity #9 style) live under <code style="font-size:12px">/fixtures/checkpoints/</code>.
-          Pick a checkpoint to preview the context, copy it for your own tools, then enter one <code style="font-size:12px">player_id</code> (MLB id string, or a synthetic id from the fixture) to call
+          Pick a checkpoint to preview context, copy it for your own tools, then enter one <code style="font-size:12px">player_id</code> (MLB id string, or a synthetic id from fixture) to call
           <code style="color:var(--orange);background:rgba(251,146,60,0.1);padding:1px 6px;border-radius:3px;font-size:12px;">POST /valuation/player</code> — same body as <code style="font-size:12px">/valuation/calculate</code> plus <code style="font-size:12px">player_id</code>. See <code style="font-size:12px">docs/draft-2026-xlsx-mapping.md</code> for how fixtures were built.
         </p>
       </div>
 
       <div class="section">
-      <h3>Fixture &amp; run</h3>
-      <p class="section-desc sandbox-context-hint" id="sandboxContextMeta">Loading fixtures…</p>
+        <h3>Fixture & run</h3>
+        <p class="section-desc sandbox-context-hint" id="sandboxContextMeta">Loading fixtures…</p>
 
-      <div class="sandbox-case-tabs" role="tablist" aria-label="Checkpoint fixture">
-        <button type="button" class="sandbox-case-tab active" role="tab" aria-selected="true" data-sandbox-file="pre_draft.json">Pre-draft</button>
-        <button type="button" class="sandbox-case-tab" role="tab" aria-selected="false" data-sandbox-file="after_pick_10.json">After 10 picks</button>
-        <button type="button" class="sandbox-case-tab" role="tab" aria-selected="false" data-sandbox-file="after_pick_50.json">After 50 picks</button>
-        <button type="button" class="sandbox-case-tab" role="tab" aria-selected="false" data-sandbox-file="after_pick_100.json">After 100 picks</button>
-        <button type="button" class="sandbox-case-tab" role="tab" aria-selected="false" data-sandbox-file="after_pick_130.json">After 130 picks</button>
-      </div>
-
-      <div class="portal-card portal-card--stack">
-        <span class="portal-label">League context (read-only)</span>
-        <p class="portal-hint" style="margin-top:4px;margin-bottom:10px">Hover the panel and use the clipboard control to copy this checkpoint JSON exactly as stored.</p>
-        <div class="sandbox-context-shell">
-          <button type="button" class="sandbox-json-copy" id="sandboxCopyContextBtn" onclick="sandboxCopyActiveFixture()" title="Copy league context JSON" aria-label="Copy league context JSON">
-            <svg class="sandbox-copy-clip" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-              <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
-              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
-            </svg>
-            <svg class="sandbox-copy-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-              <path d="M20 6L9 17l-5-5"/>
-            </svg>
-            <svg class="sandbox-copy-warn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-              <circle cx="12" cy="12" r="10"/>
-              <path d="M12 8v4M12 16h.01"/>
-            </svg>
-          </button>
-          <pre class="sandbox-context-pre" id="sandboxContextPre"></pre>
+        <div class="sandbox-case-tabs" role="tablist" aria-label="Checkpoint fixture">
+          <button type="button" class="sandbox-case-tab active" role="tab" aria-selected="true" data-sandbox-file="pre_draft.json">Pre-draft</button>
+          <button type="button" class="sandbox-case-tab" role="tab" aria-selected="false" data-sandbox-file="after_pick_10.json">After 10 picks</button>
+          <button type="button" class="sandbox-case-tab" role="tab" aria-selected="false" data-sandbox-file="after_pick_50.json">After 50 picks</button>
+          <button type="button" class="sandbox-case-tab" role="tab" aria-selected="false" data-sandbox-file="after_pick_100.json">After 100 picks</button>
+          <button type="button" class="sandbox-case-tab" role="tab" aria-selected="false" data-sandbox-file="after_pick_130.json">After 130 picks</button>
         </div>
-      </div>
 
-      <div class="portal-card sandbox-player-field">
-        <label class="portal-label" for="sandboxPlayerId">player_id to value</label>
-        <input class="portal-input" id="sandboxPlayerId" type="text" maxlength="32" placeholder="e.g. 660271 or synthetic id from fixture roster" autocomplete="off" spellcheck="false" />
-        <p class="portal-hint">Must still be in the undrafted pool for that checkpoint (not on a roster as keeper-only off-board rules apply).</p>
-      </div>
-
-      <div class="sandbox-key-row">
-        <div class="key-input-wrap">
-          <input
-            class="key-input"
-            id="sandboxApiKey"
-            type="password"
-            placeholder="x-api-key"
-            autocomplete="off"
-            spellcheck="false"
-          />
+        <div class="portal-card portal-card--stack">
+          <div class="sandbox-context-header">
+            <span>League context (read-only)</span>
+            <span style="font-size:10px;color:var(--muted);text-transform:none;letter-spacing:0">Checkpoint JSON from /fixtures/checkpoints/</span>
+          </div>
+          <div class="sandbox-context-shell">
+            <button type="button" class="sandbox-json-copy" id="sandboxCopyContextBtn" onclick="sandboxCopyActiveFixture()" title="Copy league context JSON" aria-label="Copy league context JSON">
+              <svg class="sandbox-copy-clip" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+              </svg>
+              <svg class="sandbox-copy-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M20 6L9 17l-5-5"/>
+              </svg>
+              <svg class="sandbox-copy-warn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <circle cx="12" cy="12" r="10"/>
+                <path d="M12 8v4M12 16h.01"/>
+              </svg>
+            </button>
+            <pre class="sandbox-context-pre" id="sandboxContextPre"></pre>
+          </div>
         </div>
-        <div class="sandbox-key-actions">
-          <button type="button" class="btn-secondary" onclick="sandboxCopyKeyFromUsage()">Use key from Usage</button>
-          <button type="button" class="load-btn" id="sandboxRunBtn" onclick="sandboxRunPlayerValuation()">POST /valuation/player</button>
-        </div>
-      </div>
 
-      <div class="usage-error" id="sandboxError" style="margin-top:12px"></div>
+        <div class="portal-card sandbox-player-field">
+          <label class="sandbox-field-label" for="sandboxPlayerId">player_id to value</label>
+          <input class="portal-input" id="sandboxPlayerId" type="text" maxlength="32" placeholder="e.g. 660271 or synthetic id from fixture roster" autocomplete="off" spellcheck="false" />
+          <p class="sandbox-field-hint">Must still be in the undrafted pool for that checkpoint (not on a roster as keeper-only off-board rules apply).</p>
+        </div>
+
+        <div class="sandbox-key-row">
+          <label class="sandbox-field-label" for="sandboxApiKey">API key <a href="#keys" onclick="setActiveTab('keys')" style="color:var(--accent);font-weight:600">(Create new key)</a></label>
+          <div class="key-input-wrap">
+            <input
+              class="key-input"
+              id="sandboxApiKey"
+              type="password"
+              placeholder="Paste your x-api-key or select from account"
+              autocomplete="off"
+              spellcheck="false"
+            />
+            <button
+              type="button"
+              class="load-btn"
+              id="sandboxUseAccountKeyBtn"
+              onclick="sandboxUseAccountKey()"
+              style="display:none"
+            >
+              Use account key
+            </button>
+          </div>
+          <div class="sandbox-key-actions">
+            <button type="button" class="btn-secondary" onclick="sandboxCopyKeyFromUsage()">Paste from Usage</button>
+            <button type="button" class="load-btn" id="sandboxRunBtn" onclick="sandboxRunPlayerValuation()">POST /valuation/player</button>
+          </div>
+        </div>
+
+        <div class="usage-error" id="sandboxError"></div>
       </div>
 
       <div class="section">
-      <h3>Response</h3>
-      <pre class="sandbox-out" id="sandboxOut">Choose a checkpoint, enter player_id and x-api-key, then run.</pre>
+        <h3>Response</h3>
+        <pre class="sandbox-out" id="sandboxOut">Choose a checkpoint, enter player_id and x-api-key, then run.</pre>
       </div>
     </div>
   </div><!-- /tab-sandbox -->
