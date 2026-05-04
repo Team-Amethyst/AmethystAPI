@@ -182,6 +182,7 @@
 
   /** Parses Express `errorHandler` JSON and other simple `{ error: string }` shapes. */
   function portalApiMessage(data) {
+    if (typeof data === 'string' && data.trim()) return data.trim();
     if (!data || typeof data !== 'object') return 'Request failed';
     if (typeof data.message === 'string') return data.message;
     if (data.error && typeof data.error === 'object' && typeof data.error.message === 'string') {
@@ -189,6 +190,30 @@
     }
     if (typeof data.error === 'string') return data.error;
     return 'Request failed';
+  }
+
+  function portalAuthTransportHint() {
+    if (window.location.protocol === 'file:') {
+      return 'Open the portal from the API server URL (for example http://localhost:3001) instead of file:// so session cookies can be set.';
+    }
+    return 'Check your API server and network connection, then try again.';
+  }
+
+  async function portalReadResponseBody(res) {
+    const contentType = String(res.headers.get('content-type') || '').toLowerCase();
+    if (contentType.includes('application/json')) {
+      try {
+        return await res.json();
+      } catch {
+        return null;
+      }
+    }
+    try {
+      const text = await res.text();
+      return text ? { message: text.slice(0, 300) } : null;
+    } catch {
+      return null;
+    }
   }
 
   // ── Portal account auth + key dashboard ──────────────────────
@@ -350,7 +375,7 @@
     }
     try {
       const r = await fetch('/api/account/keys', { credentials: 'include' });
-      const data = await r.json();
+      const data = await portalReadResponseBody(r);
       if (!r.ok) {
         accountShowErr(portalApiMessage(data));
         return;
@@ -384,6 +409,12 @@
     };
     btn.disabled = true;
     btn.textContent = 'Creating…';
+    if (window.location.protocol === 'file:') {
+      accountShowErr(portalAuthTransportHint());
+      btn.disabled = false;
+      btn.textContent = 'Create account';
+      return;
+    }
     try {
       const r = await fetch('/api/auth/register', {
         method: 'POST',
@@ -391,7 +422,7 @@
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
-      const data = await r.json();
+      const data = await portalReadResponseBody(r);
       if (!r.ok) {
         accountShowErr(portalApiMessage(data));
         return;
@@ -401,7 +432,7 @@
       keysStatusLoaded = false;
       setActiveTab('home');
     } catch {
-      accountShowErr('Network error while creating account.');
+      accountShowErr('Network error while creating account. ' + portalAuthTransportHint());
     } finally {
       btn.disabled = false;
       btn.textContent = 'Create account';
@@ -414,6 +445,12 @@
     const btn = document.getElementById('accountPrimaryBtn');
     btn.disabled = true;
     btn.textContent = 'Signing in…';
+    if (window.location.protocol === 'file:') {
+      accountShowErr(portalAuthTransportHint());
+      btn.disabled = false;
+      btn.textContent = 'Sign in';
+      return;
+    }
     try {
       const r = await fetch('/api/auth/login', {
         method: 'POST',
@@ -424,7 +461,7 @@
           password: document.getElementById('accountPassword').value,
         }),
       });
-      const data = await r.json();
+      const data = await portalReadResponseBody(r);
       if (!r.ok) {
         accountShowErr(portalApiMessage(data));
         return;
@@ -434,7 +471,7 @@
       keysStatusLoaded = false;
       setActiveTab('home');
     } catch {
-      accountShowErr('Network error while signing in.');
+      accountShowErr('Network error while signing in. ' + portalAuthTransportHint());
     } finally {
       btn.disabled = false;
       btn.textContent = 'Sign in';
@@ -555,7 +592,7 @@
       const r = await fetch('/api/usage', {
         headers: { 'x-api-key': key }
       });
-      const data = await r.json();
+      const data = await portalReadResponseBody(r);
 
       if (!r.ok) {
         errEl.textContent = portalApiMessage(data);
@@ -962,7 +999,7 @@
 
     try {
       const r = await fetch('/api/keys/status');
-      const data = await r.json();
+      const data = await portalReadResponseBody(r);
       keysHide(loading);
       keysStatusLoaded = true;
 
@@ -1173,7 +1210,7 @@
         headers,
         body: JSON.stringify(issueBody),
       });
-      const data = await r.json();
+      const data = await portalReadResponseBody(r);
 
       if (!r.ok) {
         keysShow(errBanner);
