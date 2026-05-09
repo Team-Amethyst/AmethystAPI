@@ -1,7 +1,9 @@
 import { Router, RequestHandler } from "express";
+import mongoose from "mongoose";
 import ApiKey from "../models/ApiKey";
 import DeveloperAccount from "../models/DeveloperAccount";
 import { ALLOWED_API_KEY_SCOPES, ALLOWED_API_KEY_TIERS, generateApiKeySecret, hashApiKey } from "../lib/apiKey";
+import { openPortalApiKeySecret, sealPortalApiKeySecret } from "../lib/portalApiKeySecret";
 import { NotFoundError, ServiceUnavailableError, ValidationError } from "../lib/appError";
 import { PortalRequest, requirePortalSession } from "../middleware/portalSession";
 import { issuanceEnabled } from "./keyIssuanceHelpers";
@@ -46,23 +48,30 @@ const listMyKeys: RequestHandler = async (req, res, next) => {
 
     const keys = await ApiKey.find({ developerAccountId: portalUser.developerAccountId })
       .sort({ createdAt: -1 })
+      .select("+key")
       .lean();
 
     res.json(
-      keys.map((doc) => ({
-        id: doc._id,
-        label: doc.label,
-        owner: doc.owner,
-        email: doc.email ?? null,
-        tier: doc.tier,
-        scopes: doc.scopes ?? [],
-        keyPrefix: doc.keyPrefix,
-        usageCount: doc.usageCount ?? 0,
-        lastUsed: doc.lastUsed ?? null,
-        createdAt: doc.createdAt ?? null,
-        expiresAt: doc.expiresAt ?? null,
-        isActive: doc.isActive,
-      }))
+      keys.map((doc) => {
+        const sealed = typeof doc.key === "string" && doc.key.length > 0 ? doc.key : null;
+        const secret = sealed ? openPortalApiKeySecret(sealed) : null;
+        return {
+          id: doc._id,
+          label: doc.label,
+          owner: doc.owner,
+          email: doc.email ?? null,
+          tier: doc.tier,
+          scopes: doc.scopes ?? [],
+          keyPrefix: doc.keyPrefix,
+          usageCount: doc.usageCount ?? 0,
+          lastUsed: doc.lastUsed ?? null,
+          createdAt: doc.createdAt ?? null,
+          expiresAt: doc.expiresAt ?? null,
+          isActive: doc.isActive,
+          /** Full secret when stored for this account (newer keys); legacy rows may omit. */
+          secret: secret ?? null,
+        };
+      })
     );
   } catch (err) {
     next(err);
@@ -112,8 +121,10 @@ const issueMyKey: RequestHandler = async (req, res, next) => {
     }
 
     const { secret, keyPrefix } = generateApiKeySecret();
+    const sealedSecret = sealPortalApiKeySecret(secret);
     const created = await ApiKey.create({
       keyHash: hashApiKey(secret),
+      key: sealedSecret,
       keyPrefix,
       label,
       owner: developerAccount.displayName,
@@ -137,8 +148,31 @@ const issueMyKey: RequestHandler = async (req, res, next) => {
       createdAt: created.createdAt,
       expiresAt: created.expiresAt || null,
       isActive: created.isActive,
-      message: "Copy this key now. It will not be shown again.",
+      message: "Key saved to your account. You can use it from the API keys and Playground pages when signed in.",
     });
+  } catch (err) {
+    next(err);
+  }
+};
+
+const deleteMyKey: RequestHandler = async (req, res, next) => {
+  try {
+    const portalUser = (req as PortalRequest).portalUser;
+    if (!portalUser) {
+      throw new ValidationError("Missing portal session context.", 500, "PORTAL_CONTEXT_MISSING");
+    }
+    const rawId = typeof req.params.id === "string" ? req.params.id.trim() : "";
+    if (!rawId || !mongoose.isValidObjectId(rawId)) {
+      throw new ValidationError("Invalid key id.", 400, "KEY_ID_INVALID");
+    }
+    const result = await ApiKey.deleteOne({
+      _id: new mongoose.Types.ObjectId(rawId),
+      developerAccountId: portalUser.developerAccountId,
+    });
+    if (result.deletedCount === 0) {
+      throw new NotFoundError("API key not found.", 404, "API_KEY_NOT_FOUND");
+    }
+    res.status(204).send();
   } catch (err) {
     next(err);
   }
@@ -147,5 +181,6 @@ const issueMyKey: RequestHandler = async (req, res, next) => {
 router.get("/me", requirePortalSession, me);
 router.get("/keys", requirePortalSession, listMyKeys);
 router.post("/keys/issue", requirePortalSession, issueMyKey);
+router.delete("/keys/:id", requirePortalSession, deleteMyKey);
 
 export default router;

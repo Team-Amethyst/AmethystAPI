@@ -9,6 +9,7 @@ import {
 } from "../lib/apiKey";
 import { ValidationError, NotFoundError } from "../lib/appError";
 import { resolveDeveloperAccount } from "../lib/developerAccounts";
+import { sealPortalApiKeySecret } from "../lib/portalApiKeySecret";
 
 const router: Router = Router();
 
@@ -94,6 +95,7 @@ const createKey: RequestHandler = async (req, res, next) => {
     });
     const created = await ApiKey.create({
       keyHash,
+      key: sealPortalApiKeySecret(secret),
       keyPrefix,
       label,
       owner,

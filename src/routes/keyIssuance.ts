@@ -15,6 +15,7 @@ import {
   issuanceEnabled,
   parseIssueBody,
 } from "./keyIssuanceHelpers";
+import { sealPortalApiKeySecret } from "../lib/portalApiKeySecret";
 
 const router = Router();
 
@@ -76,6 +77,7 @@ const postIssue: RequestHandler = async (
       try {
         await ApiKey.create({
           keyHash,
+          key: sealPortalApiKeySecret(secret),
           keyPrefix,
           label,
           owner,
@@ -95,8 +97,7 @@ const postIssue: RequestHandler = async (
           email,
           keyPrefix,
           scopes,
-          message:
-            "Store this key now. It will not be shown again. There is no account recovery for lost keys.",
+          message: "Key saved to your developer account and available from the portal key list.",
         });
         return;
       } catch (err: unknown) {
