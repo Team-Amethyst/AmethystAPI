@@ -182,6 +182,15 @@
       "pick_number": 10
     },
     {
+      "player_id": "518774",
+      "name": "Carlos Correa",
+      "position": "SS",
+      "team": "SF",
+      "team_id": "team_e",
+      "paid": 22,
+      "pick_number": 11
+    },
+    {
       "player_id": "500743",
       "name": "Miguel Rojas",
       "position": "2B",
@@ -1071,6 +1080,15 @@
       "team_id": "team_g",
       "paid": 1,
       "pick_number": 110
+    },
+    {
+      "player_id": "668942",
+      "name": "Jordan Walker",
+      "position": "UTIL",
+      "team": "UNK",
+      "team_id": "team_d",
+      "paid": 2,
+      "pick_number": 111
     },
     {
       "player_id": "691781",
