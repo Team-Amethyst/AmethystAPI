@@ -11,6 +11,8 @@ import type {
 import { getRequestId } from "../lib/requestContext";
 import { logger } from "../lib/logger";
 import { PLAYER_CATALOG_LEAN_SELECT } from "../lib/playerCatalogProjection";
+import { normalizeCatalogPlayers } from "../lib/playerCatalog";
+import { hydratePlaceholderCatalogTeamsFromMlb } from "../lib/catalogTeamHydration";
 import { zodIssuesToFieldErrors } from "../lib/zodErrors";
 import { cacheMiddleware } from "../middleware/cache";
 
@@ -27,6 +29,8 @@ const batchBodySchema = z.object({
  *
  * Baseline `value` / `tier` / `adp` from Mongo for requested MLB `player_id` strings.
  * Same id rules as `/valuation/calculate`. Cached 120s per request body (Redis when available).
+ * Placeholder-team hydration matches `loadMongoCatalogForEngine` (respects
+ * `AMETHYST_SKIP_MLB_TEAM_HYDRATE=1` for offline CI).
  */
 const batchValues: RequestHandler = async (
   req: Request,
@@ -57,15 +61,21 @@ const batchValues: RequestHandler = async (
     ),
   ];
 
-  const docs = (await Player.find({
+  const docs = await Player.find({
     mlbId: { $in: numericIds },
   })
     .select(PLAYER_CATALOG_LEAN_SELECT)
-    .lean()) as unknown as LeanPlayer[];
+    .lean();
+
+  const normalized = normalizeCatalogPlayers(docs as unknown[], () => undefined);
+  const hydrated =
+    process.env.AMETHYST_SKIP_MLB_TEAM_HYDRATE === "1"
+      ? normalized
+      : (await hydratePlaceholderCatalogTeamsFromMlb(normalized)).players;
 
   const idSet = new Set(player_ids);
   const byId = new Map<string, LeanPlayer>();
-  for (const p of docs) {
+  for (const p of hydrated) {
     const pid = getPlayerId(p);
     if (idSet.has(pid)) byId.set(pid, p);
   }

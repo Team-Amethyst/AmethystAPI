@@ -398,16 +398,19 @@ async function sync() {
   const teamIdToAbbr = await fetchTeamAbbrevMap();
   console.log(`[MLB API] Loaded ${teamIdToAbbr.size} team abbreviations`);
 
-  // Fetch bio data for all players (bounded to avoid oversized query string).
-  const playerIds = [
-    ...new Set([...batSplits.map((s) => s.player.id), ...pitSplits.map((s) => s.player.id)]),
-  ].slice(0, 600);
-
-  const bioMap = await fetchBioMap(playerIds);
-  console.log(`[MLB API] Fetched bio for ${bioMap.size} players`);
-
   /** Merge hitting + pitching splits per player so two-way rows keep both stat blobs and eligibilities. */
   const aggMap = aggregatePositiveSplits(batSplits, pitSplits);
+
+  // Fetch bios for every aggregated player (chunked — URL length limits).
+  const allAggIds = [...aggMap.keys()];
+  const bioMap = new Map<number, MlbPlayer>();
+  const BIO_CHUNK = 200;
+  for (let i = 0; i < allAggIds.length; i += BIO_CHUNK) {
+    const slice = allAggIds.slice(i, i + BIO_CHUNK);
+    const part = await fetchBioMap(slice);
+    for (const [k, v] of part) bioMap.set(k, v);
+  }
+  console.log(`[MLB API] Fetched bio for ${bioMap.size} / ${allAggIds.length} aggregated players`);
   const playerMap = new Map<number, PlayerSyncDoc>();
   for (const [mlbId, agg] of aggMap) {
     const bio = bioMap.get(mlbId);

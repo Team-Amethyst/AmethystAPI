@@ -13,6 +13,9 @@ export type ValuationUniverseFilter = {
 /**
  * Single source of truth for which catalog rows participate in baseline z-scores,
  * replacement levels, and inflation. Call once per request before baseline + inflation.
+ *
+ * Filter order: (1) `league_scope`, (2) `eligible_player_ids` if non-empty,
+ * (3) `excluded_player_ids` if non-empty.
  */
 export function filterValuationUniverse(
   players: LeanPlayer[],

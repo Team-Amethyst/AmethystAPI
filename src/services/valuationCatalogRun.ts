@@ -1,8 +1,6 @@
 import type { Logger } from "pino";
-import Player from "../models/Player";
-import { normalizeCatalogPlayers } from "../lib/playerCatalog";
-import { PLAYER_CATALOG_LEAN_SELECT } from "../lib/playerCatalogProjection";
 import type { NormalizedValuationInput } from "../types/brain";
+import { loadMongoCatalogForEngine } from "../lib/mongoCatalogPipeline";
 import {
   executeValuationWorkflow,
   type ValuationWorkflowResult,
@@ -17,9 +15,6 @@ export async function runValuationWithMongoCatalog(
   scope: { playerId?: string; position?: string } = {},
   log: Logger
 ): Promise<ValuationWorkflowResult> {
-  const rawDocs = await Player.find({}).select(PLAYER_CATALOG_LEAN_SELECT).lean();
-  const players = normalizeCatalogPlayers(rawDocs, (msg) =>
-    log.warn({ msg }, "catalog field coerced")
-  );
+  const players = await loadMongoCatalogForEngine(log);
   return executeValuationWorkflow(players, normalized, scope);
 }

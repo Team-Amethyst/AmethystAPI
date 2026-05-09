@@ -1,6 +1,5 @@
 import { Router, Request, Response, RequestHandler } from "express";
 import { z } from "zod";
-import Player from "../models/Player";
 import { ENGINE_CONTRACT_VERSION } from "../lib/engineContract";
 import {
   recommendedActionForSeverity,
@@ -15,9 +14,9 @@ import {
 } from "../lib/draftedPlayerZod";
 import { zodIssuesToFieldErrors } from "../lib/zodErrors";
 import { positionOverrideEntrySchema } from "../lib/valuationRequestSchemas";
-import { PLAYER_CATALOG_LEAN_SELECT } from "../lib/playerCatalogProjection";
 import { positionOverridesFromRequest } from "../lib/fantasyRosterSlots";
-import { LeanPlayer } from "../types/brain";
+import { loadMongoCatalogForEngine } from "../lib/mongoCatalogPipeline";
+import { logger } from "../lib/logger";
 
 const router: Router = Router();
 
@@ -50,9 +49,7 @@ const scarcity: RequestHandler = async (
   const input = parsed.data;
   const numTeams = input.num_teams ?? 12;
 
-  const players = (await Player.find({})
-    .select(PLAYER_CATALOG_LEAN_SELECT)
-    .lean()) as unknown as LeanPlayer[];
+  const players = await loadMongoCatalogForEngine(logger);
 
   const ov = positionOverridesFromRequest(input.position_overrides);
   const result = analyzeScarcity(

@@ -1,16 +1,53 @@
 import { LeagueScope } from "../types/brain";
 
-// American League team abbreviations and full names
+/**
+ * AL / NL abbreviation sets include both MLB Stats API `/teams` forms (2025:
+ * AZ, KC, TB, SF, SD, WSH) and common fantasy / legacy aliases (ARI, KCR,
+ * TBR, SFG, SDP, WSN, CHW, OAK).
+ */
 const AL_ABBREVS = new Set([
-  "BAL", "BOS", "NYY", "TBR", "TOR",   // AL East
-  "CWS", "CLE", "DET", "KCR", "MIN",   // AL Central
-  "HOU", "LAA", "OAK", "ATH", "SEA", "TEX", // AL West
+  "BAL",
+  "BOS",
+  "NYY",
+  "TB",
+  "TBR",
+  "TOR",
+  "CWS",
+  "CHW",
+  "CLE",
+  "DET",
+  "KC",
+  "KCR",
+  "MIN",
+  "HOU",
+  "LAA",
+  "OAK",
+  "ATH",
+  "SEA",
+  "TEX",
 ]);
 
 const NL_ABBREVS = new Set([
-  "ATL", "MIA", "NYM", "PHI", "WSN",   // NL East
-  "CHC", "CIN", "MIL", "PIT", "STL",   // NL Central
-  "ARI", "COL", "LAD", "SDP", "SFG",   // NL West
+  "ATL",
+  "MIA",
+  "NYM",
+  "PHI",
+  "WSH",
+  "WSN",
+  "WAS",
+  "CHC",
+  "CIN",
+  "MIL",
+  "PIT",
+  "STL",
+  "ARI",
+  "AZ",
+  "COL",
+  "LAD",
+  "SD",
+  "SDP",
+  "SF",
+  "SFG",
 ]);
 
 const AL_NAMES = new Set([
@@ -29,6 +66,10 @@ const NL_NAMES = new Set([
   "PITTSBURGH PIRATES", "ST. LOUIS CARDINALS",
   "ARIZONA DIAMONDBACKS", "COLORADO ROCKIES", "LOS ANGELES DODGERS",
   "SAN DIEGO PADRES", "SAN FRANCISCO GIANTS",
+  "ARIZONA D-BACKS",
+  "ARIZONA D BACKS",
+  "D-BACKS",
+  "D BACKS",
 ]);
 
 /**
