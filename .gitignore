@@ -141,3 +141,8 @@ vite.config.ts.timestamp-*
 # Local draft replay analysis outputs (pnpm replay-draft-json-analysis:*-report)
 test-fixtures/replay-evaluator/draft-json-*.json
 tmp/
+
+# Developer portal — Vite writes hashed bundles here (`pnpm build` / `pnpm build:portal` regenerates)
+/public/index.html
+/public/assets/index-*.js
+/public/assets/index-*.css
