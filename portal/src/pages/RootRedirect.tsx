@@ -12,12 +12,10 @@ export function RootRedirect() {
   if (isPending) {
     return (
       <div className="portal-shell">
-        <p className="portal-hint" style={{ margin: 0 }}>
-          Loading…
-        </p>
+        <p className="portal-hint portal-hint--flush">Loading…</p>
       </div>
     );
   }
 
-  return data?.user ? <Navigate to="/home" replace /> : <Navigate to="/reference" replace />;
+  return data?.user ? <Navigate to="/keys" replace /> : <Navigate to="/reference" replace />;
 }

@@ -1,12 +1,11 @@
-import { createHashRouter } from "react-router-dom";
+import { createHashRouter, Navigate } from "react-router-dom";
 import { PortalLayout } from "@/layout/PortalLayout";
 import { KeysTab } from "@/pages/KeysTab";
+import { LoginTab } from "@/pages/LoginTab";
 import { LicensingTab } from "@/pages/LicensingTab";
-import { ProtectedHome } from "@/pages/ProtectedHome";
 import { ReferenceTab } from "@/pages/ReferenceTab";
 import { RootRedirect } from "@/pages/RootRedirect";
 import { SandboxTab } from "@/pages/SandboxTab";
-import { UsageTab } from "@/pages/UsageTab";
 
 export const router = createHashRouter([
   {
@@ -16,9 +15,11 @@ export const router = createHashRouter([
       { index: true, element: <RootRedirect /> },
       { path: "reference", element: <ReferenceTab /> },
       { path: "licensing", element: <LicensingTab /> },
-      { path: "home", element: <ProtectedHome /> },
+      { path: "home", element: <Navigate to="/keys" replace /> },
+      { path: "usage", element: <Navigate to="/keys" replace /> },
+      { path: "login", element: <LoginTab /> },
+      { path: "register", element: <Navigate to="/login" replace /> },
       { path: "keys", element: <KeysTab /> },
-      { path: "usage", element: <UsageTab /> },
       { path: "sandbox", element: <SandboxTab /> },
     ],
   },

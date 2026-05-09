@@ -36,5 +36,21 @@ export async function issueAccountKey(body: {
   });
   const data = await readResponseBody(r);
   if (!r.ok) throw new Error(portalApiMessage(data));
-  return data as { apiKey?: string; developerAccountId?: string };
+  const o = data as Record<string, unknown>;
+  const apiKey =
+    typeof o.apiKey === "string" ? o.apiKey : typeof o.secret === "string" ? o.secret : undefined;
+  return {
+    apiKey,
+    developerAccountId: typeof o.developerAccountId === "string" ? o.developerAccountId : undefined,
+  };
+}
+
+export async function deleteAccountKey(id: string): Promise<void> {
+  const r = await portalFetch(`/api/account/keys/${encodeURIComponent(id)}`, {
+    method: "DELETE",
+    credentials: "include",
+  });
+  if (r.status === 204) return;
+  const data = await readResponseBody(r);
+  if (!r.ok) throw new Error(portalApiMessage(data));
 }
