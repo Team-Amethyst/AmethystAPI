@@ -113,6 +113,10 @@
         "$ref": "#/$defs/positionOverrideEntry"
       }
     },
+    "strict_scoring_categories": {
+      "type": "boolean",
+      "description": "When true, valuation fails if scoring_categories includes names not modeled in v1 baselines; default false yields scoring_category_warnings instead."
+    },
     "user_team_id": {
       "type": "string",
       "description": "Optional team context for team_adjusted_value; defaults to team_1 when omitted."

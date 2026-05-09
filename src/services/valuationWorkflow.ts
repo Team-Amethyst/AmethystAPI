@@ -8,6 +8,10 @@ import { logger } from "../lib/logger";
 import { validateValuationResponse } from "../lib/valuationQuality";
 import { DEFAULT_INFLATION_MODEL } from "../lib/valuationDefaults";
 import { positionOverridesFromRequest } from "../lib/fantasyRosterSlots";
+import {
+  listUnsupportedScoringCategories,
+  scoringCategorySupportWarnings,
+} from "../lib/scoringCategorySupport";
 import { calculateInflation } from "./inflationEngine";
 import { scoringAwareBaselinePlayers } from "./baselineValueEngine";
 import { filterValuationUniverse } from "../lib/valuationPlayerPool";
@@ -121,6 +125,19 @@ export function executeValuationWorkflow(
     excludedPlayerIds: input.excluded_player_ids,
   });
   const positionOverrides = positionOverridesFromRequest(input.position_overrides);
+  const unsupportedCats = listUnsupportedScoringCategories(input.scoring_categories);
+  if (input.strict_scoring_categories && unsupportedCats.length > 0) {
+    const names = unsupportedCats.map((c) => `${c.name} (${c.type})`).join(", ");
+    return {
+      ok: false,
+      issues: [
+        `Unsupported scoring categories for v1 baselines: ${names}. Remove them, set strict_scoring_categories to false to receive warnings instead, or extend engine stat wiring.`,
+      ],
+    };
+  }
+  const scoringCategoryWarnings =
+    unsupportedCats.length > 0 ? scoringCategorySupportWarnings(unsupportedCats) : [];
+
   const basePlayers = scoringAwareBaselinePlayers(
     valuationPool,
     input.scoring_format,
@@ -185,7 +202,15 @@ export function executeValuationWorkflow(
         basePlayers,
         scope
       );
-      return { ok: true, response: explained };
+      return {
+        ok: true,
+        response: {
+          ...explained,
+          ...(scoringCategoryWarnings.length > 0
+            ? { scoring_category_warnings: scoringCategoryWarnings }
+            : {}),
+        },
+      };
     }
     lastIssues = quality.issues;
   }

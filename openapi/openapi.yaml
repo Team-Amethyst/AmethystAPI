@@ -208,6 +208,13 @@ components:
           description: Human-readable league context (inflation, scarcity, monopolies).
           items:
             type: string
+        scoring_category_warnings:
+          type: array
+          description: |
+            Present when the request included scoring category names not implemented in the v1 baseline
+            projection pipeline (for example HLD, SLG, OPS); those categories are ignored until wired in the engine.
+          items:
+            type: string
         auction_value_note:
           type: string
           description: |

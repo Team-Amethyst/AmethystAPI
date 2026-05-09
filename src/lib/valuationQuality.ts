@@ -170,6 +170,18 @@ export function validateValuationResponse(
   ) {
     issues.push("auction_value_note must be a string when present");
   }
+  if (response.scoring_category_warnings != null) {
+    if (!Array.isArray(response.scoring_category_warnings)) {
+      issues.push("scoring_category_warnings must be an array when present");
+    } else {
+      for (let i = 0; i < response.scoring_category_warnings.length; i++) {
+        const w = response.scoring_category_warnings[i];
+        if (typeof w !== "string" || w.length === 0) {
+          issues.push(`scoring_category_warnings[${i}] must be a non-empty string`);
+        }
+      }
+    }
+  }
 
   if (issues.length > 0) {
     return { ok: false, issues };

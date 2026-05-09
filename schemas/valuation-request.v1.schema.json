@@ -91,6 +91,10 @@
         "$ref": "#/$defs/positionOverrideEntry"
       }
     },
+    "strict_scoring_categories": {
+      "type": "boolean",
+      "description": "When true, valuation fails if scoring_categories includes names not modeled in v1 baselines. Default false: unsupported names yield scoring_category_warnings on the response."
+    },
     "minors": {
       "type": "array",
       "items": {

@@ -105,7 +105,7 @@ So players at or below **replacement** in model dollars stay near **$1**; stars 
 
 ### Replacement and surplus
 
-- After the fill, **`replacement_values_by_slot_or_position[slot]`** = **minimum** baseline among players assigned to that slot (worst “starter” at that bucket), or **0** if none.
+- After the fill, the engine collects the list of **baseline `$`** values for each slot from the undrafted greedy assignment pass, then sets **`replacement_values_by_slot_or_position[slot]`** to a **percentile** of that list (per-slot defaults in `replacementSlotsV2Config.ts` — e.g. BN uses a higher tail than `C` / `OF`). It is **not** the minimum assigned baseline; see `replacementLevelsFromSlotValuesPercentile` in `fantasySlotAssignment.ts`.
 - For each undrafted player, **`surplus_basis`** = **`max(0, max_{eligible slot s}(baseline − repl[s]))`**.
 - **`remaining_slots`** in the response = **Σ remaining slot demand after rostered consumption** (before undrafted fill).
 - **`surplus_cash`** = `max(0, total_budget_remaining − remaining_slots × min_bid)` with **`min_bid = 1`**.

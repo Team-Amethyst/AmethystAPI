@@ -237,8 +237,10 @@ describe("executeValuationWorkflow", () => {
 
     expect(needA.team_adjusted_value!).toBeGreaterThan(cA.team_adjusted_value!);
     expect(needA.adjusted_value).toBe(needB.adjusted_value);
+    expect(needA.auction_value).toBe(needB.auction_value);
     expect(needA.recommended_bid).toBe(needB.recommended_bid);
     expect(needA.team_adjusted_value).not.toBe(needB.team_adjusted_value);
+    expect(needA.edge).not.toBe(needB.edge);
     for (const row of a.response.valuations) {
       expect(row.team_adjusted_value!).toBeGreaterThanOrEqual(0);
     }

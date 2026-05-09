@@ -67,6 +67,19 @@
       "type": "string",
       "enum": ["early", "mid", "late"]
     },
+    "market_notes": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "scoring_category_warnings": {
+      "type": "array",
+      "description": "Present when scoring_categories included unsupported v1 category names.",
+      "items": {
+        "type": "string"
+      }
+    },
     "valuations": {
       "type": "array",
       "items": {

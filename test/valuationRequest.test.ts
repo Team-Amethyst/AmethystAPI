@@ -111,6 +111,19 @@ describe("parseValuationRequest + Draft checkpoint fixtures", () => {
     if (!r.success) return;
     expect(r.normalized.user_team_id).toBe("team_9");
   });
+
+  it("accepts strict_scoring_categories on flat bodies", () => {
+    const r = parseValuationRequest({
+      strict_scoring_categories: true,
+      roster_slots: [{ position: "OF", count: 3 }],
+      scoring_categories: [{ name: "HR", type: "batting" }],
+      total_budget: 260,
+      drafted_players: [],
+    });
+    expect(r.success).toBe(true);
+    if (!r.success) return;
+    expect(r.normalized.strict_scoring_categories).toBe(true);
+  });
 });
 
 describe("parseValuationRequest nested (Draft checkpoint interop)", () => {

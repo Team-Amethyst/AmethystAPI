@@ -37,6 +37,7 @@ export interface ValuationRequest {
   /** Reserved / informational — does not apply min-games eligibility from catalog (no games-by-position in Mongo). Use `position_overrides` for explicit eligibility. */
   pos_eligibility_threshold?: number;
   position_overrides?: PositionOverrideEntry[];
+  strict_scoring_categories?: boolean;
   minors?: TeamRosterBucket[];
   taxi?: TeamRosterBucket[];
 }
@@ -52,6 +53,7 @@ export interface ValuationLeagueBlock {
   /** Reserved / informational — does not apply min-games eligibility from catalog. Use `position_overrides` for explicit eligibility. */
   pos_eligibility_threshold?: number;
   position_overrides?: PositionOverrideEntry[];
+  strict_scoring_categories?: boolean;
   inflation_model?: InflationModel;
 }
 
@@ -70,6 +72,12 @@ export interface NormalizedValuationInput {
   /** Reserved / informational — v1 does not apply min-games rules from Mongo. Use `position_overrides`. */
   pos_eligibility_threshold?: number;
   position_overrides?: PositionOverrideEntry[];
+  /**
+   * When true, valuation fails closed if `scoring_categories` includes any name
+   * not wired in v1 baselines (see `scoringCategorySupport.ts`). Default false:
+   * unsupported names emit `scoring_category_warnings` on the response instead.
+   */
+  strict_scoring_categories?: boolean;
   pre_draft_rosters?: Record<string, unknown[]>;
   minors?: TeamRosterBucket[] | Record<string, unknown[]>;
   taxi?: TeamRosterBucket[] | Record<string, unknown[]>;
@@ -180,6 +188,8 @@ export interface ValuationResponse {
   calculated_at: string;
   valuation_model_version?: string;
   market_notes?: string[];
+  /** Present when the request included scoring category names not implemented in v1 baselines. */
+  scoring_category_warnings?: string[];
   remaining_slots?: number;
   min_bid?: number;
   surplus_cash?: number;

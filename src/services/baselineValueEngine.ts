@@ -21,6 +21,7 @@ import {
   stdDev,
 } from "./baselineProjectionStats";
 import { applyBaselineRiskChain } from "./baselineRiskChain";
+import { ROTO_Z_HITTER, ROTO_Z_PITCHER } from "./baselineRotoZConfig";
 
 /** Catalog dollar prior weight in rotisserie baselines (remainder is projection-driven). */
 const ROTO_CATALOG_PRIOR_WEIGHT = 0.12;
@@ -162,9 +163,9 @@ function rotoBaselineForGroup(
       zWeighted += z * categoryWeight(c.cat.name);
     }
 
-    const zScale = groupKind === "pitcher" ? 0.092 : 0.08;
-    const zLo = groupKind === "pitcher" ? 0.48 : 0.55;
-    const zHi = groupKind === "pitcher" ? 1.92 : 1.7;
+    const zScale = groupKind === "pitcher" ? ROTO_Z_PITCHER.zScale : ROTO_Z_HITTER.zScale;
+    const zLo = groupKind === "pitcher" ? ROTO_Z_PITCHER.zLo : ROTO_Z_HITTER.zLo;
+    const zHi = groupKind === "pitcher" ? ROTO_Z_PITCHER.zHi : ROTO_Z_HITTER.zHi;
     const projectionMult = Math.max(zLo, Math.min(zHi, 1 + zWeighted * zScale));
     const scarcityComponent =
       scarcityMultiplierForPosition(p, rosterSlots, positionOverrides) - 1;

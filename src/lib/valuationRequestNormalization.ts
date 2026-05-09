@@ -48,6 +48,12 @@ export function buildNormalizedFromNested(
   const { league, draft_state, ...rest } = parsed;
   const sv = mergedSchemaVersion(rest, "1.0.0");
   const leagueId = rest.league_id ?? league.id;
+  const strictScoringCategories =
+    rest.strict_scoring_categories !== undefined
+      ? rest.strict_scoring_categories
+      : league.strict_scoring_categories !== undefined
+        ? league.strict_scoring_categories
+        : undefined;
   return {
     schemaVersion: sv,
     ...(leagueId ? { league_id: leagueId } : {}),
@@ -63,6 +69,9 @@ export function buildNormalizedFromNested(
     pos_eligibility_threshold: league.pos_eligibility_threshold,
     position_overrides:
       rest.position_overrides ?? league.position_overrides,
+    ...(strictScoringCategories !== undefined
+      ? { strict_scoring_categories: strictScoringCategories }
+      : {}),
     pre_draft_rosters: rest.pre_draft_rosters
       ? normalizePreDraftRostersInput(rest.pre_draft_rosters)
       : undefined,
@@ -98,6 +107,9 @@ export function buildNormalizedFromFlat(
     hitter_budget_pct: parsed.hitter_budget_pct,
     pos_eligibility_threshold: parsed.pos_eligibility_threshold,
     position_overrides: parsed.position_overrides,
+    ...(parsed.strict_scoring_categories !== undefined
+      ? { strict_scoring_categories: parsed.strict_scoring_categories }
+      : {}),
     pre_draft_rosters: parsed.pre_draft_rosters
       ? normalizePreDraftRostersInput(parsed.pre_draft_rosters)
       : undefined,

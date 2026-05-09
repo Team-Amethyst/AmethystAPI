@@ -54,6 +54,7 @@ export const leagueBlockSchema = z.object({
   hitter_budget_pct: z.number().optional(),
   pos_eligibility_threshold: z.number().optional(),
   position_overrides: z.array(positionOverrideEntrySchema).optional(),
+  strict_scoring_categories: z.boolean().optional(),
   inflation_model: inflationModelSchema.optional(),
 });
 
@@ -76,6 +77,7 @@ export const nestedValuationBodySchema = z.object({
   user_team_id: z.string().min(1).optional(),
   inflation_model: inflationModelSchema.optional(),
   position_overrides: z.array(positionOverrideEntrySchema).optional(),
+  strict_scoring_categories: z.boolean().optional(),
 });
 
 export const flatValuationBodySchema = z.object({
@@ -104,6 +106,7 @@ export const flatValuationBodySchema = z.object({
   excluded_player_ids: z.array(z.string().min(1)).optional(),
   pre_draft_rosters: preDraftRostersInputSchema.optional(),
   inflation_model: inflationModelSchema.optional(),
+  strict_scoring_categories: z.boolean().optional(),
 });
 
 export type NestedValuationBody = z.infer<typeof nestedValuationBodySchema>;
