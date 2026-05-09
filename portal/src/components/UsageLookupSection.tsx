@@ -26,13 +26,6 @@ type UsagePayload = {
   isActive?: boolean;
   expiresAt?: string;
   scopes?: string[];
-  developerAccount?: {
-    id?: string;
-    displayName?: string;
-    organization?: string | null;
-    contactEmail?: string | null;
-    isActive?: boolean;
-  } | null;
 };
 
 /** Embedded on API keys — paste any key for GET /api/usage snapshot (no sign-in required). */
@@ -129,12 +122,6 @@ export function UsageLookupSection() {
     loadMutation.mutate(key);
   }, [resolveEffectiveKey, loadMutation]);
 
-  const usageCopyDeveloperAccountId = () => {
-    const id = stats?.developerAccount?.id;
-    if (!id) return;
-    void navigator.clipboard.writeText(String(id));
-  };
-
   const tier = stats?.tier && ["free", "standard", "premium"].includes(String(stats.tier)) ? String(stats.tier) : "free";
 
   const onUsageSourceChange = (id: string) => {
@@ -197,18 +184,40 @@ export function UsageLookupSection() {
                     <label className="usage-lookup-label usage-lookup-label--secondary" htmlFor="keysUsagePick">
                       Choose key
                     </label>
-                    <select
-                      id="keysUsagePick"
-                      className="portal-select usage-key-source-select"
-                      value={usageSelectValue === USAGE_KEY_CUSTOM ? accountKeyFillOptions[0]?.id ?? "" : usageSelectValue}
-                      onChange={(e) => onUsageSourceChange(e.target.value)}
+                    <div
+                      className={
+                        !showKeyPasteField && selectedKeyOption
+                          ? "usage-lookup-select-load-row"
+                          : "usage-lookup-select-only-wrap"
+                      }
                     >
-                      {accountKeyFillOptions.map((o) => (
-                        <option key={o.id} value={o.id}>
-                          {o.label} · {o.prefix}
-                        </option>
-                      ))}
-                    </select>
+                      <select
+                        id="keysUsagePick"
+                        className="portal-select usage-key-source-select"
+                        value={
+                          usageSelectValue === USAGE_KEY_CUSTOM
+                            ? accountKeyFillOptions[0]?.id ?? ""
+                            : usageSelectValue
+                        }
+                        onChange={(e) => onUsageSourceChange(e.target.value)}
+                      >
+                        {accountKeyFillOptions.map((o) => (
+                          <option key={o.id} value={o.id}>
+                            {o.label} · {o.prefix}
+                          </option>
+                        ))}
+                      </select>
+                      {!showKeyPasteField && selectedKeyOption ? (
+                        <button
+                          type="button"
+                          className="load-btn usage-lookup-submit"
+                          onClick={loadUsage}
+                          disabled={loadMutation.isPending}
+                        >
+                          {loadMutation.isPending ? "Loading…" : "Load usage"}
+                        </button>
+                      ) : null}
+                    </div>
                   </>
                 ) : null}
                 {fillHint ? (
@@ -219,61 +228,44 @@ export function UsageLookupSection() {
               </div>
             ) : null}
 
-            <div className="usage-lookup-field">
-              <label
-                className="usage-lookup-label"
-                htmlFor={showKeyPasteField ? "keysUsageKeyInput" : "keysUsageKeyReady"}
-              >
-                API key
-              </label>
-              <div className="usage-lookup-action-row">
-                {showKeyPasteField ? (
-                  <input
-                    className="key-input usage-lookup-input"
-                    id="keysUsageKeyInput"
-                    type="password"
-                    placeholder="Paste full x-api-key secret"
-                    autoComplete="off"
-                    spellCheck={false}
-                    value={keyInput}
-                    onChange={(e) => {
-                      setKeyInput(e.target.value);
-                      setFillHint("");
-                      if (showAccountKeyPicker && usageSelectValue !== USAGE_KEY_CUSTOM) {
-                        setUsageSource(USAGE_KEY_CUSTOM);
-                      }
-                    }}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") loadUsage();
-                    }}
-                  />
-                ) : selectedKeyOption ? (
-                  <div
-                    id="keysUsageKeyReady"
-                    className="usage-key-ready"
-                    role="status"
-                    aria-label={`Secret stored for ${selectedKeyOption.label}`}
+            {!showAccountKeyPicker || showKeyPasteField ? (
+              <div className="usage-lookup-field">
+                <label className="usage-lookup-label" htmlFor="keysUsageKeyInput">
+                  API key
+                </label>
+                <div className="usage-lookup-action-row">
+                  {showKeyPasteField ? (
+                    <input
+                      className="key-input usage-lookup-input"
+                      id="keysUsageKeyInput"
+                      type="password"
+                      placeholder="Paste full x-api-key secret"
+                      autoComplete="off"
+                      spellCheck={false}
+                      value={keyInput}
+                      onChange={(e) => {
+                        setKeyInput(e.target.value);
+                        setFillHint("");
+                        if (showAccountKeyPicker && usageSelectValue !== USAGE_KEY_CUSTOM) {
+                          setUsageSource(USAGE_KEY_CUSTOM);
+                        }
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") loadUsage();
+                      }}
+                    />
+                  ) : null}
+                  <button
+                    type="button"
+                    className="load-btn usage-lookup-submit"
+                    onClick={loadUsage}
+                    disabled={loadMutation.isPending}
                   >
-                    <span className="usage-key-ready-icon" aria-hidden>
-                      ✓
-                    </span>
-                    <span className="usage-key-ready-main">
-                      <span className="usage-key-ready-title">{selectedKeyOption.label}</span>
-                      <code className="usage-key-ready-prefix">{selectedKeyOption.prefix}</code>
-                    </span>
-                    <span className="usage-key-ready-note">Secret on file</span>
-                  </div>
-                ) : null}
-                <button
-                  type="button"
-                  className="load-btn usage-lookup-submit"
-                  onClick={loadUsage}
-                  disabled={loadMutation.isPending}
-                >
-                  {loadMutation.isPending ? "Loading…" : "Load usage"}
-                </button>
+                    {loadMutation.isPending ? "Loading…" : "Load usage"}
+                  </button>
+                </div>
               </div>
-            </div>
+            ) : null}
           </div>
         </div>
 
@@ -317,51 +309,6 @@ export function UsageLookupSection() {
                   {stats.isActive ? "Active" : "Inactive"}
                 </span>
               </div>
-
-              {stats.developerAccount?.displayName ? (
-                <div className="usage-dev-account visible" id="keysUsageDevAccount">
-                  <div className="usage-dev-account-title">Developer account</div>
-                  <div
-                    className={`usage-dev-inactive-banner${stats.developerAccount.isActive === false ? " visible" : ""}`}
-                    id="keysUsageDevInactiveBanner"
-                  >
-                    This developer account is marked inactive in our records. Keys may still work until revoked — contact support if this is unexpected.
-                  </div>
-                  <div className="usage-dev-account-rows">
-                    <div className="usage-dev-row">
-                      <span className="usage-dev-k">Display name</span>
-                      <span className="usage-dev-v">{stats.developerAccount.displayName}</span>
-                    </div>
-                    {stats.developerAccount.organization ? (
-                      <div className="usage-dev-row">
-                        <span className="usage-dev-k">Organization</span>
-                        <span className="usage-dev-v">{stats.developerAccount.organization}</span>
-                      </div>
-                    ) : null}
-                    {stats.developerAccount.contactEmail ? (
-                      <div className="usage-dev-row">
-                        <span className="usage-dev-k">Contact email</span>
-                        <span className="usage-dev-v">{stats.developerAccount.contactEmail}</span>
-                      </div>
-                    ) : null}
-                    <div className="usage-dev-id-row">
-                      <span className="usage-dev-k">Account id</span>
-                      <code className="stats-key-prefix" id="keysUsageDevId">
-                        {String(stats.developerAccount.id || "")}
-                      </code>
-                      <button type="button" className="usage-copy-id" id="keysUsageCopyDevIdBtn" onClick={usageCopyDeveloperAccountId}>
-                        Copy id
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <div className="usage-dev-account visible" id="keysUsageLegacyAccount">
-                  <p className="portal-hint portal-hint--flush">
-                    No developer account is linked to this key (older issuance). Issue your next key from this page so usage and support stay organized under one account.
-                  </p>
-                </div>
-              )}
 
               <div className="stats-grid">
                 <div className="stat-item">

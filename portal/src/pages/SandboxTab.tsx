@@ -286,7 +286,7 @@ export function SandboxTab() {
 
   const poolRows = useMemo(() => poolData?.rows ?? [], [poolData?.rows]);
   const poolIsCurrent = poolRows.length > 0;
-  const selectedPlayerId = playerId.trim() || poolRows[0]?.id || "";
+  const selectedPlayerId = playerId.trim();
 
   const filteredFixturePickRows = useMemo(() => {
     const rawQ = fixturePlayerSearch.trim();
@@ -350,7 +350,7 @@ export function SandboxTab() {
       return;
     }
     if (!pid) {
-      setErr("Choose a player or enter a player_id.");
+      setErr("Choose a player from the pool.");
       return;
     }
     if (!contextRaw) {
@@ -399,10 +399,23 @@ export function SandboxTab() {
     }
   }, [activeAccountKeySelection, activeFile, effectiveKey, fixtureRaw, resolvedKeyForSelection, selectedPlayerId]);
 
+  /** Mirrors validation inside `runValuation` so the primary action stays disabled until the request can succeed. */
+  const runValuationReady = useMemo(() => {
+    if (!effectiveKey) return false;
+    const contextRaw = fixtureRaw[activeFile] ?? "";
+    if (!contextRaw.trim()) return false;
+    try {
+      JSON.parse(contextRaw);
+    } catch {
+      return false;
+    }
+    return Boolean(selectedPlayerId.trim());
+  }, [activeFile, effectiveKey, fixtureRaw, selectedPlayerId]);
+
   const statusTone =
     httpStatus === null ? "neutral" : httpStatus >= 200 && httpStatus < 300 ? "success" : httpStatus >= 400 ? "error" : "warn";
 
-  const poolSourceLabel = poolLoading ? "Loading pool" : poolIsCurrent ? "Live valuation pool" : "Awaiting key";
+  const poolSourceLabel = poolLoading ? "Loading pool" : poolIsCurrent ? "Live valuation pool" : "—";
   const poolCountLabel = poolIsCurrent ? `${poolRows.length.toLocaleString()} selectable` : effectiveKey ? "Loading" : "Not loaded";
   const poolErrorMessage = poolIsError ? (poolError instanceof Error ? poolError.message : "Could not load player pool.") : "";
 
@@ -411,7 +424,6 @@ export function SandboxTab() {
       <div className="portal-shell sandbox-shell">
         <div className="section page-hero sandbox-page-hero">
           <div>
-            <p className="sandbox-eyebrow">Developer tool</p>
             <h2>Playground</h2>
             <p className="section-desc sandbox-page-lede">
               Run <strong className="sandbox-lede-strong">POST /valuation/player</strong> against real league checkpoints.
@@ -444,15 +456,6 @@ export function SandboxTab() {
                   {checkpointLabel ? <code className="inline-code inline-code--xs">{checkpointLabel}</code> : activeFile}
                 </p>
               </div>
-              <button
-                type="button"
-                className="load-btn sandbox-run-btn"
-                id="sandboxRunBtn"
-                onClick={() => void runValuation()}
-                disabled={running}
-              >
-                {running ? "Sending..." : "Run valuation"}
-              </button>
             </div>
 
             <div className="sandbox-section-block">
@@ -618,21 +621,10 @@ export function SandboxTab() {
 
               <div className={`sandbox-pool-status${poolIsCurrent ? " sandbox-pool-status--ready" : ""}`}>
                 <span>{poolSourceLabel}</span>
-                <span>{poolIsCurrent ? `${poolRows.length.toLocaleString()} players` : effectiveKey ? "Syncing" : "Requires an API key"}</span>
+                <span>{poolIsCurrent ? `${poolRows.length.toLocaleString()} players` : effectiveKey ? "Syncing" : "—"}</span>
               </div>
 
               <div className="sandbox-player-picker">
-                {resolvedPick ? (
-                  <div className="sandbox-selected-player sandbox-selected-player--pool" aria-live="polite">
-                    <span className="sandbox-selected-player-copy">
-                      <span className="sandbox-player-sub-label">Selected player</span>
-                      <span className="sandbox-selected-player-label">{resolvedPick.name}</span>
-                    </span>
-                    <span className="sandbox-selected-player-meta">
-                      {[resolvedPick.subtitle, `player_id ${resolvedPick.id}`].filter(Boolean).join(" · ")}
-                    </span>
-                  </div>
-                ) : null}
                 <label className="sandbox-player-sub-label" htmlFor="sandboxFixturePlayerSearch">
                   Search pool
                 </label>
@@ -640,7 +632,7 @@ export function SandboxTab() {
                   id="sandboxFixturePlayerSearch"
                   type="search"
                   className="portal-input sandbox-player-search-input"
-                  placeholder={poolIsCurrent ? "Type a name or player_id to change selection" : effectiveKey ? "Loading players..." : "Choose an API key first"}
+                  placeholder={poolIsCurrent ? "Search by name" : effectiveKey ? "Loading players..." : "Choose an API key first"}
                   disabled={!poolIsCurrent}
                   value={fixturePlayerSearch}
                   onChange={(e) => setFixturePlayerSearch(e.target.value)}
@@ -652,11 +644,6 @@ export function SandboxTab() {
                     <p className="portal-hint sandbox-player-results-msg">Players appear here after a key is selected.</p>
                   ) : null}
                   {poolLoading ? <p className="portal-hint sandbox-player-results-msg">Loading available players...</p> : null}
-                  {poolIsCurrent && !fixturePlayerSearch.trim() ? (
-                    <p className="portal-hint sandbox-player-results-msg">
-                      Type to search all {poolRows.length.toLocaleString()} available players.
-                    </p>
-                  ) : null}
                   {poolIsCurrent && fixturePlayerSearch.trim() && filteredFixturePickRows.length === 0 ? (
                     <p className="portal-hint sandbox-player-results-msg">
                       No other players match that search.
@@ -675,18 +662,46 @@ export function SandboxTab() {
                             }}
                           >
                             <span className="sandbox-player-result-text">{p.name}</span>
-                            <span className="sandbox-player-result-meta">{[p.subtitle, p.id].filter(Boolean).join(" · ")}</span>
+                            {p.subtitle && p.subtitle !== p.name ? (
+                              <span className="sandbox-player-result-meta">{p.subtitle}</span>
+                            ) : null}
                           </button>
                         </li>
                       ))}
                     </ul>
                   ) : null}
                 </div>
+                {resolvedPick ? (
+                  <div
+                    className="sandbox-selected-player sandbox-selected-player--pool"
+                    aria-live="polite"
+                    aria-label={`Current pick: ${resolvedPick.name}`}
+                  >
+                    <span className="sandbox-selected-player-copy">
+                      <span className="sandbox-selected-player-label">{resolvedPick.name}</span>
+                    </span>
+                    {resolvedPick.subtitle && resolvedPick.subtitle !== resolvedPick.name ? (
+                      <span className="sandbox-selected-player-meta">{resolvedPick.subtitle}</span>
+                    ) : null}
+                  </div>
+                ) : null}
               </div>
               {poolErrorMessage ? <div className="usage-error is-visible">{poolErrorMessage}</div> : null}
             </div>
 
             {err ? <div className="usage-error is-visible">{err}</div> : null}
+
+            <div className="sandbox-run-panel sandbox-setup-run-footer">
+              <button
+                type="button"
+                className="load-btn sandbox-run-btn"
+                id="sandboxRunBtn"
+                onClick={() => void runValuation()}
+                disabled={running || !runValuationReady}
+              >
+                {running ? "Sending..." : "Run valuation"}
+              </button>
+            </div>
           </section>
 
           <aside className="sandbox-side">

@@ -398,9 +398,6 @@ export function KeysTab() {
                         </button>
                         <pre id="keysRevealPre">{issuedKey}</pre>
                       </div>
-                      <p id="keysDeveloperIdEcho" className="portal-hint portal-hint--support-echo">
-                        {dev?.id ? `Developer account id (for support / automation): ${String(dev.id)}` : ""}
-                      </p>
                       <p className="portal-hint portal-hint--tight-top">
                         While signed in, the full key remains available on the API keys list for Playground and clients.
                       </p>
