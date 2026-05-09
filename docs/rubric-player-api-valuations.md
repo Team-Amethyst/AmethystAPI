@@ -6,7 +6,7 @@ Maps rubric language to **concrete behavior** and **automated tests** in this re
 
 | Rubric idea | Implementation | Notes |
 |-------------|----------------|-------|
-| Player value via aggregator | `POST /valuation/calculate` loads Mongo via [`PLAYER_CATALOG_LEAN_SELECT`](../src/lib/playerCatalogProjection.ts), normalizes with [`normalizeCatalogPlayers`](../src/lib/playerCatalog.ts), runs [`executeValuationWorkflow`](../src/services/valuationWorkflow.ts). | Single supported path for auction dollars. |
+| Player value via aggregator | `POST /valuation/calculate` loads Mongo via [`PLAYER_CATALOG_LEAN_SELECT`](../src/lib/playerCatalogProjection.ts), normalizes with [`normalizeCatalogPlayers`](../src/lib/playerCatalog.ts), runs [`executeValuationWorkflow`](../src/services/valuationWorkflow.ts). Per-player **`auction_value`** is the canonical official dollar (equals **`adjusted_value`**; default **`inflation_model`** is **`replacement_slots_v2`**). | Single supported path for auction dollars. |
 | Last-year vs predictive | **`stats`** = last completed MLB season only. **`projection`** = 5:3:2 three-year blend ([`mlbProjectionBlend.ts`](../src/lib/mlbProjectionBlend.ts)), written by [`scripts/sync-players.ts`](../scripts/sync-players.ts). `catalogMeta` on the document lists seasons. | Baseline roto/points reads `projection` ([`baselineProjectionStats.ts`](../src/services/baselineProjectionStats.ts)). |
 | Age | Sync sets `age`; baseline uses [`baselineAgeDepthAdjustments.ts`](../src/services/baselineAgeDepthAdjustments.ts). | Catalog field `age`. |
 | Depth chart | Sync sets `depthChartPosition`; same baseline module. | Heuristic from volume; override via Mongo if needed. |

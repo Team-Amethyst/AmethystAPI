@@ -2,7 +2,7 @@
 
 This document is the **contract** for how `POST /valuation/calculate` and `POST /valuation/player` turn league settings + draft state into **dollar targets** (`adjusted_value`).
 
-Select the pass with **`inflation_model`** (request; defaults to **`global_v1`**):
+Select the pass with **`inflation_model`** (request; defaults to **`replacement_slots_v2`**):
 
 - **`global_v1`** — Simple league-wide rescale: stable and rank-preserving on the full wire, but it can produce odd auction targets because it prices **every** undrafted player in the denominator.
 - **`surplus_slots_v1`** — Roster-constrained surplus model with **one** league-wide replacement cutoff: reserves **$1** per **remaining empty roster slot**, builds a **draftable slice** from the top of the undrafted list, and maps **surplus cash** onto **value above replacement**. Useful for comparison; weaker than v2 when positions differ.

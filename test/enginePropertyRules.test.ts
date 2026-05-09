@@ -55,7 +55,7 @@ describe("inflation engine properties", () => {
       2,
       roster,
       "Mixed",
-      { deterministic: true, seed: 1 }
+      { deterministic: true, seed: 1, inflationModel: "global_v1" }
     );
     const rHigh = calculateInflation(
       [p1, p2],
@@ -64,7 +64,7 @@ describe("inflation engine properties", () => {
       2,
       roster,
       "Mixed",
-      { deterministic: true, seed: 1 }
+      { deterministic: true, seed: 1, inflationModel: "global_v1" }
     );
 
     expect(rLow.inflation_factor).toBeGreaterThan(rHigh.inflation_factor);
@@ -84,7 +84,7 @@ describe("inflation engine properties", () => {
       4,
       roster,
       "Mixed",
-      { deterministic: true, seed: 2 }
+      { deterministic: true, seed: 2, inflationModel: "global_v1" }
     );
     const sumAdjusted = res.valuations.reduce((s, v) => s + v.adjusted_value, 0);
     const pool = res.pool_value_remaining;
@@ -102,7 +102,7 @@ describe("inflation engine properties", () => {
       1,
       roster,
       "Mixed",
-      { deterministic: true, seed: 3 }
+      { deterministic: true, seed: 3, inflationModel: "global_v1" }
     );
     expect(res.players_remaining).toBe(1);
     expect(res.valuations[0].adjusted_value).toBeLessThanOrEqual(
@@ -117,7 +117,8 @@ describe("inflation engine properties", () => {
       seed: 9,
       inflationCap: 100,
       inflationFloor: 0.05,
-    } as const;
+      inflationModel: "global_v1" as const,
+    };
     const full = calculateInflation(
       players,
       [],

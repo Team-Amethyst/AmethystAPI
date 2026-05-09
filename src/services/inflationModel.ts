@@ -73,6 +73,7 @@ export function selectInflationModel(params: {
       {
         deterministic: options?.deterministic,
         seed: options?.seed,
+        positionOverrides: options?.positionOverrides,
       }
     );
     return {
@@ -187,6 +188,7 @@ export function computeInflationIndexVsOpeningAuction(params: {
     {
       deterministic: options?.deterministic,
       seed: options?.seed,
+      positionOverrides: options?.positionOverrides,
     }
   );
   let openClamped = clampInflation(

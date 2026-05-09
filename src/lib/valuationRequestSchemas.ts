@@ -14,6 +14,11 @@ export const inflationModelSchema = z.enum([
   "replacement_slots_v2",
 ]);
 
+export const positionOverrideEntrySchema = z.object({
+  player_id: z.string().min(1),
+  positions: z.array(z.string().min(1)).min(1),
+});
+
 export const teamBucketSchema = z.object({
   team_id: z.string(),
   players: z.array(draftedPlayerInputSchema),
@@ -48,6 +53,7 @@ export const leagueBlockSchema = z.object({
   scoring_format: scoringFormatSchema.optional(),
   hitter_budget_pct: z.number().optional(),
   pos_eligibility_threshold: z.number().optional(),
+  position_overrides: z.array(positionOverrideEntrySchema).optional(),
   inflation_model: inflationModelSchema.optional(),
 });
 
@@ -64,9 +70,12 @@ export const nestedValuationBodySchema = z.object({
   deterministic: z.boolean().optional(),
   seed: z.number().finite().optional(),
   player_ids: z.array(z.string().min(1)).optional(),
+  eligible_player_ids: z.array(z.string().min(1)).optional(),
+  excluded_player_ids: z.array(z.string().min(1)).optional(),
   budget_by_team_id: budgetByTeamSchema.optional(),
   user_team_id: z.string().min(1).optional(),
   inflation_model: inflationModelSchema.optional(),
+  position_overrides: z.array(positionOverrideEntrySchema).optional(),
 });
 
 export const flatValuationBodySchema = z.object({
@@ -85,11 +94,14 @@ export const flatValuationBodySchema = z.object({
   scoring_format: scoringFormatSchema.optional(),
   hitter_budget_pct: z.number().optional(),
   pos_eligibility_threshold: z.number().optional(),
+  position_overrides: z.array(positionOverrideEntrySchema).optional(),
   minors: z.array(teamBucketSchema).optional(),
   taxi: z.array(teamBucketSchema).optional(),
   deterministic: z.boolean().optional(),
   seed: z.number().finite().optional(),
   player_ids: z.array(z.string().min(1)).optional(),
+  eligible_player_ids: z.array(z.string().min(1)).optional(),
+  excluded_player_ids: z.array(z.string().min(1)).optional(),
   pre_draft_rosters: preDraftRostersInputSchema.optional(),
   inflation_model: inflationModelSchema.optional(),
 });

@@ -76,6 +76,7 @@ describe("valuation dollar ladder (integration)", () => {
     expect(res.ok).toBe(true);
     if (!res.ok) return;
     for (const row of res.response.valuations) {
+      expect(row.auction_value).toBeCloseTo(row.adjusted_value, 5);
       const infl = row.inflation_adjustment ?? 0;
       const delta = row.adjusted_value - row.baseline_value;
       expect(Math.abs(infl - delta)).toBeLessThanOrEqual(0.02);

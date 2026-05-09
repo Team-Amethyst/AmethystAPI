@@ -1,4 +1,5 @@
 import { analyzeScarcity } from "../services/scarcityEngine";
+import { positionOverridesFromRequest } from "./fantasyRosterSlots";
 import type { LeanPlayer, NormalizedValuationInput, ValuationResponse } from "../types/brain";
 import {
   confidenceFromSeverity,
@@ -38,12 +39,15 @@ export function getOrBuildExplainabilityContext(params: {
   const hit = contextCache.get(key);
   if (hit) return hit;
 
+  const positionOverrides = positionOverridesFromRequest(input.position_overrides);
   const scarcity = analyzeScarcity(
     allPlayers,
     input.drafted_players,
     input.num_teams,
     input.scoring_categories,
-    input.league_scope
+    input.league_scope,
+    undefined,
+    positionOverrides
   );
   const sortedAlerts = sortPositionAlerts(
     scarcity.positions.map((p) => {

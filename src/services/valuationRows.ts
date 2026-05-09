@@ -121,6 +121,7 @@ export function buildValuedRows(params: {
       else if (aRank < vRank * REACH_SLOPE) indicator = "Reach";
     }
 
+    const adjustedRounded = parseFloat(adjustedValue.toFixed(2));
     return {
       player_id: pid,
       name: p.name,
@@ -129,7 +130,8 @@ export function buildValuedRows(params: {
       adp: p.adp || 0,
       tier: p.tier || 0,
       baseline_value: baselineValue,
-      adjusted_value: adjustedValue,
+      auction_value: adjustedRounded,
+      adjusted_value: adjustedRounded,
       indicator,
       inflation_factor: parseFloat(inflationFactor.toFixed(4)),
       baseline_components: {
@@ -144,7 +146,7 @@ export function buildValuedRows(params: {
           : {}),
       },
       scarcity_adjustment: 0,
-      inflation_adjustment: parseFloat((adjustedValue - baselineValue).toFixed(2)),
+      inflation_adjustment: parseFloat((adjustedRounded - baselineValue).toFixed(2)),
     };
   });
 }

@@ -1,4 +1,9 @@
 import { getPlayerId } from "../lib/playerId";
+import {
+  fitsRosterSlot,
+  playerTokensFromLean,
+  type PositionOverrideMap,
+} from "../lib/fantasyRosterSlots";
 import type {
   DraftedPlayer,
   LeanPlayer,
@@ -38,6 +43,7 @@ export function buildPositionScarcity(params: {
   undrafted: LeanPlayer[];
   allPositions: string[];
   numTeams: number;
+  positionOverrides?: PositionOverrideMap;
 }): {
   positions: PositionScarcity[];
   tier_buckets: Array<{
@@ -51,10 +57,11 @@ export function buildPositionScarcity(params: {
     }>;
   }>;
 } {
-  const { undrafted, allPositions, numTeams } = params;
+  const { undrafted, allPositions, numTeams, positionOverrides } = params;
   const positions: PositionScarcity[] = allPositions.map((pos) => {
+    const posKey = pos.toUpperCase();
     const atPos = undrafted.filter((p) =>
-      p.position.toUpperCase().includes(pos.toUpperCase())
+      fitsRosterSlot(posKey, playerTokensFromLean(p, positionOverrides))
     );
     const elite = atPos.filter((p) => (p.tier || 99) === 1).length;
     const midTier = atPos.filter(
@@ -87,8 +94,9 @@ export function buildPositionScarcity(params: {
   });
 
   const tier_buckets = allPositions.map((pos) => {
+    const posKey = pos.toUpperCase();
     const atPos = undrafted.filter((p) =>
-      p.position.toUpperCase().includes(pos.toUpperCase())
+      fitsRosterSlot(posKey, playerTokensFromLean(p, positionOverrides))
     );
     const slotsPerTeam = SINGLE_SLOT_POSITIONS.has(pos)
       ? 1

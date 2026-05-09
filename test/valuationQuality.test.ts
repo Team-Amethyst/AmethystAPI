@@ -12,6 +12,7 @@ function baseRow(over: Partial<ValuedPlayer> = {}): ValuedPlayer {
     adp: 10,
     tier: 1,
     baseline_value: 10,
+    auction_value: 11,
     adjusted_value: 11,
     recommended_bid: 10,
     team_adjusted_value: 11,

@@ -103,7 +103,7 @@ describe("executeValuationWorkflow", () => {
     expect(res.response.context_v2?.market_summary.players_left).toBe(
       res.response.players_remaining
     );
-    expect(res.response.recommended_bid_note).toContain("clearing target");
+    expect(res.response.recommended_bid_note).toContain("draftroom");
     expect(res.response.phase_indicator).toMatch(/^(early|mid|late)$/);
     const first = res.response.valuations[0];
     expect(first.explain_v2).toBeDefined();
@@ -176,7 +176,7 @@ describe("executeValuationWorkflow", () => {
     if (!res.ok) return;
     expect(res.response.user_team_id_used).toBe("team_1");
     expect(res.response.team_adjusted_value_note).toBe(
-      "team_adjusted_value scales adjusted_value by roster need, dollars per open slot vs league peers, remaining-slot scarcity, and replacement drop-off for eligible slots; when the league snapshot is symmetric (no auction picks, no keeper/minors/taxi off-board ids, equal per-team budgets in budget_by_team_id when provided, equal rostered counts per team), it equals adjusted_value"
+      "team_adjusted_value is marginal worth to the requesting team's roster and budget context (need, dollars per open slot vs peers, remaining-slot scarcity, replacement drop-off). It is not a league-universal player price and must not replace auction_value for cross-player evaluation or leaderboards."
     );
   });
 

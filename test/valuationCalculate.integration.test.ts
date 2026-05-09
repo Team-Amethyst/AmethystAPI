@@ -108,8 +108,9 @@ describe("POST /valuation/calculate (Draft checkpoint bodies)", () => {
       calculated_at: expect.any(String),
       market_notes: expect.any(Array),
       user_team_id_used: expect.any(String),
+      auction_value_note: expect.stringContaining("auction_value"),
       team_adjusted_value_note:
-        "team_adjusted_value scales adjusted_value by roster need, dollars per open slot vs league peers, remaining-slot scarcity, and replacement drop-off for eligible slots; when the league snapshot is symmetric (no auction picks, no keeper/minors/taxi off-board ids, equal per-team budgets in budget_by_team_id when provided, equal rostered counts per team), it equals adjusted_value",
+        "team_adjusted_value is marginal worth to the requesting team's roster and budget context (need, dollars per open slot vs peers, remaining-slot scarcity, replacement drop-off). It is not a league-universal player price and must not replace auction_value for cross-player evaluation or leaderboards.",
       phase_indicator: expect.stringMatching(/^(early|mid|late)$/),
       context_v2: expect.objectContaining({
         schema_version: "2",
@@ -143,6 +144,7 @@ describe("POST /valuation/calculate (Draft checkpoint bodies)", () => {
         name: expect.any(String),
         position: expect.any(String),
         baseline_value: expect.any(Number),
+        auction_value: expect.any(Number),
         adjusted_value: expect.any(Number),
         recommended_bid: expect.any(Number),
         team_adjusted_value: expect.any(Number),
@@ -254,7 +256,7 @@ describe("POST /valuation/calculate — AmethystDraft BFF alignment", () => {
       .expect(200);
 
     expect(res.body.engine_contract_version).toBe("1");
-    expect(res.body.recommended_bid_note).toContain("clearing target");
+    expect(res.body.recommended_bid_note).toContain("draftroom");
     expect(res.body.valuations).toHaveLength(3);
     expect(res.body.valuations.map((r: { player_id: string }) => r.player_id).sort()).toEqual([
       "1",
@@ -358,9 +360,10 @@ describe("POST /valuation/calculate — AmethystDraft BFF alignment", () => {
       inflation_bounded_by: expect.stringMatching(/^(none|cap|floor)$/),
       pool_value_remaining: expect.any(Number),
       total_budget_remaining: expect.any(Number),
-      recommended_bid_note: expect.stringContaining("clearing target"),
+      recommended_bid_note: expect.stringContaining("draftroom"),
+      auction_value_note: expect.stringContaining("auction_value"),
       team_adjusted_value_note:
-        "team_adjusted_value scales adjusted_value by roster need, dollars per open slot vs league peers, remaining-slot scarcity, and replacement drop-off for eligible slots; when the league snapshot is symmetric (no auction picks, no keeper/minors/taxi off-board ids, equal per-team budgets in budget_by_team_id when provided, equal rostered counts per team), it equals adjusted_value",
+        "team_adjusted_value is marginal worth to the requesting team's roster and budget context (need, dollars per open slot vs peers, remaining-slot scarcity, replacement drop-off). It is not a league-universal player price and must not replace auction_value for cross-player evaluation or leaderboards.",
       phase_indicator: expect.stringMatching(/^(early|mid|late)$/),
       user_team_id_used: expect.any(String),
     });
@@ -373,6 +376,7 @@ describe("POST /valuation/calculate — AmethystDraft BFF alignment", () => {
       player_id: expect.any(String),
       name: expect.any(String),
       baseline_value: expect.any(Number),
+      auction_value: expect.any(Number),
       adjusted_value: expect.any(Number),
       recommended_bid: expect.any(Number),
       team_adjusted_value: expect.any(Number),

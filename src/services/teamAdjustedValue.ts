@@ -2,6 +2,7 @@ import {
   fitsRosterSlot,
   playerTokensFromDrafted,
   playerTokensFromLean,
+  type PositionOverrideMap,
 } from "../lib/fantasyRosterSlots";
 import type { DraftedPlayer, LeanPlayer, RosterSlot, ValuedPlayer } from "../types/brain";
 import { isStartingSlot, slotPriorityScore } from "./teamAdjustedConfig";
@@ -17,7 +18,8 @@ export {
 export function buildOpenSlotsForUserTeam(
   rosterSlots: RosterSlot[],
   rosteredPlayersForSlots: DraftedPlayer[] | undefined,
-  userTeamId: string
+  userTeamId: string,
+  positionOverrides?: PositionOverrideMap
 ): Map<string, number> {
   const open = new Map<string, number>();
   for (const rs of rosterSlots) {
@@ -32,7 +34,7 @@ export function buildOpenSlotsForUserTeam(
     (a, b) => slotPriorityScore(a) - slotPriorityScore(b)
   );
   for (const row of teamRows) {
-    const tokens = playerTokensFromDrafted(row);
+    const tokens = playerTokensFromDrafted(row, positionOverrides);
     for (const slot of sortedSlots) {
       const need = open.get(slot) ?? 0;
       if (need <= 0) continue;
@@ -82,6 +84,7 @@ export function teamAdjustedMultipliers(params: {
   slotScarcityMult: number;
   replForTeam: Record<string, number>;
   rosterSlotKeysForFit: ReadonlySet<string>;
+  positionOverrides?: PositionOverrideMap;
 }): {
   need: number;
   budget: number;
@@ -98,9 +101,10 @@ export function teamAdjustedMultipliers(params: {
     slotScarcityMult,
     replForTeam,
     rosterSlotKeysForFit,
+    positionOverrides,
   } = params;
-  const needMult = positionalNeedMultiplier(lp, openSlots);
-  const tokens = playerTokensFromLean(lp);
+  const needMult = positionalNeedMultiplier(lp, openSlots, positionOverrides);
+  const tokens = playerTokensFromLean(lp, positionOverrides);
   const drop = maxReplacementDropoff(
     row.baseline_value,
     tokens,

@@ -1,4 +1,7 @@
 import type { DraftedPlayer, LeanPlayer } from "../types/brain";
+import { getPlayerId } from "./playerId";
+
+export type PositionOverrideMap = Map<string, string[]>;
 
 export const SLOT_SPECIFICITY_ORDER: readonly string[] = [
   "C",
@@ -53,9 +56,12 @@ export function tokenizeFantasyPositions(
   return [...out];
 }
 
-export function playerTokensFromLean(p: LeanPlayer): string[] {
-  const base = tokenizeFantasyPositions(p.position, p.positions);
-  if (base.includes("P") && !base.includes("SP") && !base.includes("RP")) {
+/**
+ * SP/RP inference when catalog lists generic "P" (requires pitching projection).
+ */
+function expandPitcherTokensFromProjection(p: LeanPlayer, base: string[]): string[] {
+  const out = [...base];
+  if (out.includes("P") && !out.includes("SP") && !out.includes("RP")) {
     const pitching = (p.projection as Record<string, unknown> | undefined)
       ?.pitching as Record<string, unknown> | undefined;
     const asNum = (v: unknown): number => {
@@ -83,18 +89,74 @@ export function playerTokensFromLean(p: LeanPlayer): string[] {
       saves >= 4 &&
       starts >= 4;
     if (hybridLike) {
-      base.push("SP", "RP");
+      out.push("SP", "RP");
     } else if (rpLike && !spLike) {
-      base.push("RP");
+      out.push("RP");
     } else {
-      base.push("SP");
+      out.push("SP");
     }
   }
-  return [...new Set(base)];
+  return [...new Set(out)];
 }
 
-export function playerTokensFromDrafted(dp: DraftedPlayer): string[] {
+/**
+ * Canonical fantasy tokens for a catalog player, optionally overridden per request
+ * (`position_overrides` from Draftroom after min-games rules).
+ */
+export function effectiveFantasyTokens(
+  p: LeanPlayer,
+  overrides?: PositionOverrideMap | undefined
+): string[] {
+  const id = getPlayerId(p);
+  const ov = overrides?.get(id);
+  if (ov && ov.length > 0) {
+    const primary = ov[0] ?? "";
+    const extras = ov.slice(1);
+    const base = tokenizeFantasyPositions(primary, extras);
+    return expandPitcherTokensFromProjection(p, base);
+  }
+  const base = tokenizeFantasyPositions(p.position, p.positions);
+  return expandPitcherTokensFromProjection(p, base);
+}
+
+export function playerTokensFromLean(
+  p: LeanPlayer,
+  overrides?: PositionOverrideMap | undefined
+): string[] {
+  return effectiveFantasyTokens(p, overrides);
+}
+
+/**
+ * Draft rows carry no pitching projection — tokens match explicit strings only.
+ * Overrides replace Mongo/draft positions entirely when present.
+ */
+export function playerTokensFromDrafted(
+  dp: DraftedPlayer,
+  overrides?: PositionOverrideMap | undefined
+): string[] {
+  const ov = overrides?.get(dp.player_id);
+  if (ov && ov.length > 0) {
+    return [...new Set(tokenizeFantasyPositions(ov[0]!, ov.slice(1)))];
+  }
   return tokenizeFantasyPositions(dp.position, dp.positions);
+}
+
+/** Build override map from normalized valuation request payload. */
+export function positionOverridesFromRequest(
+  entries?: ReadonlyArray<{ player_id: string; positions: readonly string[] }> | null
+): PositionOverrideMap | undefined {
+  if (!entries || entries.length === 0) return undefined;
+  const m = new Map<string, string[]>();
+  for (const e of entries) {
+    const id = typeof e.player_id === "string" ? e.player_id.trim() : "";
+    if (!id) continue;
+    const arr = Array.isArray(e.positions)
+      ? e.positions.map((x) => String(x).trim()).filter((s) => s.length > 0)
+      : [];
+    if (arr.length === 0) continue;
+    m.set(id, arr);
+  }
+  return m.size > 0 ? m : undefined;
 }
 
 export function isHitter(tokens: readonly string[]): boolean {

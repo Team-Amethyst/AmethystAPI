@@ -1,4 +1,4 @@
-# Build stage
+# Build stage — API (tsc) + developer portal (Vite → public/)
 FROM node:20-slim AS builder
 
 ENV PNPM_HOME="/pnpm"
@@ -7,51 +7,42 @@ RUN corepack enable
 
 WORKDIR /app
 
-# Copy package files
-COPY package.json pnpm-lock.yaml ./
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
+COPY portal/package.json portal/
 
-# Install dependencies
 RUN pnpm install
 
-# Copy source code
-COPY src ./src
 COPY tsconfig.json ./
-
-# Build TypeScript
-RUN pnpm build
+COPY portal ./portal
+COPY src ./src
+COPY public ./public
 
 # Injected at `docker build --build-arg BUILD_GIT_SHA=...` so responses expose a real deploy id.
 ARG BUILD_GIT_SHA=
 ENV VALUATION_MODEL_VERSION=${BUILD_GIT_SHA}
 
+RUN pnpm run build
+
 # Production stage
 FROM node:20-slim
 
+ENV NODE_ENV=production
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
 RUN corepack enable
 
 WORKDIR /app
 
-# Copy package files
-COPY package.json pnpm-lock.yaml ./
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
+COPY portal/package.json portal/
 
-# Install production dependencies only
 RUN pnpm install --prod
 
-# Copy built application from builder
 COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/public ./public
 
-# Copy static developer portal
-COPY public ./public
-
-# App Runner routes external HTTPS → container port 8080 by default.
-# Override at the service level via the PORT env var if needed.
 EXPOSE 8080
 
-# Developer portal: GET /api/keys/status + POST /api/keys/issue (see README).
-# App Runner console env overrides this if set (e.g. KEY_ISSUANCE_ENABLED=0 to disable).
 ENV KEY_ISSUANCE_ENABLED=1
 
-# Start application
 CMD ["node", "dist/index.js"]

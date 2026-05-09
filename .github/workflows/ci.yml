@@ -37,6 +37,9 @@ jobs:
       - name: Install Dependencies
         run: pnpm install
 
+      - name: Test portal
+        run: pnpm --filter amethyst-portal exec vitest run
+
       - name: Build API
         run: pnpm build
 
@@ -45,6 +48,9 @@ jobs:
 
       - name: Lint
         run: pnpm lint
+
+      - name: Lint portal
+        run: pnpm --filter amethyst-portal exec eslint src --max-warnings 0
 
       - name: Test
         env:

@@ -1,0 +1,373 @@
+    <div class="portal-shell">
+
+    <!-- Overview -->
+    <div class="section">
+      <h2>Fantasy Baseball Analytical Engine</h2>
+      <p class="section-desc">
+        Stateless SDaaS API that receives draft state and league settings,
+        returns mathematical valuations, scarcity analysis, and draft simulations.
+        No session state is written — pass the full draft context in every request.
+      </p>
+    </div>
+
+    <!-- Authentication -->
+    <div class="section">
+      <h3>Authentication</h3>
+      <p class="section-desc">All analytical endpoints require an <code style="color:var(--orange);background:rgba(251,146,60,0.1);padding:1px 6px;border-radius:3px;font-size:12px;">x-api-key</code> header. Usage is tracked per-key.</p>
+      <div class="auth-example code-block">
+        <button class="copy-btn">Copy</button>
+        <pre><span class="t-cmt"># curl</span>
+<span class="t-method">curl</span> -X POST https://q6dbuvmuvh.us-east-1.awsapprunner.com/valuation/calculate \
+  -H <span class="t-str">"Content-Type: application/json"</span> \
+  -H <span class="t-str">"x-api-key: <span style="opacity:.5">your-api-key</span>"</span> \
+  -d <span class="t-str">'{ ... }'</span>
+
+<span class="t-cmt"># axios (recommended)</span>
+<span class="t-key">const</span> amethyst = axios.create({
+  baseURL: process.env.AMETHYST_API_URL,
+  headers: { <span class="t-str">'x-api-key'</span>: process.env.AMETHYST_API_KEY },
+  timeout: <span class="t-num">10000</span>,
+});</pre>
+      </div>
+    </div>
+
+    <!-- Endpoints -->
+    <div class="section">
+      <h3>Endpoints</h3>
+
+      <!-- /valuation/calculate -->
+      <div class="endpoint" id="ep-valuation">
+        <div class="endpoint-header">
+          <span class="method-badge method-post">POST</span>
+          <span class="endpoint-path">/valuation/calculate</span>
+          <span class="endpoint-desc">Inflation-adjusted auction values + Steal/Reach indicators</span>
+          <span class="chevron">▶</span>
+        </div>
+        <div class="endpoint-body">
+          <p class="when">Call after every auction pick. Returns every undrafted player ranked by adjusted value. AmethystDraft POSTs a single flat JSON body (see <code>schemas/valuation-request.v1.schema.json</code>); nested <code>league</code> + <code>draft_state</code> is still accepted. Invalid bodies return <code>400</code> with <code>{ "errors": [{ "field", "message" }] }</code> (JSON path in <code>field</code>).</p>
+          <div class="block-label">Request (legacy flat)</div>
+          <div class="code-block">
+            <button class="copy-btn">Copy</button>
+            <pre>{
+  <span class="t-key">"schema_version"</span>:       <span class="t-str">"1.0.0"</span>,     <span class="t-cmt">// optional; alias schemaVersion</span>
+  <span class="t-key">"checkpoint"</span>:           <span class="t-str">"pre_draft"</span>, <span class="t-cmt">// optional</span>
+  <span class="t-key">"roster_slots"</span>:        [{ <span class="t-key">"position"</span>: <span class="t-str">"OF"</span>, <span class="t-key">"count"</span>: <span class="t-num">3</span> }, <span class="t-cmt">/* ... */</span>],
+  <span class="t-key">"scoring_categories"</span>:  [{ <span class="t-key">"name"</span>: <span class="t-str">"HR"</span>, <span class="t-key">"type"</span>: <span class="t-str">"batting"</span> }, <span class="t-cmt">/* ... */</span>],
+  <span class="t-key">"total_budget"</span>:        <span class="t-num">260</span>,         <span class="t-cmt">// per-team auction budget</span>
+  <span class="t-key">"num_teams"</span>:           <span class="t-num">12</span>,          <span class="t-cmt">// optional, default 12</span>
+  <span class="t-key">"league_scope"</span>:        <span class="t-str">"Mixed"</span>,     <span class="t-cmt">// "Mixed" | "AL" | "NL"</span>
+  <span class="t-key">"scoring_format"</span>:      <span class="t-str">"5x5"</span>,       <span class="t-cmt">// optional: 5x5 | 6x6 | points</span>
+  <span class="t-key">"drafted_players"</span>: [{
+    <span class="t-key">"player_id"</span>:  <span class="t-str">"695243"</span>,    <span class="t-cmt">// String(mlbId) — canonical key</span>
+    <span class="t-key">"name"</span>:       <span class="t-str">"Player Name"</span>,
+    <span class="t-key">"position"</span>:   <span class="t-str">"OF"</span>,        <span class="t-cmt">// or use positions[] / roster_slot</span>
+    <span class="t-key">"team"</span>:       <span class="t-str">"NYY"</span>,
+    <span class="t-key">"team_id"</span>:    <span class="t-str">"team_1"</span>,
+    <span class="t-key">"paid"</span>:       <span class="t-num">42</span>,          <span class="t-cmt">// optional auction price</span>
+    <span class="t-key">"is_keeper"</span>:   <span class="t-key">false</span>,       <span class="t-cmt">// optional</span>
+    <span class="t-key">"pick_number"</span>: <span class="t-num">3</span>            <span class="t-cmt">// optional</span>
+  }],
+  <span class="t-key">"deterministic"</span>:      <span class="t-key">false</span>,       <span class="t-cmt">// optional — stable timestamps for tests</span>
+  <span class="t-key">"seed"</span>:                 <span class="t-num">42</span>,            <span class="t-cmt">// optional — with deterministic, stable tie-breaks</span>
+  <span class="t-key">"player_ids"</span>:          [<span class="t-str">"660271"</span>],   <span class="t-cmt">// optional — limit valuations[]; inflation uses full pool</span>
+  <span class="t-key">"user_team_id"</span>:        <span class="t-str">"team_1"</span>,       <span class="t-cmt">// optional — defaults to team_1 for team_adjusted_value</span>
+  <span class="t-key">"budget_by_team_id"</span>:  { <span class="t-str">"team_1"</span>: <span class="t-num">200</span> }, <span class="t-cmt">// optional — per-team $ remaining</span>
+  <span class="t-key">"minors"</span>:              [],              <span class="t-cmt">// optional — [{ team_id, players[] }]</span>
+  <span class="t-key">"taxi"</span>:                []               <span class="t-cmt">// optional</span>
+}</pre>
+          </div>
+          <div class="block-label">Response</div>
+          <p class="when" style="margin-bottom:8px">Response header <code>X-Request-Id</code> echoes your id or a generated UUID. OpenAPI: repo <code>openapi/openapi.yaml</code>.</p>
+          <div class="code-block"><pre>{
+  <span class="t-key">"engine_contract_version"</span>: <span class="t-str">"1"</span>,  <span class="t-cmt">// API contract id — detect drift vs Draft</span>
+  <span class="t-key">"valuation_model_version"</span>: <span class="t-str">"amethyst-api@1.0.0"</span>,  <span class="t-cmt">// or git SHA in production image</span>
+  <span class="t-key">"inflation_factor"</span>:      <span class="t-num">1.12</span>,    <span class="t-cmt">// &gt;1.0 = inflated market</span>
+  <span class="t-key">"inflation_model"</span>:       <span class="t-str">"replacement_slots_v2"</span>,
+  <span class="t-key">"total_budget_remaining"</span>: <span class="t-num">2184</span>,
+  <span class="t-key">"pool_value_remaining"</span>:   <span class="t-num">1948</span>,
+  <span class="t-key">"players_remaining"</span>:      <span class="t-num">496</span>,
+  <span class="t-key">"auction_value_note"</span>: <span class="t-str">"auction_value is the official player dollar valuation for external evaluation and benchmarks. It always equals adjusted_value (league-wide auction dollars from the active inflation_model). The default inflation model is replacement_slots_v2."</span>,
+  <span class="t-key">"recommended_bid_note"</span>: <span class="t-str">"recommended_bid is a draftroom bid suggestion (phase-aware clearing anchor with floors/caps and isotonic smoothing within hitters and pitchers). It guides bidding behavior in the draft UI; it is not the engine's canonical valuation of the player — use auction_value for that."</span>,
+  <span class="t-key">"team_adjusted_value_note"</span>: <span class="t-str">"team_adjusted_value is marginal worth to the requesting team's roster and budget context (need, dollars per open slot vs peers, remaining-slot scarcity, replacement drop-off). It is not a league-universal player price and must not replace auction_value for cross-player evaluation or leaderboards."</span>,
+  <span class="t-key">"phase_indicator"</span>: <span class="t-str">"early"</span>,
+  <span class="t-key">"user_team_id_used"</span>: <span class="t-str">"team_1"</span>,
+  <span class="t-key">"valuations"</span>: [{
+    <span class="t-key">"player_id"</span>:      <span class="t-str">"660271"</span>,
+    <span class="t-key">"name"</span>:           <span class="t-str">"Shohei Ohtani"</span>,
+    <span class="t-key">"position"</span>:       <span class="t-str">"DH"</span>,
+    <span class="t-key">"tier"</span>:           <span class="t-num">1</span>,
+    <span class="t-key">"baseline_value"</span>: <span class="t-num">58</span>,
+    <span class="t-key">"auction_value"</span>: <span class="t-num">65</span>,          <span class="t-cmt">// canonical official $ — equals adjusted_value</span>
+    <span class="t-key">"adjusted_value"</span>: <span class="t-num">65</span>,        <span class="t-cmt">// league-wide auction target (same as auction_value)</span>
+    <span class="t-key">"recommended_bid"</span>: <span class="t-num">72.5</span>,      <span class="t-cmt">// draftroom bid suggestion</span>
+    <span class="t-key">"team_adjusted_value"</span>: <span class="t-num">78.2</span>, <span class="t-cmt">// need + $/slot vs league + replacement drop-off</span>
+    <span class="t-key">"edge"</span>: <span class="t-num">5.7</span>,               <span class="t-cmt">// team_adjusted_value − recommended_bid</span>
+    <span class="t-key">"indicator"</span>:      <span class="t-str">"Steal"</span>,    <span class="t-cmt">// "Steal" | "Reach" | "Fair Value"</span>
+    <span class="t-key">"baseline_components"</span>: {
+      <span class="t-key">"scoring_format"</span>: <span class="t-str">"5x5"</span>,
+      <span class="t-key">"projection_component"</span>: <span class="t-num">4.2</span>,
+      <span class="t-key">"scarcity_component"</span>: <span class="t-num">0.1</span>
+    },
+    <span class="t-key">"scarcity_adjustment"</span>: <span class="t-num">0</span>,       <span class="t-cmt">// embedded in baseline_value</span>
+    <span class="t-key">"inflation_adjustment"</span>: <span class="t-num">7</span>        <span class="t-cmt">// adjusted − baseline</span>
+  }],
+  <span class="t-key">"calculated_at"</span>: <span class="t-str">"2026-03-07T17:39:19Z"</span>
+}</pre>
+          <p class="when" style="margin-top:8px">If post-calculation sanity checks fail, the API returns <strong>422</strong> with the same <code>{ errors: [...] }</code> shape as Zod validation — <strong>no</strong> <code>valuations</code> payload. This route is <strong>not</strong> Redis-cached (fresh prices after catalog sync). Request body limit <strong>1 MB</strong>. Per-key rate limits are <strong>configurable</strong> (<code>RATE_LIMIT_*</code> env vars; see OpenAPI / README).</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- /valuation/player -->
+      <div class="endpoint" id="ep-valuation-player">
+        <div class="endpoint-header">
+          <span class="method-badge method-post">POST</span>
+          <span class="endpoint-path">/valuation/player</span>
+          <span class="endpoint-desc">Single-player valuation using full league context</span>
+          <span class="chevron">▶</span>
+        </div>
+        <div class="endpoint-body">
+          <p class="when">Use when the UI needs one player card only. Uses the same valuation pipeline and inflation math as <code>/valuation/calculate</code>, then returns one player under <code>player</code>.</p>
+          <div class="block-label">Request</div>
+          <div class="code-block">
+            <button class="copy-btn">Copy</button>
+            <pre>{
+  <span class="t-key">"player_id"</span>: <span class="t-str">"660271"</span>,
+  <span class="t-key">"schema_version"</span>: <span class="t-str">"1.0.0"</span>,
+  <span class="t-key">"roster_slots"</span>: [{ <span class="t-key">"position"</span>: <span class="t-str">"OF"</span>, <span class="t-key">"count"</span>: <span class="t-num">3</span> }],
+  <span class="t-key">"scoring_categories"</span>: [{ <span class="t-key">"name"</span>: <span class="t-str">"HR"</span>, <span class="t-key">"type"</span>: <span class="t-str">"batting"</span> }],
+  <span class="t-key">"total_budget"</span>: <span class="t-num">260</span>,
+  <span class="t-key">"num_teams"</span>: <span class="t-num">12</span>,
+  <span class="t-key">"user_team_id"</span>: <span class="t-str">"team_1"</span>,
+  <span class="t-key">"drafted_players"</span>: []
+}</pre>
+          </div>
+          <div class="block-label">Response</div>
+          <div class="code-block"><pre>{
+  <span class="t-key">"engine_contract_version"</span>: <span class="t-str">"1"</span>,
+  <span class="t-key">"inflation_factor"</span>: <span class="t-num">1.12</span>,
+  <span class="t-key">"players_remaining"</span>: <span class="t-num">496</span>,
+  <span class="t-key">"valuations"</span>: [{ <span class="t-cmt">/* single row */</span> }],
+  <span class="t-key">"player"</span>: {
+    <span class="t-key">"player_id"</span>: <span class="t-str">"660271"</span>,
+    <span class="t-key">"name"</span>: <span class="t-str">"Shohei Ohtani"</span>,
+    <span class="t-key">"baseline_value"</span>: <span class="t-num">58</span>,
+    <span class="t-key">"adjusted_value"</span>: <span class="t-num">65</span>,
+    <span class="t-key">"recommended_bid"</span>: <span class="t-num">72.5</span>,
+    <span class="t-key">"team_adjusted_value"</span>: <span class="t-num">78.2</span>,
+    <span class="t-key">"edge"</span>: <span class="t-num">5.7</span>,
+    <span class="t-key">"indicator"</span>: <span class="t-str">"Steal"</span>
+  }
+}</pre>
+          </div>
+          <p class="when" style="margin-top:8px">Errors: <code>400</code> when <code>player_id</code> is missing, <code>404</code> when the player is not in the current valuation pool (drafted, out-of-scope, or unknown id).</p>
+        </div>
+      </div>
+
+      <!-- /catalog/batch-values -->
+      <div class="endpoint" id="ep-catalog">
+        <div class="endpoint-header">
+          <span class="method-badge method-post">POST</span>
+          <span class="endpoint-path">/catalog/batch-values</span>
+          <span class="endpoint-desc">Baseline value / tier / adp from engine catalog</span>
+          <span class="chevron">▶</span>
+        </div>
+        <div class="endpoint-body">
+          <p class="when">Use from the Draft app to merge engine baselines with MLB player bios. Same <code>x-api-key</code> as other Brain routes. Cached 120s per body hash when Redis is available. Higher default rate ceiling than valuation; still tunable via <code>RATE_LIMIT_CATALOG_*</code>.</p>
+          <div class="block-label">Request</div>
+          <div class="code-block">
+            <button class="copy-btn">Copy</button>
+            <pre>{
+  <span class="t-key">"player_ids"</span>:     [<span class="t-str">"660271"</span>, <span class="t-str">"592450"</span>],
+  <span class="t-key">"league_scope"</span>:   <span class="t-str">"Mixed"</span>
+}</pre>
+          </div>
+          <div class="block-label">Response</div>
+          <div class="code-block"><pre>{
+  <span class="t-key">"engine_contract_version"</span>: <span class="t-str">"1"</span>,
+  <span class="t-key">"players"</span>: [{
+    <span class="t-key">"player_id"</span>: <span class="t-str">"660271"</span>,
+    <span class="t-key">"name"</span>:      <span class="t-str">"Shohei Ohtani"</span>,
+    <span class="t-key">"position"</span>:  <span class="t-str">"DH"</span>,
+    <span class="t-key">"team"</span>:      <span class="t-str">"LAD"</span>,
+    <span class="t-key">"value"</span>:     <span class="t-num">58</span>,
+    <span class="t-key">"tier"</span>:      <span class="t-num">1</span>,
+    <span class="t-key">"adp"</span>:       <span class="t-num">1</span>
+  }]
+}</pre>
+          </div>
+        </div>
+      </div>
+
+      <!-- /analysis/scarcity -->
+      <div class="endpoint" id="ep-scarcity">
+        <div class="endpoint-header">
+          <span class="method-badge method-post">POST</span>
+          <span class="endpoint-path">/analysis/scarcity</span>
+          <span class="endpoint-desc">Positional depth scores + monopoly warnings</span>
+          <span class="chevron">▶</span>
+        </div>
+        <div class="endpoint-body">
+          <p class="when">Call after each pick round. Surfaces scarce positions and category monopoly risks.</p>
+          <div class="block-label">Request</div>
+          <div class="code-block">
+            <button class="copy-btn">Copy</button>
+            <pre>{
+  <span class="t-key">"drafted_players"</span>:     [ <span class="t-cmt">/* same DraftedPlayer shape as above */</span> ],
+  <span class="t-key">"scoring_categories"</span>:  [{ <span class="t-key">"name"</span>: <span class="t-str">"SV"</span>, <span class="t-key">"type"</span>: <span class="t-str">"pitching"</span> }],
+  <span class="t-key">"position"</span>:           <span class="t-str">"SS"</span>,    <span class="t-cmt">// optional — filter to one position</span>
+  <span class="t-key">"num_teams"</span>:          <span class="t-num">12</span>,
+  <span class="t-key">"league_scope"</span>:       <span class="t-str">"Mixed"</span>
+}</pre>
+          </div>
+          <div class="block-label">Response</div>
+          <div class="code-block"><pre>{
+  <span class="t-key">"positions"</span>: [{
+    <span class="t-key">"position"</span>:          <span class="t-str">"SS"</span>,
+    <span class="t-key">"elite_remaining"</span>:   <span class="t-num">2</span>,     <span class="t-cmt">// tier-1 still available</span>
+    <span class="t-key">"mid_tier_remaining"</span>:<span class="t-num">5</span>,
+    <span class="t-key">"total_remaining"</span>:   <span class="t-num">18</span>,
+    <span class="t-key">"scarcity_score"</span>:    <span class="t-num">74</span>,    <span class="t-cmt">// 0–100, higher = more scarce</span>
+    <span class="t-key">"alert"</span>:             <span class="t-str">"Only 2 elite SS remain"</span>
+  }],
+  <span class="t-key">"monopoly_warnings"</span>: [{
+    <span class="t-key">"team_id"</span>:           <span class="t-str">"team_3"</span>,
+    <span class="t-key">"category"</span>:          <span class="t-str">"SV"</span>,
+    <span class="t-key">"share_percentage"</span>:  <span class="t-num">62</span>,
+    <span class="t-key">"message"</span>:           <span class="t-str">"team_3 controls 62% of SV"</span>
+  }]
+}</pre>
+          </div>
+        </div>
+      </div>
+
+      <!-- /simulation/mock-pick -->
+      <div class="endpoint" id="ep-simulation">
+        <div class="endpoint-header">
+          <span class="method-badge method-post">POST</span>
+          <span class="endpoint-path">/simulation/mock-pick</span>
+          <span class="endpoint-desc">ADP + roster-need heuristic pick predictions</span>
+          <span class="chevron">▶</span>
+        </div>
+        <div class="endpoint-body">
+          <p class="when">Powers AI opponent picks in the Practice Draft environment. Not cached — every call returns fresh predictions based on state.</p>
+          <div class="block-label">Request</div>
+          <div class="code-block">
+            <button class="copy-btn">Copy</button>
+            <pre>{
+  <span class="t-key">"pick_order"</span>:   [<span class="t-str">"team_1"</span>, <span class="t-str">"team_2"</span>],   <span class="t-cmt">// team_ids in draft order</span>
+  <span class="t-key">"roster_slots"</span>: [{ <span class="t-key">"position"</span>: <span class="t-str">"SP"</span>, <span class="t-key">"count"</span>: <span class="t-num">5</span> }],
+  <span class="t-key">"league_scope"</span>: <span class="t-str">"Mixed"</span>,
+  <span class="t-key">"teams"</span>: [{
+    <span class="t-key">"team_id"</span>:         <span class="t-str">"team_1"</span>,
+    <span class="t-key">"budget_remaining"</span>: <span class="t-num">180</span>,       <span class="t-cmt">// optional</span>
+    <span class="t-key">"roster"</span>:          [ <span class="t-cmt">/* DraftedPlayer[] already on this team */</span> ]
+  }],
+  <span class="t-key">"available_player_ids"</span>: [<span class="t-str">"695243"</span>, <span class="t-cmt">/* ... */</span>]  <span class="t-cmt">// optional explicit pool</span>
+}</pre>
+          </div>
+          <div class="block-label">Response</div>
+          <div class="code-block"><pre>{
+  <span class="t-key">"predictions"</span>: [{
+    <span class="t-key">"team_id"</span>:     <span class="t-str">"team_1"</span>,
+    <span class="t-key">"pick_position"</span>: <span class="t-num">1</span>,
+    <span class="t-key">"confidence"</span>:  <span class="t-num">0.82</span>,              <span class="t-cmt">// 0–1</span>
+    <span class="t-key">"predicted_player"</span>: {
+      <span class="t-key">"player_id"</span>: <span class="t-str">"660271"</span>,
+      <span class="t-key">"name"</span>:      <span class="t-str">"Shohei Ohtani"</span>,
+      <span class="t-key">"position"</span>: <span class="t-str">"DH"</span>,
+      <span class="t-key">"adp"</span>:       <span class="t-num">1</span>,
+      <span class="t-key">"reason"</span>:    <span class="t-str">"Team needs DH (urgency 90%); best available by ADP."</span>
+    }
+  }]
+}</pre>
+          </div>
+        </div>
+      </div>
+
+      <!-- /signals/news -->
+      <div class="endpoint" id="ep-signals">
+        <div class="endpoint-header">
+          <span class="method-badge method-get">GET</span>
+          <span class="endpoint-path">/signals/news</span>
+          <span class="endpoint-desc">Injuries, trades, promotions, demotions from MLB Transactions</span>
+          <span class="chevron">▶</span>
+        </div>
+        <div class="endpoint-body">
+          <p class="when">Surface player news in the draftroom UI. Cached 15 minutes — cheap to call on every page load.</p>
+          <div class="block-label">Query Parameters</div>
+          <div class="code-block">
+            <button class="copy-btn">Copy</button>
+            <pre><span class="t-cmt"># days     — lookback window (default: 7)</span>
+<span class="t-cmt"># signal_type — filter: injury | role_change | trade | demotion | promotion</span>
+
+GET /signals/news?days=<span class="t-num">3</span>&signal_type=<span class="t-str">injury</span></pre>
+          </div>
+          <div class="block-label">Response</div>
+          <div class="code-block"><pre>{
+  <span class="t-key">"signals"</span>: [{
+    <span class="t-key">"player_id"</span>:     <span class="t-str">"695243"</span>,     <span class="t-cmt">// present when matched to DB player</span>
+    <span class="t-key">"player_name"</span>:   <span class="t-str">"Player Name"</span>,
+    <span class="t-key">"signal_type"</span>:   <span class="t-str">"injury"</span>,
+    <span class="t-key">"severity"</span>:      <span class="t-str">"high"</span>,       <span class="t-cmt">// "low" | "medium" | "high"</span>
+    <span class="t-key">"description"</span>:   <span class="t-str">"Placed on 10-day IL"</span>,
+    <span class="t-key">"effective_date"</span>:<span class="t-str">"2026-03-07"</span>,
+    <span class="t-key">"source"</span>:        <span class="t-str">"MLB Transactions API"</span>
+  }],
+  <span class="t-key">"count"</span>: <span class="t-num">4</span>
+}</pre>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Player ID contract -->
+    <div class="section">
+      <h3>Player ID Contract</h3>
+      <p class="section-desc">
+        All <code style="color:var(--orange);background:rgba(251,146,60,0.1);padding:1px 6px;border-radius:3px;font-size:12px;">player_id</code> fields are the numeric MLB Stats API player ID cast to a string.
+        Use <code style="color:var(--orange);background:rgba(251,146,60,0.1);padding:1px 6px;border-radius:3px;font-size:12px;">String(player.id)</code> from any MLB Stats API response.
+      </p>
+      <div class="code-block"><pre><span class="t-cmt">// ✅ correct</span>
+player_id: String(player.id)   <span class="t-cmt">// e.g. "660271"</span>
+
+<span class="t-cmt">// ❌ wrong</span>
+player_id: player._id          <span class="t-cmt">// MongoDB ObjectId — not recognized</span></pre>
+      </div>
+    </div>
+
+    <!-- Error codes -->
+    <div class="section">
+      <h3>Error Responses</h3>
+      <div class="card">
+        <table>
+          <thead>
+            <tr><th>Status</th><th>Meaning</th><th>Action</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><span style="color:var(--orange)">401</span></td><td>Missing or invalid x-api-key</td><td>Check header is present and key matches issued value</td></tr>
+            <tr><td><span style="color:var(--red)">403</span></td><td>API key deactivated</td><td>Contact Amethyst Industries to reactivate</td></tr>
+            <tr><td><span style="color:var(--orange)">400</span></td><td>Validation error</td><td>Read <code style="font-size:11px">error</code> field — missing required field</td></tr>
+            <tr><td><span style="color:var(--red)">5xx</span></td><td>Server error</td><td>Degrade gracefully — draft should continue</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Caching -->
+    <div class="section">
+      <h3>Caching</h3>
+      <div class="card">
+        <table>
+          <thead><tr><th>Endpoint</th><th>TTL</th><th>Key</th></tr></thead>
+          <tbody>
+            <tr><td>/valuation/calculate</td><td>No cache</td><td>Always recomputed</td></tr>
+            <tr><td>/valuation/player</td><td>No cache</td><td>Always recomputed</td></tr>
+            <tr><td>/analysis/scarcity</td><td>120s</td><td>Hash of request body</td></tr>
+            <tr><td>/simulation/mock-pick</td><td>No cache</td><td>Stateful per call</td></tr>
+            <tr><td>/signals/news</td><td>900s</td><td>Date range + signal type</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+

@@ -174,12 +174,23 @@ function buildPlayerDocFromAgg(
     projection.batting = blendedBat;
   } else if (agg.bat) {
     const stat = agg.bat.stat;
+    const ab = Number(stat.atBats ?? 0);
+    const bb = Number(stat.baseOnBalls ?? 0);
+    const pa =
+      Number(stat.plateAppearances ?? 0) > 0
+        ? Number(stat.plateAppearances)
+        : ab + bb;
+    const obpStr = String(stat.obp ?? ".000");
+    const obpNum = parseFloat(obpStr);
     projection.batting = {
       avg: String(stat.avg ?? ".000"),
       hr: Number(stat.homeRuns ?? 0),
       rbi: Number(stat.rbi ?? 0),
       runs: Number(stat.runs ?? 0),
       sb: Number(stat.stolenBases ?? 0),
+      atBats: ab,
+      obp: Number.isFinite(obpNum) ? obpStr : ".000",
+      plateAppearances: Math.max(0, Math.round(pa)),
     };
   }
   if (blendedPit) {

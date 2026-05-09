@@ -103,6 +103,7 @@ components:
     ValuationResponse:
       type: object
       description: |
+        Per-player **`auction_value`** is the canonical official dollar valuation (always equal to `adjusted_value`).
         Per-player `baseline_value` is list price after the scoring/roster baseline engine
         (not raw Mongo `value`).         `inflation_model` selects the inflation pass: `global_v1` uses
         `adjusted_value = baseline_value * inflation_factor` with the **full** undrafted pool as
@@ -131,7 +132,8 @@ components:
         inflation_model:
           type: string
           enum: [global_v1, surplus_slots_v1, replacement_slots_v2]
-          description: Inflation pass used for this response (echoes request defaulting rule).
+          description: |
+            Inflation pass used for this response (echoes request). When omitted in the request, defaults to `replacement_slots_v2`.
         inflation_factor:
           type: number
           description: |
@@ -206,17 +208,24 @@ components:
           description: Human-readable league context (inflation, scarcity, monopolies).
           items:
             type: string
+        auction_value_note:
+          type: string
+          description: |
+            Explains `valuations[].auction_value`: the official player valuation for benchmarks (mirrors `adjusted_value`;
+            default inflation model is `replacement_slots_v2`).
         recommended_bid_note:
           type: string
           description: |
-            Explains `recommended_bid`: phase-aware clearing **target** (floors, pitcher dampening,
-            smoothed ranks)—a bidding guide, not a guaranteed winning bid vs the room.
+            Explains `recommended_bid`: a draftroom bid suggestion (UX smoothing), not the canonical player valuation;
+            use `auction_value` for evaluation.
         user_team_id_used:
           type: string
           description: Team context used for team_adjusted_value (defaults to team_1).
         team_adjusted_value_note:
           type: string
-          description: How `team_adjusted_value` is derived from roster economics.
+          description: |
+            Explains `team_adjusted_value`: roster-context marginal worth for the requesting team only,
+            not a league-universal price — use `auction_value` for cross-player valuation.
         phase_indicator:
           type: string
           enum: [early, mid, late]
@@ -306,6 +315,7 @@ components:
       type: object
       description: |
         Per-row dollars follow a **pipeline** (list → league → bid → roster); see `docs/valuation-dollar-ladder.md`.
+        **`auction_value`** is the canonical official valuation (equals `adjusted_value`).
         `scarcity_adjustment` is always 0 (roster scarcity is inside `baseline_value`).
         `inflation_adjustment` is the full delta `adjusted_value - baseline_value`.
       properties:
@@ -326,20 +336,27 @@ components:
           description: >-
             Post–baseline-engine “list-adjacent” dollars for this scoring/build (not raw Mongo `value`;
             scarcity may already be embedded).
+        auction_value:
+          type: number
+          description: >-
+            **Canonical official dollar valuation** for evaluation and benchmarks; equal to `adjusted_value`.
+            With default settings the inflation model is `replacement_slots_v2`.
         adjusted_value:
           type: number
           description: >-
             League-wide auction target from `inflation_model`: `global_v1` uses baseline × inflation_factor;
             surplus models use replacement/slot surplus formulas (see `docs/valuation-inflation-semantics.md`).
+            Always identical to `auction_value`.
         recommended_bid:
           type: number
           description: >-
-            Phase- and depth-aware bid anchor from baseline + adjusted, then isotonic smoothing within
-            hitters and within pitchers (UX discipline; not a second copy of adjusted_value).
+            Draftroom bid suggestion (phase/depth-aware anchor plus isotonic smoothing within hitters and pitchers).
+            Guidance for live bidding — not the canonical player valuation (`auction_value`).
         team_adjusted_value:
           type: number
           description: >-
-            Marginal value to the requesting team (need, budget vs peers, slot scarcity, replacement drop-off).
+            Marginal worth to the requesting team's roster and budget only (need, dollars vs peers, slot scarcity,
+            replacement drop-off). Not a universal player price — use `auction_value` for that.
             Equals adjusted_value in a symmetric pre-auction snapshot (no picks, no off-board asymmetry,
             equal per-team budgets when budget_by_team_id is set, equal rostered counts per team).
         edge:
@@ -679,6 +696,20 @@ paths:
                 league_scope:
                   type: string
                   enum: [Mixed, AL, NL]
+                position_overrides:
+                  type: array
+                  description: Optional Draftroom eligibility overrides (same semantics as POST /valuation/calculate).
+                  items:
+                    type: object
+                    required: [player_id, positions]
+                    properties:
+                      player_id:
+                        type: string
+                      positions:
+                        type: array
+                        items:
+                          type: string
+                        minItems: 1
       responses:
         "200":
           content:

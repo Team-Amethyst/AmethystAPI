@@ -45,7 +45,7 @@ The Engine accepts the **flat** body Draft builds for server-to-server calls:
 - **`drafted_players`:** auction picks only (keepers on rosters belong in **`pre_draft_rosters`**, not double-listed here, unless you intentionally mirror Draft’s model).
 - **`pre_draft_rosters`:** optional **map** (`team_id` → array of rows) **or** **array** of `{ team_id, players }` (same as Draft checkpoints).
 - **`schema_version` / `schemaVersion`:** both optional; if both are sent, **`schemaVersion` (camelCase) wins**.
-- **`inflation_model`:** optional, defaults to **`global_v1`**. Set **`replacement_slots_v2`** for Draftroom-quality slot/position-aware surplus inflation (preferred). **`surplus_slots_v1`** is a lighter single-cutoff surplus model. Remaining-slot math for surplus models uses `roster_slots`, `num_teams`, `drafted_players`, keepers/minors/taxi, and eligibility.
+- **`inflation_model`:** optional, defaults to **`replacement_slots_v2`** (slot/position-aware surplus inflation — the official auction-dollar path). Set **`global_v1`** only when you need legacy full-list rescale. **`surplus_slots_v1`** is a lighter single-cutoff surplus model. Remaining-slot math for surplus models uses `roster_slots`, `num_teams`, `drafted_players`, keepers/minors/taxi, and eligibility.
 - **`player_ids`:** optional subset of undrafted MLB ids to **return** in `valuations[]`; does not shrink the inflation basis (see [valuation-inflation-semantics.md](docs/valuation-inflation-semantics.md)).
 - **Responses:** **`engine_contract_version: "1"`** on success; **`X-Request-Id`** echoed when sent.
 - **Errors:** **400** = request validation only, body **`{ errors: [{ field, message }] }`**. **422** = output sanity failure, same `errors` shape, **no** prices.
@@ -86,7 +86,7 @@ The course diagram expects: ingest league + player state → choose **Rotisserie
 | Filter drafted / scope | `calculateInflation` + `league_scope` | Same. |
 | Scoring branch (Roto vs points) | `resolveScoringMode` in [`src/services/valuationWorkflow.ts`](src/services/valuationWorkflow.ts) — logged as `scoring_mode`; **v1 math still uses stored `value` for both** | Next increment: compute or rescale `value` per `scoring_format` + `scoring_categories` before inflation. |
 | Surplus / scarcity / market | Baseline `value` + inflation vs remaining budget + Steal/Reach vs ADP | Extend `inflationEngine` / scarcity as you add SABR-style signals. |
-| Auction dollars | `adjusted_value` on each row | Same. |
+| Auction dollars | **`auction_value`** (canonical; equals **`adjusted_value`**) on each row | Same inflation math; use **`auction_value`** for external evaluation. |
 | Validate prices | [`src/lib/valuationQuality.ts`](src/lib/valuationQuality.ts) — finite numbers, non-negative totals, valid indicators; failures → **HTTP 422** with `{ errors: [...] }` and **no** `valuations` payload (fail closed) | Add caps / recompute loop inside `executeValuationWorkflow` when you have tunables. |
 
 **Orchestration:** [`executeValuationWorkflow`](src/services/valuationWorkflow.ts) is the single entry used by `POST /valuation/calculate` so the pipeline stays explicit and testable.
@@ -98,8 +98,8 @@ The course diagram expects: ingest league + player state → choose **Rotisserie
 All Brain endpoints require an `x-api-key` header. See [Authentication](#authentication).
 
 ### `POST /valuation/calculate`
-Returns every undrafted player with an inflation-adjusted auction value and a **Steal / Reach / Fair Value** indicator.
-Baseline values are now scoring-aware (`5x5` / `6x6` / `points`) and include bounded scarcity/replacement adjustments before inflation.
+Returns every undrafted player with **`auction_value`** (canonical official dollar valuation, equal to **`adjusted_value`**) and auxiliary draft UX fields (`recommended_bid`, `team_adjusted_value`, `edge`), plus a **Steal / Reach / Fair Value** indicator.
+Baseline values are scoring-aware (`5x5` / `6x6` / `points`) and include bounded scarcity/replacement adjustments before inflation.
 
 The **AmethystDraft** API forwards a single JSON object (no extra wrapper): either the merged body from `buildEngineValuationCalculateBodyFromFixture` or live league/roster state. Canonical JSON Schema for the flat fixture shape: [schemas/valuation-request.v1.schema.json](schemas/valuation-request.v1.schema.json) (align with Draft `apps/api/schemas/valuation-request.v1.schema.json` when present). Nested `{ league, draft_state }` is still accepted for older tests; see [schemas/valuation-request-v1.json](schemas/valuation-request-v1.json).
 
@@ -136,7 +136,9 @@ The **AmethystDraft** API forwards a single JSON object (no extra wrapper): eith
 | `league_id` | Optional; echoed in `context_v2.scope.league_id`. Nested bodies may use `league.id` instead; top-level `league_id` wins |
 | `budget_by_team_id` | Per-team **remaining** $; when non-empty, league remaining = **sum(map)** and **`paid` ignored** — see [API contract](#api-contract-draft--engine-alignment) |
 | `scoring_format` | `5x5` \| `6x6` \| `points` (validated; v1 inflation may ignore) |
-| `hitter_budget_pct`, `pos_eligibility_threshold` | Forward-compatible; v1 math may ignore |
+| `hitter_budget_pct` | Forward-compatible; v1 baseline may ignore |
+| `pos_eligibility_threshold` | Reserved / informational — **does not** drive eligibility in v1 (no games-by-position in Mongo) |
+| `position_overrides` | Optional `{ player_id, positions[] }[]` from Draftroom **min-games eligibility** — replaces Mongo `position` / `positions` for baseline scarcity, replacement_slots_v2, team-adjusted value, and scarcity |
 | `minors`, `taxi` | `{ team_id, players[] }[]` on flat bodies; nested fixtures may still use a legacy record map |
 | `deterministic` | Fixed `calculated_at` and stable sorts |
 | `seed` | With `deterministic`, seeded tie-breaks so CI can pin ordering |
@@ -164,7 +166,7 @@ If `player_id` is not in the current valuation pool, returns `404` with `{ error
 Deploy label **`valuation_model_version`**: env `VALUATION_MODEL_VERSION`, or Docker `BUILD_GIT_SHA` (CI sets this), else `package.json` `name@version`. Set **`VALUATION_AGGREGATE_LOG=1`** for structured per-request pool/inflation logs.
 
 ### `POST /catalog/batch-values`
-First-class baseline read: same **`player_id`** rules as valuation (string MLB id / `mlbId`). Returns **`engine_contract_version`** plus `players[]`. Responses are **cached 120s** per request body (Redis when configured). Merge with MLB bios in Draft. `league_scope` filters the list. `pos_eligibility_threshold` is reserved for future eligibility rules.
+First-class baseline read: same **`player_id`** rules as valuation (string MLB id / `mlbId`). Returns **`engine_contract_version`** plus `players[]`. Responses are **cached 120s** per request body (Redis when configured). Merge with MLB bios in Draft. `league_scope` filters the list. `pos_eligibility_threshold` is informational only in v1 (does not change catalog math); use **`position_overrides`** on valuation requests for eligibility-aware pricing.
 
 ```json
 {
@@ -295,7 +297,8 @@ curl -X POST http://localhost:3002/valuation/calculate \
 |---|---|---|
 | `MONGO_URI` | Atlas connection string | Same |
 | `PORT` | `3002` | `8080` |
-| `CORS_ORIGIN` | `http://localhost:5173` | Production frontend URL |
+| `CORS_ORIGIN` | Omit (any Origin / reflect) or comma-separated allowlist | Omit works when the portal is served from the same App Runner URL. Set explicit origins for a separate browser UI or to lock down cross-origin access. |
+| `PORTAL_API_BASE_URL` | Omit | Set to your API public origin (e.g. `https://api.example.com`, no trailing slash) **only** when the portal HTML is hosted on a **different** host than the API. |
 | `REDIS_URL` | `redis://localhost:6379` | Upstash URL (when ready) |
 | `KEY_ISSUANCE_ENABLED` | Omit or `1` / `on` (default **on**) | Set to **`0`**, **`false`**, or **`off`** to disable portal minting |
 | `KEY_ISSUANCE_SECRET` | Optional shared secret for `X-Key-Issuance-Token` | Same — use for operator-gated issuance |
@@ -311,6 +314,8 @@ Push to `main` — GitHub Actions builds, pushes to ECR, and triggers an App Run
 **App Runner health check:** `GET /api/health` on port `8080`
 
 **MongoDB Atlas:** Network Access must allow `0.0.0.0/0` (App Runner has no static IP).
+
+**Portal sign-in “network error”:** Usually CORS: omit **`CORS_ORIGIN`** so the API reflects the browser `Origin` (no localhost default). If the portal is on another domain than the API, set **`CORS_ORIGIN`** to that portal origin (comma-separated if several) and set **`PORTAL_API_BASE_URL`** to the API’s public `https://…` URL.
 
 **Key issuance:** Minting defaults **on** in the app (unset `KEY_ISSUANCE_ENABLED` means enabled). The Docker image also sets **`ENV KEY_ISSUANCE_ENABLED=1`** for clarity. To disable on App Runner, set **`KEY_ISSUANCE_ENABLED=0`** in the service environment (overrides the image). Optionally set **`KEY_ISSUANCE_SECRET`** and send **`X-Key-Issuance-Token`** on `POST /api/keys/issue`. Record intent in GitHub with `gh variable set KEY_ISSUANCE_ENABLED --body 1` when the API allows (does not change AWS by itself).
 

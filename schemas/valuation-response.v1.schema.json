@@ -55,9 +55,13 @@
     "calculated_at": {
       "type": "string"
     },
+    "auction_value_note": {
+      "type": "string",
+      "description": "Explains valuations[].auction_value as the canonical official dollar valuation (equals adjusted_value)."
+    },
     "recommended_bid_note": {
       "type": "string",
-      "description": "Explains recommended_bid as a phase-aware clearing guide, not a guaranteed winning bid."
+      "description": "Explains recommended_bid as a draftroom bid suggestion, not the canonical valuation (use auction_value)."
     },
     "phase_indicator": {
       "type": "string",
@@ -73,7 +77,8 @@
       "type": "string"
     },
     "team_adjusted_value_note": {
-      "type": "string"
+      "type": "string",
+      "description": "Explains team_adjusted_value as roster-context marginal worth only, not a universal player price."
     }
   },
   "$defs": {
@@ -87,6 +92,7 @@
         "adp",
         "tier",
         "baseline_value",
+        "auction_value",
         "adjusted_value",
         "indicator",
         "inflation_factor"
@@ -114,12 +120,16 @@
         "baseline_value": {
           "type": "number"
         },
+        "auction_value": {
+          "type": "number",
+          "description": "Canonical official dollar valuation for evaluation; equals adjusted_value."
+        },
         "adjusted_value": {
           "type": "number"
         },
         "recommended_bid": {
           "type": "number",
-          "description": "Phase-aware expected clearing price."
+          "description": "Draftroom bid suggestion (UX); not the canonical valuation."
         },
         "indicator": {
           "type": "string",

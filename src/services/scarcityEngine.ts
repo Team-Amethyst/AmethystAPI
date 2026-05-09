@@ -11,6 +11,7 @@ import {
   MULTI_SLOT_POSITIONS,
   SINGLE_SLOT_POSITIONS,
 } from "./scarcityConfig";
+import type { PositionOverrideMap } from "../lib/fantasyRosterSlots";
 import { buildMonopolyWarnings, buildPositionScarcity } from "./scarcityHelpers";
 
 /**
@@ -27,7 +28,8 @@ export function analyzeScarcity(
   numTeams: number,
   scoringCategories: ScoringCategory[],
   leagueScope: LeagueScope = "Mixed",
-  filterPosition?: string
+  filterPosition?: string,
+  positionOverrides?: PositionOverrideMap
 ): ScarcityResponse {
   const draftedIds = new Set(draftedPlayers.map((d) => d.player_id));
   const scoped = filterByScope(allPlayers, leagueScope);
@@ -45,6 +47,7 @@ export function analyzeScarcity(
     undrafted,
     allPositions,
     numTeams,
+    positionOverrides,
   });
 
   // ── Monopoly detection ────────────────────────────────────────────────────

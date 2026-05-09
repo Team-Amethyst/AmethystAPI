@@ -9,10 +9,12 @@ import type {
 } from "../types/brain";
 
 export const DETERMINISTIC_CALCULATED_AT = "1970-01-01T00:00:00.000Z";
+export const AUCTION_VALUE_NOTE =
+  "auction_value is the official player dollar valuation for external evaluation and benchmarks. It always equals adjusted_value (league-wide auction dollars from the active inflation_model). The default inflation model is replacement_slots_v2.";
 export const RECOMMENDED_BID_NOTE =
-  "recommended_bid is a phase-aware model clearing target (star floors, pitcher dampening, isotonic smoothing)—a bidding guide, not a prediction of the winning hammer price; room behavior can diverge materially.";
+  "recommended_bid is a draftroom bid suggestion (phase-aware clearing anchor with floors/caps and isotonic smoothing within hitters and pitchers). It guides bidding behavior in the draft UI; it is not the engine's canonical valuation of the player — use auction_value for that.";
 export const TEAM_ADJUSTED_NOTE =
-  "team_adjusted_value scales adjusted_value by roster need, dollars per open slot vs league peers, remaining-slot scarcity, and replacement drop-off for eligible slots; when the league snapshot is symmetric (no auction picks, no keeper/minors/taxi off-board ids, equal per-team budgets in budget_by_team_id when provided, equal rostered counts per team), it equals adjusted_value";
+  "team_adjusted_value is marginal worth to the requesting team's roster and budget context (need, dollars per open slot vs peers, remaining-slot scarcity, replacement drop-off). It is not a league-universal player price and must not replace auction_value for cross-player evaluation or leaderboards.";
 
 export function buildInflationResponse(params: {
   inflationModelEffective: InflationModel;
@@ -45,6 +47,7 @@ export function buildInflationResponse(params: {
     pool_value_remaining: parseFloat(params.poolValueRemaining.toFixed(2)),
     players_remaining: params.playersRemaining,
     valuations: params.valuations,
+    auction_value_note: AUCTION_VALUE_NOTE,
     recommended_bid_note: RECOMMENDED_BID_NOTE,
     user_team_id_used: params.userTeamId,
     team_adjusted_value_note: TEAM_ADJUSTED_NOTE,

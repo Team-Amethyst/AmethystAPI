@@ -104,7 +104,14 @@
         "surplus_slots_v1",
         "replacement_slots_v2"
       ],
-      "description": "Optional; defaults to global_v1. May also be set on league.inflation_model."
+      "description": "Optional; defaults to replacement_slots_v2. May also be set on league.inflation_model."
+    },
+    "position_overrides": {
+      "type": "array",
+      "description": "Optional; wins over league.position_overrides when both set (nested body).",
+      "items": {
+        "$ref": "#/$defs/positionOverrideEntry"
+      }
     },
     "user_team_id": {
       "type": "string",
@@ -112,6 +119,25 @@
     }
   },
   "$defs": {
+    "positionOverrideEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["player_id", "positions"],
+      "properties": {
+        "player_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "positions": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
     "rosterSlot": {
       "type": "object",
       "required": [
@@ -210,6 +236,12 @@
         },
         "pos_eligibility_threshold": {
           "type": "number"
+        },
+        "position_overrides": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/positionOverrideEntry"
+          }
         },
         "inflation_model": {
           "type": "string",

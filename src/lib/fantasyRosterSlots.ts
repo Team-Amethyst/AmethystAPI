@@ -1,12 +1,15 @@
 export {
   SLOT_SPECIFICITY_ORDER,
+  effectiveFantasyTokens,
   fitsRosterSlot,
   isHitter,
   isPurePitcher,
   playerTokensFromDrafted,
   playerTokensFromLean,
+  positionOverridesFromRequest,
   slotSpecificityIndex,
   tokenizeFantasyPositions,
+  type PositionOverrideMap,
 } from "./fantasyPositioning";
 export {
   buildLeagueSlotDemand,

@@ -1,12 +1,17 @@
-import { fitsRosterSlot, playerTokensFromLean } from "../lib/fantasyRosterSlots";
+import {
+  fitsRosterSlot,
+  playerTokensFromLean,
+  type PositionOverrideMap,
+} from "../lib/fantasyRosterSlots";
 import type { LeanPlayer } from "../types/brain";
 import { FLEX_SLOTS } from "./teamAdjustedConfig";
 
 export function positionalNeedMultiplier(
   p: LeanPlayer,
-  openSlots: Map<string, number>
+  openSlots: Map<string, number>,
+  positionOverrides?: PositionOverrideMap
 ): number {
-  const tokens = playerTokensFromLean(p);
+  const tokens = playerTokensFromLean(p, positionOverrides);
   const slots = [...openSlots.keys()];
   const hasOpenPrimary = slots.some((slot) => {
     const u = slot.toUpperCase();

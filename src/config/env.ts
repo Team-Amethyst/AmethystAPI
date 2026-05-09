@@ -29,6 +29,16 @@ function parsePositiveInt(raw: string | undefined, fallback: number): number {
   return Number.isFinite(n) && n > 0 ? n : fallback;
 }
 
+/** Comma-separated browser origins. Empty = allow any Origin (reflect) — use explicit URLs to lock down. */
+function parseCorsAllowlist(raw: string | undefined): string[] {
+  const t = trim(raw);
+  if (!t) return [];
+  return t
+    .split(",")
+    .map((s) => s.trim())
+    .filter((s) => s.length > 0);
+}
+
 const Schema = z.object({
   NODE_ENV: z.string().optional(),
   VITEST: z.string().optional(),
@@ -39,6 +49,8 @@ const Schema = z.object({
     z.number().int().positive().max(65535).optional()
   ),
   CORS_ORIGIN: z.string().optional(),
+  /** Public API origin for portal fetches when UI and API are on different hosts (no trailing slash). */
+  PORTAL_API_BASE_URL: z.string().optional(),
   REDIS_URL: z.string().optional(),
   TRUST_PROXY: z.string().optional(),
   ENGINE_IP_ALLOWLIST: z.string().optional(),
@@ -73,8 +85,11 @@ export const env = {
   isVitest: e.VITEST === "true",
   forceSecureCookies: trim(e.FORCE_SECURE_COOKIES) === "1",
   mongoUri: trim(e.MONGO_URI),
-  port: e.PORT ?? 3001,
-  corsOrigin: trim(e.CORS_ORIGIN) ?? "http://localhost:5173",
+  /** Default matches README / portal (`public/js/portal.js`) so local sign-in hits the same origin. */
+  port: e.PORT ?? 3002,
+  /** Empty array ⇒ reflect `Origin` header (works for App Runner / custom domains without env churn). */
+  corsAllowedOrigins: parseCorsAllowlist(e.CORS_ORIGIN),
+  portalApiBaseUrl: trim(e.PORTAL_API_BASE_URL),
   redisUrl: trim(e.REDIS_URL) ?? "redis://localhost:6379",
   trustProxyFirstHop,
   /** Parsed allowlist entries; empty array when disabled. */

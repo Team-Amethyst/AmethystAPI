@@ -11,6 +11,9 @@ import type {
   ValueIndicator,
 } from "./core";
 
+/** Per-player catalog position overrides (Draftroom eligibility); replaces Mongo `position` / `positions` for valuation math. */
+export type PositionOverrideEntry = { player_id: string; positions: string[] };
+
 export interface ValuationRequest {
   roster_slots: RosterSlot[];
   scoring_categories: ScoringCategory[];
@@ -24,12 +27,16 @@ export interface ValuationRequest {
   deterministic?: boolean;
   seed?: number;
   player_ids?: string[];
+  eligible_player_ids?: string[];
+  excluded_player_ids?: string[];
   inflation_model?: InflationModel;
   budget_by_team_id?: Record<string, number>;
   user_team_id?: string;
   scoring_format?: ScoringFormat;
   hitter_budget_pct?: number;
+  /** Reserved / informational — does not apply min-games eligibility from catalog (no games-by-position in Mongo). Use `position_overrides` for explicit eligibility. */
   pos_eligibility_threshold?: number;
+  position_overrides?: PositionOverrideEntry[];
   minors?: TeamRosterBucket[];
   taxi?: TeamRosterBucket[];
 }
@@ -42,7 +49,9 @@ export interface ValuationLeagueBlock {
   league_scope?: LeagueScope;
   scoring_format?: ScoringFormat;
   hitter_budget_pct?: number;
+  /** Reserved / informational — does not apply min-games eligibility from catalog. Use `position_overrides` for explicit eligibility. */
   pos_eligibility_threshold?: number;
+  position_overrides?: PositionOverrideEntry[];
   inflation_model?: InflationModel;
 }
 
@@ -58,13 +67,19 @@ export interface NormalizedValuationInput {
   drafted_players: DraftedPlayer[];
   scoring_format?: ScoringFormat;
   hitter_budget_pct?: number;
+  /** Reserved / informational — v1 does not apply min-games rules from Mongo. Use `position_overrides`. */
   pos_eligibility_threshold?: number;
+  position_overrides?: PositionOverrideEntry[];
   pre_draft_rosters?: Record<string, unknown[]>;
   minors?: TeamRosterBucket[] | Record<string, unknown[]>;
   taxi?: TeamRosterBucket[] | Record<string, unknown[]>;
   deterministic: boolean;
   seed?: number;
   player_ids?: string[];
+  /** If set and non-empty, only these player ids are in the valuation universe. */
+  eligible_player_ids?: string[];
+  /** Removed from the valuation universe (after scope + eligible). */
+  excluded_player_ids?: string[];
   budget_by_team_id?: Record<string, number>;
   user_team_id?: string;
   inflation_model?: InflationModel;
@@ -85,6 +100,8 @@ export interface CalculateInflationOptions {
   rosteredPlayersForSlots?: DraftedPlayer[];
   userTeamId?: string;
   debugSignals?: boolean;
+  /** From request `position_overrides`; replaces Mongo positions for slot/token logic across baseline, replacement v2, team-adjusted, scarcity. */
+  positionOverrides?: Map<string, string[]>;
 }
 
 export interface ValuedPlayer {
@@ -95,8 +112,12 @@ export interface ValuedPlayer {
   adp: number;
   tier: number;
   baseline_value: number;
+  /** Official dollar valuation for benchmarks and external evaluation; equals `adjusted_value`. */
+  auction_value: number;
   adjusted_value: number;
+  /** Draftroom bid suggestion (phase/depth/smoothing); not the canonical player valuation — use `auction_value`. */
   recommended_bid?: number;
+  /** Marginal worth to the requesting team's roster/budget context only; not a league-universal price — use `auction_value` for that. */
   team_adjusted_value?: number;
   edge?: number;
   indicator: ValueIndicator;
@@ -166,6 +187,8 @@ export interface ValuationResponse {
   draftable_pool_size?: number;
   replacement_values_by_slot_or_position?: Record<string, number>;
   fallback_reason?: string | null;
+  /** Explains `auction_value` as the canonical official valuation (mirrors `adjusted_value`). */
+  auction_value_note?: string;
   recommended_bid_note?: string;
   user_team_id_used?: string;
   team_adjusted_value_note?: string;

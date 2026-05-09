@@ -22,7 +22,16 @@ export function projectBatting(
   yr2?: MlbStatRecord | null,
   yr3?: MlbStatRecord | null,
   minAb = 50
-): { avg: string; hr: number; rbi: number; runs: number; sb: number } | null {
+): {
+  avg: string;
+  hr: number;
+  rbi: number;
+  runs: number;
+  sb: number;
+  atBats: number;
+  obp: string;
+  plateAppearances: number;
+} | null {
   const years = [yr1, yr2, yr3];
   let wTotal = 0;
   let wH = 0;
@@ -31,6 +40,8 @@ export function projectBatting(
   let wRBI = 0;
   let wRuns = 0;
   let wSB = 0;
+  let wPA = 0;
+  let wObpPa = 0;
 
   for (let i = 0; i < years.length; i++) {
     const s = years[i];
@@ -45,17 +56,37 @@ export function projectBatting(
     wRBI += num(s.rbi) * w;
     wRuns += num(s.runs) * w;
     wSB += num(s.stolenBases) * w;
+    const bb = num(s.baseOnBalls);
+    const pa =
+      num(s.plateAppearances) > 0
+        ? num(s.plateAppearances)
+        : ab + bb + num(s.hitByPitch) + num(s.sacFlies);
+    const obpStr = String(s.obp ?? "").trim();
+    const obpParse = Number(obpStr);
+    const obp =
+      Number.isFinite(obpParse) && obpParse > 0
+        ? obpParse
+        : pa > 0
+          ? (num(s.hits) + bb) / pa
+          : 0;
+    wPA += pa * w;
+    wObpPa += obp * pa * w;
   }
 
   if (wTotal <= 0 || wAB <= 0) return null;
 
   const avg = wH / wAB;
+  const blendedPa = wPA / wTotal;
+  const blendedObp = wPA > 0 ? wObpPa / wPA : 0;
   return {
     avg: avg.toFixed(3),
     hr: Math.round(wHR / wTotal),
     rbi: Math.round(wRBI / wTotal),
     runs: Math.round(wRuns / wTotal),
     sb: Math.round(wSB / wTotal),
+    atBats: Math.round(wAB / wTotal),
+    obp: blendedObp.toFixed(3),
+    plateAppearances: Math.max(0, Math.round(blendedPa)),
   };
 }
 

@@ -1,6 +1,7 @@
 import { env } from "./config/env";
 import express, { Request, Response, NextFunction } from "express";
 import cors from "cors";
+import fs from "fs";
 import mongoose from "mongoose";
 import path from "path";
 import { requestIdMiddleware } from "./middleware/requestId";
@@ -44,15 +45,64 @@ if (env.trustProxyFirstHop) {
 
 app.use(
   cors({
-    origin: env.corsOrigin,
+    credentials: true,
+    origin(origin, callback) {
+      const allowed = env.corsAllowedOrigins;
+      if (allowed.length === 0) {
+        callback(null, true);
+        return;
+      }
+      if (!origin) {
+        callback(null, true);
+        return;
+      }
+      if (allowed.includes(origin)) {
+        callback(null, true);
+        return;
+      }
+      callback(null, false);
+    },
   })
 );
 
 app.use(express.json({ limit: "1mb" }));
 app.use(requestIdMiddleware);
 
-// Serve developer portal from public/
-app.use(express.static(path.join(__dirname, "../public")));
+const portalPublicDir = path.join(__dirname, "../public");
+let cachedPortalIndexHtml: string | null = null;
+
+function loadPortalIndexHtml(): string {
+  if (cachedPortalIndexHtml == null) {
+    cachedPortalIndexHtml = fs.readFileSync(path.join(portalPublicDir, "index.html"), "utf8");
+  }
+  return cachedPortalIndexHtml;
+}
+
+function escapeHtmlAttr(value: string): string {
+  return value.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;");
+}
+
+const PORTAL_API_BASE_PLACEHOLDER = "<!-- AMETHYST_API_BASE_META -->";
+
+function portalIndexHtmlBody(): string {
+  let html = loadPortalIndexHtml();
+  const base = env.portalApiBaseUrl;
+  const metaTag = base ? `  <meta name="amethyst-api-base" content="${escapeHtmlAttr(base)}" />\n` : "";
+  if (html.includes(PORTAL_API_BASE_PLACEHOLDER)) {
+    html = html.replace(PORTAL_API_BASE_PLACEHOLDER, metaTag);
+  } else if (base) {
+    html = html.replace("<head>", `<head>\n  <meta name="amethyst-api-base" content="${escapeHtmlAttr(base)}" />`);
+  }
+  return html;
+}
+
+app.get(["/", "/index.html"], (_req, res) => {
+  res.type("html");
+  res.send(portalIndexHtmlBody());
+});
+
+// Serve developer portal assets from public/
+app.use(express.static(portalPublicDir));
 
 // ── Public routes ─────────────────────────────────────────────────────────────
 app.get("/api/health", (_req, res) => {

@@ -227,7 +227,10 @@ describe("scoringAwareBaselinePlayers", () => {
     const out = scoringAwareBaselinePlayers(
       [twoWay, dhOnly],
       "points",
-      [{ name: "HR", type: "batting" }],
+      [
+        { name: "HR", type: "batting" },
+        { name: "K", type: "pitching" },
+      ],
       [{ position: "DH", count: 1 }]
     );
     const vTw = out.find((x) => x._id === "tw")!.value;
@@ -255,6 +258,7 @@ describe("scoringAwareBaselinePlayers", () => {
       adp: 250,
       tier: 2,
       value: 1,
+      projection: { batting: { hr: 8, rbi: 32, runs: 38, sb: 6, avg: 0.22 } },
     };
     const out = scoringAwareBaselinePlayers(
       [spec, flat],

@@ -1,17 +1,32 @@
 import type { LeanPlayer } from "../types/brain";
-import { playerTokensFromLean } from "../lib/fantasyRosterSlots";
+import {
+  playerTokensFromLean,
+  type PositionOverrideMap,
+} from "../lib/fantasyRosterSlots";
 
 export type ProjectionNode = Record<string, number | string | undefined>;
 type CategoryDirection = "higher" | "lower";
 
 export function toNum(v: unknown, fallback = 0): number {
-  const n = typeof v === "number" ? v : Number(v);
+  if (typeof v === "number" && Number.isFinite(v)) return v;
+  if (typeof v === "string") {
+    const t = v.trim();
+    if (t === "") return fallback;
+    const x = parseFloat(t);
+    return Number.isFinite(x) ? x : fallback;
+  }
+  const n = Number(v);
   return Number.isFinite(n) ? n : fallback;
 }
 
 /** Uses full eligibility tokens (e.g. two-way SP+DH) so baseline matches slot/surplus logic. */
-export function isPitcherForBaseline(p: LeanPlayer): boolean {
-  return playerTokensFromLean(p).some((t) => t === "SP" || t === "RP" || t === "P");
+export function isPitcherForBaseline(
+  p: LeanPlayer,
+  overrides?: PositionOverrideMap
+): boolean {
+  return playerTokensFromLean(p, overrides).some(
+    (t) => t === "SP" || t === "RP" || t === "P"
+  );
 }
 
 export function getProjectionSection(
@@ -55,13 +70,78 @@ export function categoryDirection(name: string): CategoryDirection {
   return key === "ERA" || key === "WHIP" ? "lower" : "higher";
 }
 
+/** When AB/PA/IP are missing on older catalog rows, avoid rate-only blowups. */
+const FALLBACK_ROTO_AB = 400;
+const FALLBACK_ROTO_PA = 450;
+const FALLBACK_ROTO_IP = 120;
+
+function projectedAb(section: ProjectionNode): number {
+  const ab = toNum(
+    (section as Record<string, unknown>).atBats ?? (section as Record<string, unknown>).ab
+  );
+  if (ab > 0) return ab;
+  return FALLBACK_ROTO_AB;
+}
+
+function projectedPa(section: ProjectionNode): number {
+  const pa = toNum(
+    (section as Record<string, unknown>).plateAppearances ??
+      (section as Record<string, unknown>).pa
+  );
+  if (pa > 0) return pa;
+  return Math.max(projectedAb(section) * 1.05, FALLBACK_ROTO_PA);
+}
+
+function projectedIpPitch(section: ProjectionNode): number {
+  const v =
+    (section as Record<string, unknown>).innings ??
+    (section as Record<string, unknown>).inningsPitched ??
+    (section as Record<string, unknown>).ip;
+  if (typeof v === "number" && Number.isFinite(v) && v > 0) return v;
+  if (typeof v === "string") {
+    const n = parseFloat(v.trim());
+    if (Number.isFinite(n) && n > 0) return n;
+  }
+  return FALLBACK_ROTO_IP;
+}
+
+/**
+ * Raw scale for roto z-scores. Rate categories use volume-weighted “counting”
+ * analogs (e.g. AVG×AB, ERA×IP) so part-time rate spikes do not dominate.
+ */
 export function categoryRawValue(section: ProjectionNode, name: string): number {
+  const key = name.toUpperCase();
+  if (key === "AVG") {
+    return toNum(section.avg) * projectedAb(section);
+  }
+  if (key === "OBP") {
+    return toNum(section.obp) * projectedPa(section);
+  }
+  if (key === "ERA") {
+    return toNum(section.era) * projectedIpPitch(section);
+  }
+  if (key === "WHIP") {
+    return toNum(section.whip) * projectedIpPitch(section);
+  }
   const field = statFieldForCategory(name);
   if (!field) return 0;
-  const raw = toNum(section[field as keyof ProjectionNode]);
+  return toNum(section[field as keyof ProjectionNode]);
+}
+
+/**
+ * Points leagues: use traditional stat lines (not AB/IP-weighted roto z inputs).
+ */
+export function pointsCategoryRaw(
+  section: ProjectionNode,
+  name: string
+): number {
   const key = name.toUpperCase();
-  if (key === "AVG" || key === "OBP") return raw * 1000;
-  return raw;
+  const field = statFieldForCategory(name);
+  if (key === "AVG" || key === "OBP") {
+    return toNum(section[key === "AVG" ? "avg" : "obp"]);
+  }
+  if (field) return toNum(section[field as keyof ProjectionNode]);
+  return 0;
 }
 
 export function mean(vals: number[]): number {

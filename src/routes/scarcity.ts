@@ -14,7 +14,9 @@ import {
   scoringCategorySchema,
 } from "../lib/draftedPlayerZod";
 import { zodIssuesToFieldErrors } from "../lib/zodErrors";
+import { positionOverrideEntrySchema } from "../lib/valuationRequestSchemas";
 import { PLAYER_CATALOG_LEAN_SELECT } from "../lib/playerCatalogProjection";
+import { positionOverridesFromRequest } from "../lib/fantasyRosterSlots";
 import { LeanPlayer } from "../types/brain";
 
 const router: Router = Router();
@@ -25,6 +27,7 @@ const scarcityBodySchema = z.object({
   position: z.string().optional(),
   num_teams: z.number().int().positive().optional(),
   league_scope: leagueScopeSchema.optional(),
+  position_overrides: z.array(positionOverrideEntrySchema).optional(),
 });
 
 /**
@@ -51,13 +54,15 @@ const scarcity: RequestHandler = async (
     .select(PLAYER_CATALOG_LEAN_SELECT)
     .lean()) as unknown as LeanPlayer[];
 
+  const ov = positionOverridesFromRequest(input.position_overrides);
   const result = analyzeScarcity(
     players,
     input.drafted_players,
     numTeams,
     input.scoring_categories,
     input.league_scope ?? "Mixed",
-    input.position
+    input.position,
+    ov
   );
 
   const selected = input.position

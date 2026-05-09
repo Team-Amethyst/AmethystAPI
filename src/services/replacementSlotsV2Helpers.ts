@@ -3,6 +3,7 @@ import {
   maxSurplusOverSlots,
   playerTokensFromDrafted,
   playerTokensFromLean,
+  type PositionOverrideMap,
   type SlotAssignmentCandidate,
 } from "../lib/fantasyRosterSlots";
 import type { DraftedPlayer, LeanPlayer } from "../types/brain";
@@ -12,12 +13,13 @@ export function buildRosteredCandidates(
   rostered: DraftedPlayer[],
   baselineById: Map<string, number>,
   deterministic: boolean,
-  seed: number
+  seed: number,
+  positionOverrides?: PositionOverrideMap
 ): SlotAssignmentCandidate[] {
   const rows: SlotAssignmentCandidate[] = rostered.map((d) => ({
     player_id: d.player_id,
     baseline: baselineById.get(d.player_id) ?? 0,
-    tokens: playerTokensFromDrafted(d),
+    tokens: playerTokensFromDrafted(d, positionOverrides),
   }));
   rows.sort((a, b) => compareSlotAssignmentCandidates(a, b, deterministic, seed));
   return rows;
@@ -26,12 +28,13 @@ export function buildRosteredCandidates(
 export function buildUndraftedCandidates(
   undrafted: LeanPlayer[],
   deterministic: boolean,
-  seed: number
+  seed: number,
+  positionOverrides?: PositionOverrideMap
 ): SlotAssignmentCandidate[] {
   const rows: SlotAssignmentCandidate[] = undrafted.map((p) => ({
     player_id: getPlayerId(p),
     baseline: p.value || 0,
-    tokens: playerTokensFromLean(p),
+    tokens: playerTokensFromLean(p, positionOverrides),
   }));
   rows.sort((a, b) => compareSlotAssignmentCandidates(a, b, deterministic, seed));
   return rows;
@@ -60,7 +63,8 @@ export function computeTotalSurplusMass(params: {
 export function buildSurplusBasisMap(
   undrafted: LeanPlayer[],
   replacementValues: Record<string, number>,
-  rosterSlotKeys: ReadonlySet<string>
+  rosterSlotKeys: ReadonlySet<string>,
+  positionOverrides?: PositionOverrideMap
 ): Map<string, number> {
   const out = new Map<string, number>();
   for (const p of undrafted) {
@@ -69,7 +73,7 @@ export function buildSurplusBasisMap(
       id,
       maxSurplusOverSlots(
         p.value || 0,
-        playerTokensFromLean(p),
+        playerTokensFromLean(p, positionOverrides),
         replacementValues,
         rosterSlotKeys
       )

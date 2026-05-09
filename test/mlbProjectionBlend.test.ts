@@ -10,6 +10,8 @@ describe("mlbProjectionBlend", () => {
     expect(out).not.toBeNull();
     expect(out!.hr).toBeGreaterThan(20);
     expect(out!.hr).toBeLessThan(30);
+    expect(out!.atBats).toBeGreaterThan(400);
+    expect(out!.plateAppearances).toBeGreaterThan(400);
   });
 
   it("returns null when no year meets minimum AB", () => {

@@ -6,8 +6,11 @@ import type {
 import { attachValuationExplainability } from "../lib/valuationExplainability";
 import { logger } from "../lib/logger";
 import { validateValuationResponse } from "../lib/valuationQuality";
+import { DEFAULT_INFLATION_MODEL } from "../lib/valuationDefaults";
+import { positionOverridesFromRequest } from "../lib/fantasyRosterSlots";
 import { calculateInflation } from "./inflationEngine";
 import { scoringAwareBaselinePlayers } from "./baselineValueEngine";
+import { filterValuationUniverse } from "../lib/valuationPlayerPool";
 import { computeRemainingLeagueRosterSlots } from "../lib/remainingLeagueRosterSlots";
 import { buildRosteredPlayersForSlotEngine } from "../lib/rosteredPlayersForSlots";
 
@@ -19,14 +22,15 @@ import { buildRosteredPlayersForSlotEngine } from "../lib/rosteredPlayersForSlot
  * 2. **Read eligible player data** — `LeanPlayer[]` from Mongo (`Player`); long-term this
  *    should carry 3-year stats, age, role, injury signals populated by your analytics/sync
  *    pipeline (not an external valuation API).
- * 3. **Filter drafted / ineligible** — Inside `calculateInflation` (drafted ids + league_scope).
+ * 3. **Valuation universe** — `filterValuationUniverse` (`league_scope`, optional
+ *    `eligible_player_ids` / `excluded_player_ids`) before baseline z-scores and inflation.
+ *    **Filter drafted** — inside `calculateInflation` (drafted ids, minors/taxi, etc.).
  *    Optional `player_ids` only limits **returned rows**; inflation basis follows **`inflation_model`**
- *    (`global_v1`, `surplus_slots_v1`, or `replacement_slots_v2`; see `docs/valuation-inflation-semantics.md`).
+ *    (`global_v1`, `surplus_slots_v1`, or `replacement_slots_v2`; default **`replacement_slots_v2`**; see `docs/valuation-inflation-semantics.md`).
  * 4. **Choose scoring system** — Branch on `scoring_format`: `points` vs category-style
- *    (`5x5` / `6x6` / default rotisserie-style). **v1:** Baseline auction $ still come from
- *    `LeanPlayer.value` (your model’s output in DB). Per-system stat→dollar conversion is
- *    the next increment (replace or rescale `value` before inflation).
- * 5. **Per-player projection & surplus** — Encoded in stored `value`, `tier`, `projection`;
+ *    (`5x5` / `6x6` / default). Baseline dollars are projection- and category-driven; Mongo
+ *    `value` is a weak prior via `catalogValuePrior`.
+ * 5. **Per-player projection & surplus** — Projections + scoring categories set list baselines;
  *    inflation pass scales to remaining auction dollars (market condition).
  * 6. **Convert to auction dollars** — `calculateInflation` → `adjusted_value`.
  * 7. **Validate reasonableness** — `validateValuationResponse` (finite, non-negative $, enums).
@@ -111,11 +115,18 @@ export function executeValuationWorkflow(
   scope: { playerId?: string; position?: string } = {},
   options: { debugSignals?: boolean } = {}
 ): ValuationWorkflowResult {
+  const valuationPool = filterValuationUniverse(allPlayers, {
+    leagueScope: input.league_scope,
+    eligiblePlayerIds: input.eligible_player_ids,
+    excludedPlayerIds: input.excluded_player_ids,
+  });
+  const positionOverrides = positionOverridesFromRequest(input.position_overrides);
   const basePlayers = scoringAwareBaselinePlayers(
-    allPlayers,
+    valuationPool,
     input.scoring_format,
     input.scoring_categories,
-    input.roster_slots
+    input.roster_slots,
+    positionOverrides
   );
   const extra = extractDraftedIdsAndSpend(input);
   const rosteredPlayersForSlots = buildRosteredPlayersForSlotEngine(input);
@@ -152,10 +163,11 @@ export function executeValuationWorkflow(
         additionalDraftedIds: extra.additionalDraftedIds,
         inflationCap: pass.inflationCap,
         inflationFloor: pass.inflationFloor,
-        inflationModel: input.inflation_model ?? "global_v1",
+        inflationModel: input.inflation_model ?? DEFAULT_INFLATION_MODEL,
         remainingLeagueSlots,
         rosteredPlayersForSlots,
         debugSignals: options.debugSignals,
+        positionOverrides,
       }
     );
 

@@ -1,0 +1,106 @@
+    <div class="portal-shell">
+
+    <div class="section">
+      <h2>Licensing</h2>
+      <p class="section-desc">
+        Amethyst Engine is a generalized Sports Data as a Service (SDaaS) platform.
+        The core API is available for commercial licensing under a revenue-share model.
+        Licensee-specific data instances and strategic configurations remain private and isolated.
+      </p>
+    </div>
+
+    <!-- Tiers -->
+    <div class="section">
+      <h3>License Tiers</h3>
+      <div class="card">
+        <table>
+          <thead>
+            <tr><th>Tier</th><th>Use Case</th><th>Features</th><th>Pricing</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="tier-badge tier-free">free</span></td>
+              <td>Evaluation &amp; prototyping</td>
+              <td>All endpoints, rate-limited</td>
+              <td style="color:var(--muted)">Contact us</td>
+            </tr>
+            <tr>
+              <td><span class="tier-badge tier-standard">standard</span></td>
+              <td>Production applications</td>
+              <td>Full access, standard rate limits, usage reporting</td>
+              <td style="color:var(--muted)">Revenue share — contact us</td>
+            </tr>
+            <tr>
+              <td><span class="tier-badge tier-premium">premium</span></td>
+              <td>High-volume &amp; enterprise</td>
+              <td>Elevated rate limits, priority support, custom league scope extensions</td>
+              <td style="color:var(--muted)">Custom — contact us</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Revenue share model -->
+    <div class="section">
+      <h3>Revenue Share Model</h3>
+      <p class="section-desc">
+        Commercial licenses are structured as a percentage of net revenue generated
+        by your application through use of the Amethyst Engine API.
+        This aligns our incentives with your product's success.
+      </p>
+      <div class="card" style="padding:0">
+        <div style="display:grid;grid-template-columns:1fr 1fr;border-bottom:1px solid var(--border)">
+          <div style="padding:20px 24px;border-right:1px solid var(--border)">
+            <div style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px">Model</div>
+            <div style="font-size:28px;font-weight:700;color:var(--accent);letter-spacing:-0.03em">5%</div>
+            <div style="font-size:13px;color:var(--muted);margin-top:4px">of net licensing revenue</div>
+          </div>
+          <div style="padding:20px 24px">
+            <div style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px">Term</div>
+            <div style="font-size:28px;font-weight:700;color:var(--text);letter-spacing:-0.03em">5 yr</div>
+            <div style="font-size:13px;color:var(--muted);margin-top:4px">from first commercial sale</div>
+          </div>
+        </div>
+        <div style="padding:16px 24px;font-size:13px;color:var(--muted);line-height:1.7">
+          Under the Reuse Clause of the Amethyst Engine license agreement, founding customers
+          receive a <strong style="color:var(--text)">5% royalty on net licensing revenue</strong> for a period of
+          five years following the first commercial sale. This royalty is calculated and reported quarterly
+          based on cumulative API key usage tracked per licensee.
+        </div>
+      </div>
+    </div>
+
+    <!-- Infrastructure -->
+    <div class="section">
+      <h3>Infrastructure &amp; Maintenance</h3>
+      <div class="card">
+        <table>
+          <thead><tr><th>Component</th><th>Stack</th><th>Notes</th></tr></thead>
+          <tbody>
+            <tr><td>API Runtime</td><td>Node.js 20 + Express 5 on AWS App Runner</td><td>Managed container, auto-scaling</td></tr>
+            <tr><td>Database</td><td>MongoDB Atlas</td><td>Document-based player &amp; key schemas</td></tr>
+            <tr><td>Cache</td><td>Redis</td><td>Low-latency live-draft response caching</td></tr>
+            <tr><td>Player Data</td><td>MLB Stats API sync</td><td>Daily refresh during season (Mar–Oct)</td></tr>
+            <tr><td>Monitoring</td><td>AWS App Runner health checks</td><td>Automatic restart on failure</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Contact -->
+    <div class="section">
+      <h3>Get a License</h3>
+      <div class="license-contact" style="background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--accent);border-radius:var(--radius);padding:20px 24px">
+        <p style="font-size:14px;color:var(--text);margin-bottom:6px;font-weight:600">Interested in licensing the Amethyst Engine for your fantasy sports product?</p>
+        <p style="font-size:13px;color:var(--muted);line-height:1.7">
+          The API is sport-agnostic and architected for plug-and-play expansion into additional domains.
+          Licensing terms are negotiated per application. Reach out to discuss your use case,
+          expected volume, and integration timeline.
+        </p>
+        <p style="margin-top:14px">
+          <a href="mailto:licensing@amethystindustries.com" style="color:var(--accent);font-weight:600;font-size:13px">licensing@amethystindustries.com</a>
+        </p>
+      </div>
+    </div>
+

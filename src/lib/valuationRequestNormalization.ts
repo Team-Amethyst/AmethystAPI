@@ -1,4 +1,5 @@
 import type { NormalizedValuationInput } from "../types/brain";
+import { DEFAULT_INFLATION_MODEL } from "./valuationDefaults";
 import type {
   FlatValuationBody,
   NestedValuationBody,
@@ -60,6 +61,8 @@ export function buildNormalizedFromNested(
     scoring_format: league.scoring_format,
     hitter_budget_pct: league.hitter_budget_pct,
     pos_eligibility_threshold: league.pos_eligibility_threshold,
+    position_overrides:
+      rest.position_overrides ?? league.position_overrides,
     pre_draft_rosters: rest.pre_draft_rosters
       ? normalizePreDraftRostersInput(rest.pre_draft_rosters)
       : undefined,
@@ -70,7 +73,10 @@ export function buildNormalizedFromNested(
     player_ids: rest.player_ids,
     budget_by_team_id: rest.budget_by_team_id,
     user_team_id: rest.user_team_id,
-    inflation_model: rest.inflation_model ?? league.inflation_model ?? "global_v1",
+    inflation_model:
+      rest.inflation_model ?? league.inflation_model ?? DEFAULT_INFLATION_MODEL,
+    eligible_player_ids: rest.eligible_player_ids,
+    excluded_player_ids: rest.excluded_player_ids,
   };
 }
 
@@ -91,6 +97,7 @@ export function buildNormalizedFromFlat(
     scoring_format: parsed.scoring_format,
     hitter_budget_pct: parsed.hitter_budget_pct,
     pos_eligibility_threshold: parsed.pos_eligibility_threshold,
+    position_overrides: parsed.position_overrides,
     pre_draft_rosters: parsed.pre_draft_rosters
       ? normalizePreDraftRostersInput(parsed.pre_draft_rosters)
       : undefined,
@@ -101,6 +108,8 @@ export function buildNormalizedFromFlat(
     player_ids: parsed.player_ids,
     budget_by_team_id: parsed.budget_by_team_id,
     user_team_id: parsed.user_team_id,
-    inflation_model: parsed.inflation_model ?? "global_v1",
+    inflation_model: parsed.inflation_model ?? DEFAULT_INFLATION_MODEL,
+    eligible_player_ids: parsed.eligible_player_ids,
+    excluded_player_ids: parsed.excluded_player_ids,
   };
 }

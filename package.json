@@ -7,7 +7,9 @@
   "scripts": {
     "test": "vitest run",
     "dev": "nodemon src/index.ts",
-    "build": "tsc",
+    "build": "pnpm run build:portal && tsc",
+    "build:portal": "pnpm --filter amethyst-portal build",
+    "dev:portal": "pnpm --filter amethyst-portal dev",
     "start": "node dist/index.js",
     "lint": "eslint src test vitest.config.ts --max-warnings 0",
     "test:watch": "vitest",

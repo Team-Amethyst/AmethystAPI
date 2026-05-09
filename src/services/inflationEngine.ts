@@ -1,5 +1,5 @@
+import { DEFAULT_INFLATION_MODEL } from "../lib/valuationDefaults";
 import { isSymmetricOpenLeagueContext } from "../lib/symmetricLeagueOpen";
-import { filterByScope } from "../lib/leagueScope";
 import {
   smoothRecommendedBids,
 } from "./recommendedBid";
@@ -64,16 +64,17 @@ export function calculateInflation(
   leagueScope: LeagueScope = "Mixed",
   options?: CalculateInflationOptions
 ): ValuationResponse {
+  void leagueScope;
   const requestedModel: InflationModel =
-    options?.inflationModel ?? "global_v1";
+    options?.inflationModel ?? DEFAULT_INFLATION_MODEL;
 
   const draftedIds = new Set(draftedPlayers.map((d) => d.player_id));
   for (const pid of options?.additionalDraftedIds ?? []) {
     draftedIds.add(pid);
   }
 
-  const scoped = filterByScope(allPlayers, leagueScope);
-  const undraftedFull = scoped.filter((p) => !draftedIds.has(getPlayerId(p)));
+  /* `allPlayers` must already be the request valuation universe (see `filterValuationUniverse`). */
+  const undraftedFull = allPlayers.filter((p) => !draftedIds.has(getPlayerId(p)));
 
   let undraftedForRows = undraftedFull;
   if (options?.playerIdsFilter && options.playerIdsFilter.length > 0) {
@@ -108,7 +109,7 @@ export function calculateInflation(
 
   const modelSelection = selectInflationModel({
     requestedModel,
-    scoped,
+    scoped: allPlayers,
     undraftedFull,
     byValueFull,
     draftedPlayers,
@@ -152,7 +153,7 @@ export function calculateInflation(
     v2Result,
     options,
     draftedPlayers,
-    scoped,
+    scoped: allPlayers,
     rosterSlots,
     numTeams,
     budgetRemaining,

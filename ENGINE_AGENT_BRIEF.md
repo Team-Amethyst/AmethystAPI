@@ -118,7 +118,8 @@ Draft’s web client allows **`engine_contract_version`** (or similar) on valuat
 
 Engine semantics (see **`docs/valuation-inflation-semantics.md`** in the Engine repo):
 
-- **`inflation_model`** — request field defaulting to **`global_v1`**; **`replacement_slots_v2`** is the **Draftroom-preferred** slot/position-aware surplus model (set explicitly in the request). **`surplus_slots_v1`** is a lighter single-cutoff surplus model. Both use remaining roster context derived from `roster_slots`, `num_teams`, `drafted_players`, and keeper/minors/taxi rows for slot fill.
+- **`inflation_model`** — request field defaulting to **`replacement_slots_v2`** (official slot/position-aware surplus auction dollars). Set **`global_v1`** only for legacy full-list rescale. **`surplus_slots_v1`** is a lighter single-cutoff surplus model. All use remaining roster context derived from `roster_slots`, `num_teams`, `drafted_players`, and keeper/minors/taxi rows for slot fill.
+- **`valuations[].auction_value`** — **canonical primary dollar** per player for evaluation (always equals **`adjusted_value`**).
 - **`pool_value_remaining`** — inflation denominator for the active model (**full** undrafted baseline $ for `global_v1`; surplus mass in the draftable slice for `surplus_slots_v1`). Not the sum of only `valuations[]` rows.
 - **`players_remaining`** — count of players in the **full** undrafted pool. When **`player_ids`** is set, **`valuations.length`** may be smaller; do not equate it with `players_remaining`.
 - **`inflation_raw`** / **`inflation_bounded_by`** — pre-clamp ratio vs cap/floor; meaning depends on **`inflation_model`**; use so “+200% market” copy is not shown when the number is **clamp-driven**.

@@ -164,6 +164,12 @@ export function validateValuationResponse(
   ) {
     issues.push("team_adjusted_value_note must be a string when present");
   }
+  if (
+    response.auction_value_note != null &&
+    typeof response.auction_value_note !== "string"
+  ) {
+    issues.push("auction_value_note must be a string when present");
+  }
 
   if (issues.length > 0) {
     return { ok: false, issues };

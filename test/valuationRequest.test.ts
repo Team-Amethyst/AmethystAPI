@@ -236,7 +236,7 @@ describe("parseValuationRequest errors", () => {
     expect(r.errors[0]?.message).toMatch(/Duplicate player_id/);
   });
 
-  it("accepts inflation_model on flat body and defaults to global_v1", () => {
+  it("accepts inflation_model on flat body and defaults to replacement_slots_v2", () => {
     const surplus = parseValuationRequest({
       roster_slots: [{ position: "OF", count: 3 }],
       scoring_categories: [{ name: "HR", type: "batting" }],
@@ -267,7 +267,7 @@ describe("parseValuationRequest errors", () => {
     });
     expect(def.success).toBe(true);
     if (!def.success) return;
-    expect(def.normalized.inflation_model).toBe("global_v1");
+    expect(def.normalized.inflation_model).toBe("replacement_slots_v2");
   });
 
   it("rejects spend above league cap without budget_by_team_id", () => {

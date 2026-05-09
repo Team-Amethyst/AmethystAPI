@@ -88,7 +88,7 @@ export function applyRecommendedBidPass(params: {
     row.recommended_bid = parseFloat(clearing.toFixed(2));
     if (!options?.debugSignals) continue;
     const lp = byRowPlayerId.get(row.player_id);
-    const tokens = lp ? playerTokensFromLean(lp) : [];
+    const tokens = lp ? playerTokensFromLean(lp, options?.positionOverrides) : [];
     const replBest = bestReplacementForPlayer(
       tokens,
       replForTeam,
@@ -144,7 +144,8 @@ export function applyTeamAdjustedAndEdgePass(params: {
   const openSlots = buildOpenSlotsForUserTeam(
     rosterSlots,
     options?.rosteredPlayersForSlots,
-    userTeamId
+    userTeamId,
+    options?.positionOverrides
   );
   const budgetMult = budgetPressureMultiplier(
     draftedPlayers,
@@ -201,6 +202,7 @@ export function applyTeamAdjustedAndEdgePass(params: {
       slotScarcityMult,
       replForTeam,
       rosterSlotKeysForFit,
+      positionOverrides: options?.positionOverrides,
     });
     row.team_adjusted_value = computeTeamAdjustedValue({ row, multipliers });
     if (options?.debugSignals) {

@@ -35,7 +35,7 @@ This map documents where each pricing responsibility lives after the refactor.
 
 - `src/services/valuationRows.ts`
   - Deterministic value/ADP sorting helpers.
-  - Per-row adjusted/baseline/inflation shaping with indicator assignment.
+  - Per-row **`auction_value`** (= **`adjusted_value`**), baseline/inflation shaping with indicator assignment.
 - `src/lib/playerId.ts`
   - Canonical player id resolution (`mlbId` fallback to `_id`).
 

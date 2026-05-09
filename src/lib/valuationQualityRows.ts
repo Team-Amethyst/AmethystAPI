@@ -17,6 +17,15 @@ export function rowIssues(row: ValuedPlayer, index: number): string[] {
   } else if (row.adjusted_value < 0) {
     out.push(`${p}.adjusted_value should not be negative (reasonable prices)`);
   }
+  if (!isFiniteNumber(row.auction_value)) {
+    out.push(`${p}.auction_value must be a finite number`);
+  } else if (row.auction_value < 0) {
+    out.push(`${p}.auction_value should not be negative (reasonable prices)`);
+  } else if (
+    Math.abs(row.auction_value - row.adjusted_value) > 0.02
+  ) {
+    out.push(`${p}.auction_value must equal adjusted_value (canonical alias)`);
+  }
   if (row.recommended_bid != null) {
     if (!isFiniteNumber(row.recommended_bid)) {
       out.push(`${p}.recommended_bid must be a finite number when present`);

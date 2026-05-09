@@ -6,6 +6,7 @@ import {
   greedyAssignLeagueSlotsMutable,
   maxSurplusOverSlots,
   playerTokensFromLean,
+  type PositionOverrideMap,
   replacementLevelsFromSlotValuesPercentile,
   replacementLevelsFromSlotValues,
   sumDemand,
@@ -40,10 +41,12 @@ export function computeReplacementSlotsV2(
     seed?: number;
     inflationCap?: number;
     inflationFloor?: number;
+    positionOverrides?: PositionOverrideMap;
   }
 ): ReplacementSlotsV2Result {
   const deterministic = Boolean(options?.deterministic);
   const seed = options?.seed ?? 0;
+  const positionOverrides = options?.positionOverrides;
 
   const rosterSlotKeys = new Set<string>();
   const initialDemand = buildLeagueSlotDemand(rosterSlots, numTeams);
@@ -56,7 +59,8 @@ export function computeReplacementSlotsV2(
     rostered,
     baselineById,
     deterministic,
-    seed
+    seed,
+    positionOverrides
   );
 
   greedyAssignLeagueSlotsMutable(
@@ -101,7 +105,7 @@ export function computeReplacementSlotsV2(
         getPlayerId(p),
         maxSurplusOverSlots(
           p.value || 0,
-          playerTokensFromLean(p),
+          playerTokensFromLean(p, positionOverrides),
           repl,
           rosterSlotKeys
         )
@@ -127,7 +131,8 @@ export function computeReplacementSlotsV2(
   const undraftedCandidates = buildUndraftedCandidates(
     undrafted,
     deterministic,
-    seed
+    seed,
+    positionOverrides
   );
   const undraftedCandidateById = new Map(
     undraftedCandidates.map((c) => [c.player_id, c] as const)
@@ -203,7 +208,8 @@ export function computeReplacementSlotsV2(
   const playerIdToSurplusBasis = buildSurplusBasisMap(
     undrafted,
     replacement_values_by_slot_or_position,
-    rosterSlotKeys
+    rosterSlotKeys,
+    positionOverrides
   );
 
   const pool_value_remaining = total_surplus_mass;

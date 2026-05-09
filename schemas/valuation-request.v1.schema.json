@@ -81,7 +81,15 @@
       "type": "number"
     },
     "pos_eligibility_threshold": {
-      "type": "number"
+      "type": "number",
+      "description": "Reserved / informational only in v1 — engine does not compute games-by-position from Mongo. Use position_overrides for explicit eligibility."
+    },
+    "position_overrides": {
+      "type": "array",
+      "description": "Per-player eligibility from Draftroom (min-games rules). Replaces Mongo position/positions for slot fitting, baseline scarcity, replacement_slots_v2, team-adjusted value, and scarcity analysis.",
+      "items": {
+        "$ref": "#/$defs/positionOverrideEntry"
+      }
     },
     "minors": {
       "type": "array",
@@ -108,6 +116,22 @@
         "minLength": 1
       }
     },
+    "eligible_player_ids": {
+      "type": "array",
+      "description": "Optional whitelist of catalog player ids in the valuation universe (after league_scope). Omit or empty = full scoped catalog.",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "excluded_player_ids": {
+      "type": "array",
+      "description": "Optional blacklist applied after league_scope and eligible_player_ids.",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
     "inflation_model": {
       "type": "string",
       "enum": [
@@ -115,7 +139,7 @@
         "surplus_slots_v1",
         "replacement_slots_v2"
       ],
-      "description": "global_v1 = league-wide list rescale. surplus_slots_v1 = single replacement slice. replacement_slots_v2 = slot/position-aware replacement + surplus (Draftroom preferred). Defaults to global_v1 when omitted."
+      "description": "global_v1 = league-wide list rescale. surplus_slots_v1 = single replacement slice. replacement_slots_v2 = slot/position-aware replacement + surplus (official default when omitted)."
     },
     "pre_draft_rosters": {
       "description": "Keepers / pre-draft rosters: either a map team_id → rows, or an array of { team_id, players } (Draft BFF finalize payload).",
@@ -140,6 +164,25 @@
     }
   },
   "$defs": {
+    "positionOverrideEntry": {
+      "type": "object",
+      "required": ["player_id", "positions"],
+      "additionalProperties": false,
+      "properties": {
+        "player_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "positions": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
     "rosterSlot": {
       "type": "object",
       "required": [

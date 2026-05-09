@@ -46,6 +46,7 @@ export function explainabilityCacheKey(
     ]),
     budgets: input.budget_by_team_id ?? null,
     leagueScope: input.league_scope,
+    positionOverrides: input.position_overrides ?? null,
   });
   return crypto.createHash("sha1").update(payload).digest("hex");
 }
