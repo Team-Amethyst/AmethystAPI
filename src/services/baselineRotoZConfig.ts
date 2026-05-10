@@ -28,6 +28,10 @@
  * hitter/pitcher auction splits while keeping Σauction≈league budget. Roster shapes that
  * collapse hitting demand (generic **P**) or shrink the pool (`eligible_player_ids`) remain
  * warning-heavy edge cases, not the Draftroom default calibration target.
+ *
+ * **Rate-only ERA/WHIP (May 2026):** Pitcher `zScale` / `zHi` tuned with intrinsic **22** and
+ * `categoryWeight`(ERA/WHIP) **11** so Σauction hitter share sits ~65–72% while aces stay above
+ * replacement (no ERA×IP penalty).
  */
 export const ROTO_Z_HITTER = {
   zScale: 0.128,
@@ -36,7 +40,7 @@ export const ROTO_Z_HITTER = {
 } as const;
 
 export const ROTO_Z_PITCHER = {
-  zScale: 0.11,
+  zScale: 0.102,
   zLo: 0.46,
-  zHi: 2.19,
+  zHi: 2.06,
 } as const;

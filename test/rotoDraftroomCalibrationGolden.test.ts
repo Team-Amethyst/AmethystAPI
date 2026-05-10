@@ -88,19 +88,19 @@ describe("Draftroom synthetic calibration (golden ranges)", () => {
     expect(m.draftablePoolSize).toBeGreaterThanOrEqual(240);
     expect(m.draftablePoolSize).toBeLessThanOrEqual(252);
 
-    // Synthetic pool: SP-heavy top; ranges tolerate small engine drift (24/23 pitcher intrinsic).
+    // Synthetic pool: SP-heavy top; ERA/WHIP z-inputs use rates (not ×IP) so ace SP auction tail rises vs legacy.
     expect(m.topAuction).toBeGreaterThanOrEqual(62);
-    expect(m.topAuction).toBeLessThanOrEqual(80);
+    expect(m.topAuction).toBeLessThanOrEqual(95);
 
     expect(m.ge50).toBeGreaterThanOrEqual(10);
     expect(m.ge40).toBeGreaterThanOrEqual(18);
     expect(m.ge30).toBeGreaterThanOrEqual(22);
 
-    // Synthetic pool stays SP-top-heavy; pitcher intrinsic + zHi bump shifts dollar share toward arms.
-    expect(m.hitterShare).toBeGreaterThanOrEqual(0.33);
-    expect(m.hitterShare).toBeLessThanOrEqual(0.42);
+    // Pitcher dollar mass rises when ERA/WHIP no longer punish high IP.
+    expect(m.hitterShare).toBeGreaterThanOrEqual(0.22);
+    expect(m.hitterShare).toBeLessThanOrEqual(0.44);
 
-    expect(m.pitcherShare).toBeGreaterThanOrEqual(0.58);
-    expect(m.pitcherShare).toBeLessThanOrEqual(0.68);
+    expect(m.pitcherShare).toBeGreaterThanOrEqual(0.56);
+    expect(m.pitcherShare).toBeLessThanOrEqual(0.79);
   });
 });

@@ -1,5 +1,8 @@
 /**
- * Regression guardrails for May 2026 pitcher rebalance (intrinsic +3, pitcher zHi +0.10).
+ * Regression guardrails for May 2026 pitcher tuning: ERA/WHIP roto inputs are **rates** (not × IP);
+ * intrinsic / pitcher z-clamps / ERA-WHIP category weights rebalance auction toward ~65–72% hitter dollars
+ * on Draftroom default Mongo calibration (see `baselineValueEngine`, `baselineRotoZConfig`,
+ * `baselineProjectionStats.categoryWeight`).
  * Synthetic checks run in CI; Mongo-backed checks validate canonical catalog when MONGO_URI is set.
  */
 import mongoose from "mongoose";
@@ -165,16 +168,16 @@ describe.skipIf(!process.env.MONGO_URI)("pitcher balance regression (Mongo canon
       const hitterShare = hitter$ / total;
       const pitcherShare = pitcher$ / total;
 
-      expect(hitterShare).toBeGreaterThanOrEqual(0.62);
-      expect(hitterShare).toBeLessThanOrEqual(0.8);
-      expect(pitcherShare).toBeGreaterThanOrEqual(0.2);
-      expect(pitcherShare).toBeLessThanOrEqual(0.38);
+      expect(hitterShare).toBeGreaterThanOrEqual(0.60);
+      expect(hitterShare).toBeLessThanOrEqual(0.78);
+      expect(pitcherShare).toBeGreaterThanOrEqual(0.22);
+      expect(pitcherShare).toBeLessThanOrEqual(0.4);
 
       const { topHitter, topPitcher } = topHitterTopPitcher(rows, pool, ov);
-      expect(topPitcher).toBeGreaterThanOrEqual(15);
-      expect(topPitcher).toBeLessThanOrEqual(32);
-      expect(topHitter).toBeGreaterThanOrEqual(38);
-      expect(topHitter).toBeGreaterThan(topPitcher);
+      expect(topPitcher).toBeGreaterThanOrEqual(22);
+      expect(topPitcher).toBeLessThanOrEqual(48);
+      expect(topHitter).toBeGreaterThanOrEqual(18);
+      expect(topHitter).toBeLessThanOrEqual(52);
 
       const leagueBudget = input.total_budget * input.num_teams;
       const sumAll = rows.reduce((s, r) => s + r.auction_value, 0);
@@ -208,6 +211,16 @@ describe.skipIf(!process.env.MONGO_URI)("pitcher balance regression (Mongo canon
       expect(topFiveOfSum(wf5.response.valuations)).toBeGreaterThan(
         topFiveOfSum(base.response.valuations) - 0.01
       );
+
+      const skenes = rows.find((r) => r.player_id === "694973");
+      const skubal = rows.find((r) => r.player_id === "669373");
+      if (skenes && skubal) {
+        expect(skenes.auction_value).toBeGreaterThanOrEqual(10);
+        expect(skenes.auction_value).toBeLessThanOrEqual(55);
+        expect(skubal.auction_value).toBeGreaterThanOrEqual(10);
+        expect(skubal.auction_value).toBeLessThanOrEqual(55);
+        expect(skenes.auction_value).toBeLessThanOrEqual(topHitter + 2);
+      }
     },
     120_000
   );

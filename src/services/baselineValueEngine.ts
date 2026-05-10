@@ -34,12 +34,13 @@ const ROTO_INTRINSIC_BASE_HITTER = 24;
  * Pitcher intrinsic rotisserie baseline anchor (`statCore = intrinsic * projectionMult × …`).
  * Wrapped so offline calibration scripts can sweep without editing literals.
  *
- * **May 2026:** Raised **+3** after canonical catalog cleanup — pairs with `ROTO_Z_PITCHER.zHi`
- * so standard mixed auction dollars shift toward realistic hitter/pitcher balance (~70%/30% vs
- * prior hitter-heavy boards). Generic **P** slots and thin eligible pools remain stress cases;
- * see scenario-matrix audit scripts under `scripts/pitcher-balance-scenario-matrix.ts`.
+ * **May 2026:** Raised **+3** after canonical catalog cleanup (paired with `ROTO_Z_PITCHER.zHi`).
+ * **May 2026 follow-up:** ERA/WHIP roto inputs use **rates only** (not × IP). That fixes ace SP
+ * baselines but shifted auction mass toward arms; intrinsic **23 → 22** with pitcher z-tuning in
+ * `baselineRotoZConfig.ts` and slightly lower ERA/WHIP `categoryWeight` vs AVG-class rates restores
+ * ~65–72% hitter dollar share on Draftroom default Mongo calibration without reverting to ERA×IP.
  */
-export const ROTO_INTRINSIC_BASE_PITCHER_REF = { value: 23 };
+export const ROTO_INTRINSIC_BASE_PITCHER_REF = { value: 22 };
 
 function defaultPointsWeight(cat: ScoringCategory): number {
   const k = normalizeScoringCategoryName(cat.name);

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   categoryRawValue,
+  categoryWeight,
   pointsCategoryRaw,
   getProjectionSection,
 } from "../src/services/baselineProjectionStats";
@@ -59,6 +60,20 @@ describe("baselineProjectionStats extended scoring categories", () => {
 
   it("categoryRawValue QS count", () => {
     expect(categoryRawValue(pitching, "QS")).toBe(20);
+  });
+
+  it("categoryWeight keeps ERA/WHIP below AVG-class batting rates (rate-only roto inputs)", () => {
+    expect(categoryWeight("ERA")).toBe(11);
+    expect(categoryWeight("WHIP")).toBe(11);
+    expect(categoryWeight("AVG")).toBe(14);
+  });
+
+  it("categoryRawValue ERA and WHIP are pitcher rates only (not multiplied by IP)", () => {
+    expect(categoryRawValue(pitching, "ERA")).toBeCloseTo(3.2, 5);
+    expect(categoryRawValue(pitching, "WHIP")).toBeCloseTo(1.1, 5);
+    const hiIpSameRate = { ...pitching, innings: "210", era: "3.20", whip: "1.10" };
+    expect(categoryRawValue(hiIpSameRate, "ERA")).toBeCloseTo(3.2, 5);
+    expect(categoryRawValue(hiIpSameRate, "WHIP")).toBeCloseTo(1.1, 5);
   });
 
   it("pointsCategoryRaw parity for rates and counts", () => {

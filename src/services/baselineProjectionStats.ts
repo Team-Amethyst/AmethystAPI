@@ -55,8 +55,9 @@ export function getProjectionSection(
 
 export function categoryWeight(name: string): number {
   const key = normalizeScoringCategoryName(name);
-  if (key === "AVG" || key === "OBP" || key === "SLG" || key === "OPS" || key === "ERA" || key === "WHIP")
-    return 14;
+  if (key === "AVG" || key === "OBP" || key === "SLG" || key === "OPS") return 14;
+  /** Pitching rates (see categoryRawValue): modestly below AVG-class weights — pure ERA/WHIP rates without ×IP already lift ace SP z-mass vs legacy. */
+  if (key === "ERA" || key === "WHIP") return 11;
   if (key === "HR" || key === "RBI" || key === "R" || key === "K" || key === "TB") return 1;
   if (key === "K/9") return 1;
   if (key === "SB" || key === "SV" || key === "W" || key === "HLD" || key === "SV+HLD") return 1.6;
@@ -126,8 +127,11 @@ function projectedIpPitch(section: ProjectionNode): number {
 }
 
 /**
- * Raw scale for roto z-scores. Rate categories use volume-weighted “counting”
- * analogs (e.g. AVG×AB, ERA×IP) so part-time rate spikes do not dominate.
+ * Raw scale for roto z-scores.
+ * - Batting rates use volume-weighted analogs (AVG×AB, OBP×PA, …) so part-time spikes don’t dominate.
+ * - **Pitching ERA and WHIP use the rate only (not × IP)** for rotisserie z-scores. Multiplying rate×IP
+ *   mixed SP and RP in one pool and punished high-IP starters (large raw) despite elite ratios.
+ * - K/9 remains a per-inning rate (see branch below).
  */
 export function categoryRawValue(section: ProjectionNode, name: string): number {
   const key = normalizeScoringCategoryName(name);
@@ -159,10 +163,10 @@ export function categoryRawValue(section: ProjectionNode, name: string): number 
     return ip > 0 ? (9 * k) / ip : 0;
   }
   if (key === "ERA") {
-    return toNum(section.era) * projectedIpPitch(section);
+    return toNum(section.era);
   }
   if (key === "WHIP") {
-    return toNum(section.whip) * projectedIpPitch(section);
+    return toNum(section.whip);
   }
   const field = statFieldForCategory(name);
   if (!field) return 0;
