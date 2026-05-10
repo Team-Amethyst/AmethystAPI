@@ -200,7 +200,7 @@ describe("scoringAwareBaselinePlayers", () => {
     expect(pSpread).toBeGreaterThan(hSpread * 0.85);
   });
 
-  it("treats two-way SP eligibility as pitcher for points baseline", () => {
+  it("two-way points baseline uses max(hitter, pitcher) and exposes candidate dollars", () => {
     const twoWay: LeanPlayer = {
       _id: "tw",
       mlbId: 999,
@@ -213,7 +213,7 @@ describe("scoringAwareBaselinePlayers", () => {
       value: 25,
       projection: {
         batting: { hr: 20, rbi: 60, runs: 70, sb: 10, avg: 0.28 },
-        /* Strong ace line so pointsBaseline takes the pitcher branch above DH-only hitting. */
+        /* Strong ace line — pitcher candidate beats hitter candidate for points. */
         pitching: { strikeouts: 260, wins: 16, saves: 0, era: 2.4, whip: 0.92 },
       },
     };
@@ -233,10 +233,69 @@ describe("scoringAwareBaselinePlayers", () => {
       ],
       [{ position: "DH", count: 1 }]
     );
-    const vTw = out.find((x) => x._id === "tw")!.value;
+    const tw = out.find((x) => x._id === "tw")!;
+    const vTw = tw.value;
     const vDh = out.find((x) => x._id === "dh")!.value;
+    const meta = tw.projection?.__valuation_meta__ as {
+      two_way_role_selected?: string;
+      hitter_baseline_candidate?: number;
+      pitcher_baseline_candidate?: number;
+    };
+    expect(meta.two_way_role_selected).toBe("pitcher");
+    expect(meta.hitter_baseline_candidate).toBeDefined();
+    expect(meta.pitcher_baseline_candidate).toBeDefined();
+    expect(meta.pitcher_baseline_candidate!).toBeGreaterThan(meta.hitter_baseline_candidate!);
     expect(vTw).not.toBeCloseTo(vDh, 0);
     expect(vTw).toBeGreaterThan(vDh);
+  });
+
+  it("two-way roto baseline uses max(hitter, pitcher) when batting projections dominate", () => {
+    const twoWay: LeanPlayer = {
+      _id: "tw-roto",
+      mlbId: 660271,
+      name: "TwoWayEliteBat",
+      team: "LAA",
+      position: "DH",
+      positions: ["SP", "DH"],
+      catalog_rank: 1,
+      catalog_tier: 1,
+      value: 40,
+      projection: {
+        batting: { hr: 48, rbi: 115, runs: 110, sb: 22, avg: 0.31 },
+        pitching: { strikeouts: 110, wins: 7, saves: 0, era: 4.35, whip: 1.28 },
+      },
+    };
+    const cats = [
+      { name: "HR", type: "batting" as const },
+      { name: "RBI", type: "batting" as const },
+      { name: "R", type: "batting" as const },
+      { name: "SB", type: "batting" as const },
+      { name: "AVG", type: "batting" as const },
+      { name: "W", type: "pitching" as const },
+      { name: "SV", type: "pitching" as const },
+      { name: "ERA", type: "pitching" as const },
+      { name: "WHIP", type: "pitching" as const },
+      { name: "K", type: "pitching" as const },
+    ];
+    const out = scoringAwareBaselinePlayers(
+      [twoWay],
+      "5x5",
+      cats,
+      [
+        { position: "DH", count: 1 },
+        { position: "SP", count: 5 },
+        { position: "P", count: 5 },
+      ]
+    );
+    const row = out[0]!;
+    const meta = row.projection?.__valuation_meta__ as {
+      two_way_role_selected?: string;
+      hitter_baseline_candidate?: number;
+      pitcher_baseline_candidate?: number;
+    };
+    expect(meta.two_way_role_selected).toBe("hitter");
+    expect(meta.hitter_baseline_candidate!).toBeGreaterThan(meta.pitcher_baseline_candidate!);
+    expect(row.value).toBe(meta.hitter_baseline_candidate);
   });
 
   it("lifts very low catalog value when ADP and tier show real draft interest", () => {
