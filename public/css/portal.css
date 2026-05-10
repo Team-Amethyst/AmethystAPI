@@ -3679,6 +3679,43 @@
     .section.page-hero {
       margin-bottom: var(--space-5);
     }
+    /* API Reference tab — in-page nav + hash targets clear sticky header */
+    #tab-reference [id] {
+      scroll-margin-top: calc(var(--header-height) + 12px);
+    }
+    #tab-reference .reference-toc {
+      margin-bottom: var(--space-5);
+      padding: var(--space-4);
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+    }
+    #tab-reference .reference-toc-label {
+      display: block;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--muted);
+      margin-bottom: var(--space-3);
+    }
+    #tab-reference .reference-toc ul {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-2) var(--space-5);
+    }
+    #tab-reference .reference-toc a {
+      font-size: 13px;
+      color: var(--accent-hover);
+      text-decoration: none;
+    }
+    #tab-reference .reference-toc a:hover {
+      text-decoration: underline;
+      color: var(--accent);
+    }
     .page-hero .section-desc {
       margin-bottom: 0;
     }

@@ -5,6 +5,22 @@ function attachReferenceDelegates(root: HTMLElement) {
   const onClick = (e: MouseEvent) => {
     const t = e.target as HTMLElement | null;
     if (!t) return;
+    const tocAnchor = t.closest(".reference-toc a[href^='#']") as HTMLAnchorElement | null;
+    if (tocAnchor) {
+      const href = tocAnchor.getAttribute("href");
+      if (href && href.startsWith("#") && href.length > 1 && !href.startsWith("#/")) {
+        const id = href.slice(1);
+        const el = document.getElementById(id);
+        if (el) {
+          e.preventDefault();
+          const reduce =
+            typeof window.matchMedia === "function" &&
+            window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+          el.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "start" });
+          return;
+        }
+      }
+    }
     const header = t.closest(".endpoint-header");
     if (header) {
       const ep = header.closest(".endpoint");

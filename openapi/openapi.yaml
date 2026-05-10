@@ -53,13 +53,20 @@ info:
     **Developer portal — key minting:** `GET /api/keys/status` and `POST /api/keys/issue` mint
     MongoDB `apikeys` documents by default; set `KEY_ISSUANCE_ENABLED=0|false|off` to disable.
     Optional `KEY_ISSUANCE_SECRET` requires header `X-Key-Issuance-Token`.
+
+    **Base URL:** Local development uses `http://localhost:3002` (see README `pnpm dev`).
+    Production Draft BFF env **`AMETHYST_API_URL`** must point at this Engine’s public origin
+    (e.g. App Runner). The browser Draft app never calls the Engine directly with the API key.
   version: 1.0.0
 
 servers:
+  - url: http://localhost:3002
+    description: Local Engine (`pnpm dev`; default PORT per README)
   - url: https://{host}
     variables:
       host:
-        default: localhost:3001
+        default: q6dbuvmuvh.us-east-1.awsapprunner.com
+        description: Deployed Engine host (replace with yours)
 
 components:
   securitySchemes:

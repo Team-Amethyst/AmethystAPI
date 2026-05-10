@@ -261,6 +261,8 @@ Usage is tracked per key (`usageCount`) for royalty reporting.
 
 ## Local Development
 
+The embedded **API Reference** tab in the developer portal (`pnpm dev:portal`, then open the Reference tab) summarizes authentication, Draft-vs-Engine wiring, local ports, and links here for the full checklist.
+
 **Prerequisites:** Node 20, pnpm 9, MongoDB Atlas access, Redis (optional)
 
 ```bash

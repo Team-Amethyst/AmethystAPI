@@ -1,7 +1,5 @@
-    <div class="portal-shell">
-
     <!-- Overview -->
-    <div class="section page-hero">
+    <div class="section page-hero" id="ref-overview">
       <h2>Fantasy Baseball Analytical Engine</h2>
       <p class="section-desc">
         Stateless SDaaS API that receives draft state and league settings,
@@ -10,13 +8,26 @@
       </p>
     </div>
 
+    <nav class="reference-toc" aria-label="On this page">
+      <span class="reference-toc-label">On this page</span>
+      <ul>
+        <li><a href="#ref-auth">Authentication</a></li>
+        <li><a href="#ref-draft-engine">Draft app &amp; Engine</a></li>
+        <li><a href="#ref-local-dev">Local development</a></li>
+        <li><a href="#ref-endpoints">Endpoints</a></li>
+        <li><a href="#ref-player-id">Player IDs</a></li>
+        <li><a href="#ref-errors">Errors</a></li>
+        <li><a href="#ref-caching">Caching</a></li>
+      </ul>
+    </nav>
+
     <!-- Authentication -->
-    <div class="section">
+    <div class="section" id="ref-auth">
       <h3>Authentication</h3>
       <p class="section-desc">All analytical endpoints require an <code style="color:var(--orange);background:rgba(251,146,60,0.1);padding:1px 6px;border-radius:3px;font-size:12px;">x-api-key</code> header. Usage is tracked per-key.</p>
       <div class="auth-example code-block">
         <button class="copy-btn">Copy</button>
-        <pre><span class="t-cmt"># curl</span>
+        <pre><span class="t-cmt"># curl — local Engine: replace host with http://localhost:3002</span>
 <span class="t-method">curl</span> -X POST https://q6dbuvmuvh.us-east-1.awsapprunner.com/valuation/calculate \
   -H <span class="t-str">"Content-Type: application/json"</span> \
   -H <span class="t-str">"x-api-key: <span style="opacity:.5">your-api-key</span>"</span> \
@@ -31,8 +42,44 @@
       </div>
     </div>
 
+    <!-- Draft app vs Engine -->
+    <div class="section" id="ref-draft-engine">
+      <h3>Draft application &amp; Engine</h3>
+      <p class="section-desc">
+        The <strong>draft room UI</strong> (<a href="https://github.com/Team-Amethyst/AmethystDraft" target="_blank" rel="noopener noreferrer">AmethystDraft</a>) runs in the browser.
+        It calls <strong>your backend</strong>; only that server should call this Engine with <code>x-api-key</code> — never ship the key to client-side JavaScript.
+        Configure your Draft-side server env (for example <code>AMETHYST_API_URL</code>) to this Engine&apos;s origin: production App Runner in deploys, or <code>http://localhost:3002</code> when developing against a local Engine.
+      </p>
+      <p class="section-desc" style="margin-top:8px">
+        Wiring detail: <a href="https://github.com/Team-Amethyst/AmethystAPI/blob/main/docs/amethystdraft-engine-integration.md" target="_blank" rel="noopener noreferrer">Draft ↔ Engine integration</a>
+        and <a href="https://github.com/Team-Amethyst/AmethystAPI/blob/main/ENGINE_AGENT_BRIEF.md" target="_blank" rel="noopener noreferrer">ENGINE_AGENT_BRIEF</a>
+        (same repo as this Engine).
+      </p>
+    </div>
+
+    <!-- Local development -->
+    <div class="section" id="ref-local-dev">
+      <h3>Local development</h3>
+      <p class="section-desc">
+        From the Engine repo root: <code>pnpm install</code>, copy <code>.env.example</code> to <code>.env</code> (set <code>MONGO_URI</code>), then <code>pnpm dev</code> — the API listens on <strong>port 3002</strong> by default.
+        To run this developer portal against that Engine: <code>pnpm dev:portal</code> (Vite on <strong>5173</strong>; <code>/api</code>, <code>/valuation</code>, and related routes proxy to <code>http://localhost:3002</code>).
+      </p>
+      <div class="auth-example code-block">
+        <button class="copy-btn">Copy</button>
+        <pre><span class="t-cmt"># Terminal 1 — Engine API</span>
+pnpm dev
+
+<span class="t-cmt"># Terminal 2 — portal (optional)</span>
+pnpm dev:portal</pre>
+      </div>
+      <p class="section-desc" style="margin-top:8px">
+        Full setup (catalog sync, curl smoke test, env table): README <strong>Local Development</strong>.
+        Machine-readable contract: <a href="https://github.com/Team-Amethyst/AmethystAPI/blob/main/openapi/openapi.yaml" target="_blank" rel="noopener noreferrer"><code>openapi/openapi.yaml</code></a>.
+      </p>
+    </div>
+
     <!-- Endpoints -->
-    <div class="section">
+    <div class="section" id="ref-endpoints">
       <h3>Endpoints</h3>
 
       <!-- /valuation/calculate -->
@@ -322,7 +369,7 @@ GET /signals/news?days=<span class="t-num">3</span>&signal_type=<span class="t-s
     </div>
 
     <!-- Player ID contract -->
-    <div class="section">
+    <div class="section" id="ref-player-id">
       <h3>Player ID Contract</h3>
       <p class="section-desc">
         All <code style="color:var(--orange);background:rgba(251,146,60,0.1);padding:1px 6px;border-radius:3px;font-size:12px;">player_id</code> fields are the numeric MLB Stats API player ID cast to a string.
@@ -337,7 +384,7 @@ player_id: player._id          <span class="t-cmt">// MongoDB ObjectId — not r
     </div>
 
     <!-- Error codes -->
-    <div class="section">
+    <div class="section" id="ref-errors">
       <h3>Error Responses</h3>
       <div class="card">
         <table>
@@ -347,7 +394,8 @@ player_id: player._id          <span class="t-cmt">// MongoDB ObjectId — not r
           <tbody>
             <tr><td><span style="color:var(--orange)">401</span></td><td>Missing or invalid x-api-key</td><td>Check header is present and key matches issued value</td></tr>
             <tr><td><span style="color:var(--red)">403</span></td><td>API key deactivated</td><td>Contact Amethyst Industries to reactivate</td></tr>
-            <tr><td><span style="color:var(--orange)">400</span></td><td>Validation error</td><td>Read <code style="font-size:11px">error</code> field — missing required field</td></tr>
+            <tr><td><span style="color:var(--orange)">400</span></td><td>Request validation failed</td><td>Body is <code style="font-size:11px">{ "errors": [{ "field", "message" }] }</code> — fix the named fields</td></tr>
+            <tr><td><span style="color:var(--orange)">422</span></td><td>Output sanity check failed (e.g. valuation)</td><td>Same <code style="font-size:11px">errors</code> shape; <strong>no</strong> price payload — retry or simplify request</td></tr>
             <tr><td><span style="color:var(--red)">5xx</span></td><td>Server error</td><td>Degrade gracefully — draft should continue</td></tr>
           </tbody>
         </table>
@@ -355,7 +403,7 @@ player_id: player._id          <span class="t-cmt">// MongoDB ObjectId — not r
     </div>
 
     <!-- Caching -->
-    <div class="section">
+    <div class="section" id="ref-caching">
       <h3>Caching</h3>
       <div class="card">
         <table>
@@ -363,6 +411,7 @@ player_id: player._id          <span class="t-cmt">// MongoDB ObjectId — not r
           <tbody>
             <tr><td>/valuation/calculate</td><td>No cache</td><td>Always recomputed</td></tr>
             <tr><td>/valuation/player</td><td>No cache</td><td>Always recomputed</td></tr>
+            <tr><td>/catalog/batch-values</td><td>120s</td><td>Hash of request body (when Redis up)</td></tr>
             <tr><td>/analysis/scarcity</td><td>120s</td><td>Hash of request body</td></tr>
             <tr><td>/simulation/mock-pick</td><td>No cache</td><td>Stateful per call</td></tr>
             <tr><td>/signals/news</td><td>900s</td><td>Date range + signal type</td></tr>
