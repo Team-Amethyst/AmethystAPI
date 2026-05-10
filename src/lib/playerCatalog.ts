@@ -1,4 +1,5 @@
 import type { LeanPlayer } from "../types/brain";
+import type { CatalogKind } from "./catalogRowClassification";
 
 const DEFAULT_NUMERIC = {
   value: 0,
@@ -31,6 +32,11 @@ function coerceInjurySeverity(raw: unknown): number | undefined {
   if (!Number.isFinite(n)) return undefined;
   const s = Math.min(3, Math.max(0, Math.trunc(n)));
   return s > 0 ? s : undefined;
+}
+
+function coerceCatalogKind(raw: unknown): CatalogKind | undefined {
+  if (raw === "mlb" || raw === "custom") return raw;
+  return undefined;
 }
 
 function coerceMlbId(raw: unknown): number | undefined {
@@ -101,6 +107,7 @@ export function normalizeCatalogPlayers(
     }
 
     const mlbId = coerceMlbId(d.mlbId);
+    const catalogKind = coerceCatalogKind(d.catalogKind);
     const positions = coercePositions(d.positions);
     const age = coercePositiveInt(d.age);
     const depthChartPosition = coercePositiveInt(
@@ -113,6 +120,7 @@ export function normalizeCatalogPlayers(
     rows.push({
       _id: d._id,
       mlbId,
+      ...(catalogKind ? { catalogKind } : {}),
       name: typeof d.name === "string" ? d.name : "Unknown",
       team: typeof d.team === "string" ? d.team : "",
       position: typeof d.position === "string" ? d.position : "",

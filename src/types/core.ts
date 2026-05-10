@@ -41,6 +41,8 @@ export type ScoringFormat = "5x5" | "6x6" | "points";
 export interface LeanPlayer {
   _id: unknown;
   mlbId?: number;
+  /** MLB sync rows vs explicitly tagged manual/custom catalog entries (may omit mlbId). */
+  catalogKind?: "mlb" | "custom";
   name: string;
   team: string;
   position: string;

@@ -1,5 +1,6 @@
 import type { Logger } from "pino";
 import Player from "../models/Player";
+import { isValuationEligibleCatalogRow } from "./catalogRowClassification";
 import { normalizeCatalogPlayers } from "./playerCatalog";
 import { PLAYER_CATALOG_LEAN_SELECT } from "./playerCatalogProjection";
 import { hydratePlaceholderCatalogTeamsFromMlb } from "./catalogTeamHydration";
@@ -31,14 +32,23 @@ export async function loadMongoCatalogForEngine(
   const normalized = normalizeCatalogPlayers(rawDocs, (msg) =>
     log?.warn({ msg }, "catalog field coerced")
   );
+  const preCount = normalized.length;
+  const valuationRows = normalized.filter((p) => isValuationEligibleCatalogRow(p));
+  const excluded = preCount - valuationRows.length;
+  if (excluded > 0) {
+    log?.warn(
+      { excluded_invalid_catalog_rows: excluded },
+      "catalog rows excluded from valuation (no mlbId and not catalogKind=custom)"
+    );
+  }
   if (
     options?.skipMlbHydration ||
     process.env.AMETHYST_SKIP_MLB_TEAM_HYDRATE === "1"
   ) {
-    return normalized;
+    return valuationRows;
   }
   const { players } = await hydratePlaceholderCatalogTeamsFromMlb(
-    normalized,
+    valuationRows,
     {
       log: (m) => log?.info({ msg: m }, "catalog team hydrate"),
     }

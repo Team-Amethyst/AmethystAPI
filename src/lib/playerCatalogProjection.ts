@@ -4,4 +4,4 @@
  * `_id` remains included by Mongoose unless explicitly excluded.
  */
 export const PLAYER_CATALOG_LEAN_SELECT =
-  "mlbId name team position positions age depthChartPosition injurySeverity adp tier value outlook projection" as const;
+  "mlbId catalogKind name team position positions age depthChartPosition injurySeverity adp tier value outlook projection" as const;

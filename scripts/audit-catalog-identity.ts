@@ -80,7 +80,7 @@ async function main(): Promise<void> {
   let rows: CatalogIdentityRow[];
   try {
     const docs = await Player.find({})
-      .select("mlbId name team position positions adp tier value projection")
+      .select("mlbId catalogKind name team position positions adp tier value projection")
       .lean();
     rows = (docs as Record<string, unknown>[]).map(toRow);
   } finally {

@@ -1,21 +1,19 @@
 /**
  * Sync script — fetches live player data from the MLB Stats API and upserts
- * into the `players` collection so the Amethyst Engine and Draftroom share
- * the same canonical player IDs (MLB numeric IDs).
+ * into the `players` collection by canonical **mlbId** only (`catalogKind: "mlb"`).
  *
- * Persists merged hitting + pitching splits per player (so two-way players
- * keep both `stats` / `projection` blobs), `positions[]` from split + bio
- * (including `TWP` → DH/SP). **`stats`** = last completed MLB season only.
- * **`projection`** = weighted 5:3:2 blend over the last three completed seasons
- * (see `src/lib/mlbProjectionBlend.ts`). `catalogMeta` records which seasons were used.
- *
- * Run with:  pnpm sync-players
- *
- * Safe to re-run — uses upsert on mlbId so no duplicates are created.
+ * Run:
+ *   pnpm sync-players
+ *   pnpm sync-players -- --dry-run
+ *   pnpm sync-players -- --dry-run --rebuild-catalog
+ *   pnpm sync-players -- --rebuild-catalog --confirm-destructive   # dedupe + remove invalid
+ *   pnpm sync-players -- --skip-sync --rebuild-catalog --dry-run
  */
 
 import mongoose from "mongoose";
 import dotenv from "dotenv";
+import { mkdirSync, writeFileSync } from "fs";
+import path from "path";
 import {
   assignTier,
   calcAge,
@@ -25,18 +23,29 @@ import {
 import { projectBatting, projectPitching } from "../src/lib/mlbProjectionBlend";
 import { resolveMlbTeamAbbrev } from "../src/lib/mlbTeamResolve";
 import Player from "../src/models/Player";
+import { classifyCatalogDoc } from "../src/lib/catalogRowClassification";
+import type { CatalogIdentityRow } from "../src/lib/catalogIdentityHelpers";
+import { findDuplicateMlbIdGroups } from "../src/lib/catalogIdentityHelpers";
+import { loadMongoCatalogForEngine } from "../src/lib/mongoCatalogPipeline";
+import { collectProjectionSanityIssues } from "../src/lib/projectionSanity";
+import {
+  runSyncQualityGates,
+  sameNameDistinctMlbIdWarning,
+} from "../src/lib/syncQualityGates";
+import { getPlayerId } from "../src/lib/playerId";
+import { PLAYER_CATALOG_LEAN_SELECT } from "../src/lib/playerCatalogProjection";
 
 dotenv.config();
+
+const ROOT = path.resolve(__dirname, "..");
+const MLB_API = "https://statsapi.mlb.com/api/v1";
+const LAST_COMPLETED_SEASON = new Date().getFullYear() - 1;
 
 const MONGO_URI = process.env.MONGO_URI;
 if (!MONGO_URI) {
   console.error("MONGO_URI not set in .env");
   process.exit(1);
 }
-
-const MLB_API = "https://statsapi.mlb.com/api/v1";
-/** Last completed calendar season (aligns with monolith / Draft Kit “last year” stat basis). */
-const LAST_COMPLETED_SEASON = new Date().getFullYear() - 1;
 
 interface MlbPlayer {
   id: number;
@@ -53,6 +62,7 @@ type SplitAgg = {
 
 type PlayerSyncDoc = {
   mlbId: number;
+  catalogKind: "mlb";
   name: string;
   team: string;
   position: string;
@@ -70,6 +80,27 @@ type PlayerSyncDoc = {
     projection_blend_seasons: number[];
   };
 };
+
+type SyncCli = {
+  dryRun: boolean;
+  rebuildCatalog: boolean;
+  confirmDestructive: boolean;
+  skipSync: boolean;
+  failOnGate: boolean;
+  archiveInvalid: boolean;
+};
+
+function parseArgs(argv: string[]): SyncCli {
+  const a = new Set(argv.filter((x) => x !== "--"));
+  return {
+    dryRun: a.has("--dry-run") || a.has("--dryRun"),
+    rebuildCatalog: a.has("--rebuild-catalog") || a.has("--rebuildCatalog"),
+    confirmDestructive: a.has("--confirm-destructive") || a.has("--confirmDestructive"),
+    skipSync: a.has("--skip-sync") || a.has("--skipSync"),
+    failOnGate: !a.has("--no-fail-gates"),
+    archiveInvalid: a.has("--archive-invalid"),
+  };
+}
 
 function addMlbPositionAbbrev(set: Set<string>, abbrev?: string): void {
   if (!abbrev) return;
@@ -216,6 +247,7 @@ function buildPlayerDocFromAgg(
 
   const doc: PlayerSyncDoc = {
     mlbId,
+    catalogKind: "mlb",
     name: agg.bat?.player.fullName ?? agg.pit?.player.fullName ?? bio?.fullName ?? "Unknown",
     team,
     position,
@@ -375,11 +407,46 @@ function assignAdpByValue(players: PlayerSyncDoc[]): PlayerSyncDoc[] {
   return sorted;
 }
 
-async function sync() {
-  await mongoose.connect(MONGO_URI as string);
+function docToIdentityRow(doc: Record<string, unknown>): CatalogIdentityRow {
+  return {
+    _id: String(doc._id),
+    mlbId: doc.mlbId as number | null | undefined,
+    name: String(doc.name ?? ""),
+    team: String(doc.team ?? ""),
+    position: String(doc.position ?? ""),
+    positions: Array.isArray(doc.positions) ? (doc.positions as string[]) : undefined,
+    adp: typeof doc.adp === "number" ? doc.adp : Number(doc.adp) || 0,
+    tier: typeof doc.tier === "number" ? doc.tier : Number(doc.tier) || 0,
+    value: typeof doc.value === "number" ? doc.value : Number(doc.value) || 0,
+    projection: doc.projection,
+  };
+}
+
+async function ensurePartialUniqueMlbIndex(): Promise<void> {
+  try {
+    await Player.collection.createIndex(
+      { mlbId: 1 },
+      {
+        unique: true,
+        name: "mlbId_1_partial_unique",
+        partialFilterExpression: { mlbId: { $type: "number", $gt: 0 } },
+      }
+    );
+    console.log("[MongoDB] Ensured partial unique index on mlbId");
+  } catch (e) {
+    console.warn(
+      "[MongoDB] Could not ensure partial unique index on mlbId (duplicate mlbIds or permissions?):",
+      (e as Error).message
+    );
+  }
+}
+
+async function fetchMlbPlayerDocs(): Promise<PlayerSyncDoc[]> {
   const last = LAST_COMPLETED_SEASON;
   const seasons = [last, last - 1, last - 2] as const;
-  console.log(`[MongoDB] Connected — syncing stats ${last}, projection blend ${seasons.join("/")}`);
+  console.log(
+    `[MongoDB] Syncing stats ${last}, projection blend ${seasons.join("/")}`
+  );
 
   const perYear = await Promise.all(seasons.map((se) => fetchSeasonSplitsForYear(se)));
   const yearBat = new Map<number, Map<number, Record<string, string | number>>>();
@@ -398,10 +465,8 @@ async function sync() {
   const teamIdToAbbr = await fetchTeamAbbrevMap();
   console.log(`[MLB API] Loaded ${teamIdToAbbr.size} team abbreviations`);
 
-  /** Merge hitting + pitching splits per player so two-way rows keep both stat blobs and eligibilities. */
   const aggMap = aggregatePositiveSplits(batSplits, pitSplits);
 
-  // Fetch bios for every aggregated player (chunked — URL length limits).
   const allAggIds = [...aggMap.keys()];
   const bioMap = new Map<number, MlbPlayer>();
   const BIO_CHUNK = 200;
@@ -411,35 +476,286 @@ async function sync() {
     for (const [k, v] of part) bioMap.set(k, v);
   }
   console.log(`[MLB API] Fetched bio for ${bioMap.size} / ${allAggIds.length} aggregated players`);
+
   const playerMap = new Map<number, PlayerSyncDoc>();
+  const rejectedProjectionQuarantine: { mlbId: number; reason: string }[] = [];
   for (const [mlbId, agg] of aggMap) {
     const bio = bioMap.get(mlbId);
-    const doc = buildPlayerDocFromAgg(mlbId, agg, bio, teamIdToAbbr, yearBat, yearPit, last);
-    if (doc) playerMap.set(mlbId, doc);
+    const doc = buildPlayerDocFromAgg(
+      mlbId,
+      agg,
+      bio,
+      teamIdToAbbr,
+      yearBat,
+      yearPit,
+      last
+    );
+    if (!doc) continue;
+    if (typeof mlbId !== "number" || mlbId <= 0) {
+      rejectedProjectionQuarantine.push({ mlbId, reason: "invalid_mlb_id_key" });
+      continue;
+    }
+    playerMap.set(mlbId, doc);
   }
 
-  // Assign ADP by value rank
-  const players = assignAdpByValue([...playerMap.values()]);
+  if (rejectedProjectionQuarantine.length > 0) {
+    const qPath = path.join(ROOT, "tmp", "sync-projection-quarantine.json");
+    mkdirSync(path.dirname(qPath), { recursive: true });
+    writeFileSync(qPath, JSON.stringify(rejectedProjectionQuarantine, null, 2));
+    console.warn(`[Sync] Wrote projection quarantine ${qPath} (${rejectedProjectionQuarantine.length})`);
+  }
 
-  // Upsert all players — safe to re-run
-  const ops = players.map((p) => ({
-    updateOne: {
-      filter: { mlbId: p.mlbId },
-      update: { $set: p },
-      upsert: true,
-    },
-  }));
-
-  const result = await Player.bulkWrite(ops);
-  console.log(
-    `[Sync] Done — ${result.upsertedCount} inserted, ${result.modifiedCount} updated, ${players.length} total`
-  );
-
-  await mongoose.disconnect();
-  console.log("[MongoDB] Disconnected");
+  return assignAdpByValue([...playerMap.values()]);
 }
 
-sync().catch((err) => {
+async function runRebuildCatalog(cli: SyncCli): Promise<{
+  before: Record<string, number>;
+  after: Record<string, number>;
+}> {
+  const raw = await Player.find({})
+    .select(`${PLAYER_CATALOG_LEAN_SELECT} catalogMeta`)
+    .lean();
+  const docs = raw as Record<string, unknown>[];
+
+  const beforeCounts = countCatalogClasses(docs);
+
+  const dupGroups = findDuplicateMlbIdGroups(docs.map(docToIdentityRow));
+  const invalidDeletes: mongoose.Types.ObjectId[] = [];
+  const dupDeletes: mongoose.Types.ObjectId[] = [];
+
+  for (const [, arr] of dupGroups) {
+    const sorted = [...arr].sort((a, b) => (b.value ?? 0) - (a.value ?? 0));
+    const keeper = sorted[0]!;
+    for (let i = 1; i < sorted.length; i++) {
+      dupDeletes.push(new mongoose.Types.ObjectId(sorted[i]!._id));
+    }
+    console.log(
+      `[Rebuild] duplicate mlbId ${keeper.mlbId}: keep ${keeper._id}, remove ${sorted.length - 1} extras`
+    );
+  }
+
+  for (const d of docs) {
+    const cls = classifyCatalogDoc(d);
+    if (cls === "invalid_catalog_row") {
+      invalidDeletes.push(new mongoose.Types.ObjectId(String(d._id)));
+    }
+  }
+
+  const rebuildReport = {
+    generatedAt: new Date().toISOString(),
+    dryRun: cli.dryRun,
+    before_catalog_class_counts: beforeCounts,
+    duplicate_mlbId_groups: dupGroups.size,
+    mongo_ids_to_delete_duplicate: dupDeletes.map((id) => id.toHexString()),
+    mongo_ids_to_delete_invalid: invalidDeletes.map((id) => id.toHexString()),
+    invalid_rows_sample: docs
+      .filter((d) => classifyCatalogDoc(d) === "invalid_catalog_row")
+      .slice(0, 40)
+      .map((d) => ({
+        _id: String(d._id),
+        name: d.name,
+        team: d.team,
+        mlbId: d.mlbId ?? null,
+        catalogKind: d.catalogKind ?? null,
+      })),
+  };
+
+  const reportPath = path.join(ROOT, "tmp", "rebuild-catalog-report.json");
+  mkdirSync(path.dirname(reportPath), { recursive: true });
+  writeFileSync(reportPath, JSON.stringify(rebuildReport, null, 2));
+  console.log(`[Rebuild] Wrote ${reportPath}`);
+
+  if (!cli.dryRun && !cli.confirmDestructive) {
+    console.error(
+      "[Rebuild] Refusing destructive rebuild without --confirm-destructive (see tmp/rebuild-catalog-report.json)"
+    );
+    process.exit(2);
+  }
+
+  if (!cli.dryRun && cli.confirmDestructive) {
+    const archive = mongoose.connection.collection("players_catalog_archive");
+    const toArchive = [...dupDeletes, ...invalidDeletes];
+    if (cli.archiveInvalid && toArchive.length > 0) {
+      const full = await Player.find({ _id: { $in: toArchive } }).lean();
+      const stamped = full.map((doc) => ({
+        ...doc,
+        archivedAt: new Date(),
+        archiveReason: "rebuild_catalog_dedupe_or_invalid",
+      }));
+      if (stamped.length > 0) {
+        await archive.insertMany(stamped as Record<string, unknown>[]);
+      }
+      console.log(`[Rebuild] Archived ${stamped.length} docs to players_catalog_archive`);
+    }
+    if (dupDeletes.length > 0) {
+      const r = await Player.deleteMany({ _id: { $in: dupDeletes } });
+      console.log(`[Rebuild] Deleted ${r.deletedCount} duplicate mlbId rows`);
+    }
+    if (invalidDeletes.length > 0) {
+      const r = await Player.deleteMany({ _id: { $in: invalidDeletes } });
+      console.log(`[Rebuild] Deleted ${r.deletedCount} invalid non-custom rows`);
+    }
+  }
+
+  let afterCounts = beforeCounts;
+  if (cli.dryRun) {
+    afterCounts = beforeCounts;
+  } else {
+    const rawAfter = await Player.find({}).select(PLAYER_CATALOG_LEAN_SELECT).lean();
+    afterCounts = countCatalogClasses(rawAfter as Record<string, unknown>[]);
+  }
+
+  return { before: beforeCounts, after: afterCounts };
+}
+
+function countCatalogClasses(docs: Record<string, unknown>[]): Record<string, number> {
+  const out: Record<string, number> = {
+    canonical_mlb_player: 0,
+    custom_player: 0,
+    invalid_catalog_row: 0,
+  };
+  for (const d of docs) {
+    const c = classifyCatalogDoc(d);
+    out[c]++;
+  }
+  return out;
+}
+
+async function runPostSyncGates(cli: SyncCli): Promise<void> {
+  const rawDocs = await Player.find({}).select(PLAYER_CATALOG_LEAN_SELECT).lean();
+  const allRows = (rawDocs as Record<string, unknown>[]).map(docToIdentityRow);
+
+  const valuationPool = await loadMongoCatalogForEngine(undefined, {
+    skipMlbHydration: process.env.AMETHYST_SKIP_MLB_TEAM_HYDRATE === "1",
+  });
+
+  const gateResult = runSyncQualityGates(allRows, valuationPool, { topTierProjectionCutoff: 3 });
+  gateResult.warnings.push(...sameNameDistinctMlbIdWarning(allRows));
+  const projIssues = collectProjectionSanityIssues(valuationPool, getPlayerId);
+  for (const issue of projIssues) {
+    gateResult.warnings.push(
+      `projection sanity [${issue.reason}] ${issue.name} (${issue.player_id})`
+    );
+  }
+
+  const sanityPath = path.join(ROOT, "tmp", "sync-projection-sanity.json");
+  mkdirSync(path.dirname(sanityPath), { recursive: true });
+  writeFileSync(sanityPath, JSON.stringify(projIssues, null, 2));
+
+  const gatePath = path.join(ROOT, "tmp", "sync-quality-gates.json");
+  writeFileSync(gatePath, JSON.stringify(gateResult, null, 2));
+
+  console.log(
+    JSON.stringify(
+      {
+        sync_quality_gates: {
+          errors: gateResult.errors.length,
+          warnings: gateResult.warnings.length,
+        },
+        wrote: gatePath,
+      },
+      null,
+      2
+    )
+  );
+
+  if (gateResult.errors.length > 0) {
+    console.error("[Sync][gates] ERRORS:\n", gateResult.errors.join("\n"));
+  }
+  if (gateResult.warnings.length > 0) {
+    console.warn("[Sync][gates] WARNINGS:\n", gateResult.warnings.slice(0, 40).join("\n"));
+    if (gateResult.warnings.length > 40) {
+      console.warn(`... and ${gateResult.warnings.length - 40} more`);
+    }
+  }
+
+  if (cli.failOnGate && gateResult.errors.length > 0) {
+    throw new Error(`Sync quality gates failed (${gateResult.errors.length} errors)`);
+  }
+}
+
+async function main(): Promise<void> {
+  const cli = parseArgs(process.argv.slice(2));
+  await mongoose.connect(MONGO_URI as string);
+  console.log("[MongoDB] Connected");
+
+  try {
+    await ensurePartialUniqueMlbIndex();
+
+    let rebuildSummary: { before: Record<string, number>; after: Record<string, number> } | null =
+      null;
+    if (cli.rebuildCatalog) {
+      rebuildSummary = await runRebuildCatalog(cli);
+      console.log(
+        JSON.stringify(
+          {
+            rebuild_catalog_class_counts: {
+              before: rebuildSummary.before,
+              after: rebuildSummary.after,
+            },
+          },
+          null,
+          2
+        )
+      );
+    }
+
+    if (!cli.skipSync) {
+      const players = await fetchMlbPlayerDocs();
+
+      const existing = await Player.find({ mlbId: { $gt: 0 } })
+        .select("mlbId")
+        .lean();
+      const existingIds = new Set(
+        existing.map((e) => e.mlbId as number).filter((n) => typeof n === "number")
+      );
+
+      let wouldInsert = 0;
+      let wouldUpdate = 0;
+      for (const p of players) {
+        if (existingIds.has(p.mlbId)) wouldUpdate++;
+        else wouldInsert++;
+      }
+
+      const ops = players.map((p) => ({
+        updateOne: {
+          filter: { mlbId: p.mlbId },
+          update: { $set: p },
+          upsert: true,
+        },
+      }));
+
+      if (cli.dryRun) {
+        console.log(
+          JSON.stringify(
+            {
+              dry_run: true,
+              would_upsert_total: players.length,
+              would_insert_approx: wouldInsert,
+              would_update_approx: wouldUpdate,
+              projection_resolution_failures: 0,
+              note: "Approximate insert vs update based on existing mlbIds in Mongo.",
+            },
+            null,
+            2
+          )
+        );
+      } else {
+        const result = await Player.bulkWrite(ops);
+        console.log(
+          `[Sync] Done — ${result.upsertedCount} inserted, ${result.modifiedCount} modified, ${players.length} upserts`
+        );
+      }
+    }
+
+    await runPostSyncGates(cli);
+  } finally {
+    await mongoose.disconnect();
+    console.log("[MongoDB] Disconnected");
+  }
+}
+
+main().catch((err) => {
   console.error("[Sync] Error:", err);
   process.exit(1);
 });
