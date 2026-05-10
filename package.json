@@ -24,6 +24,7 @@
     "audit:valuation-response": "ts-node --project tsconfig.scripts.json scripts/valuation-response-audit.ts",
     "calibrate-valuations": "ts-node --project tsconfig.scripts.json scripts/calibrate-valuations.ts",
     "valuation-walkthrough": "ts-node --project tsconfig.scripts.json scripts/real-world-valuation-walkthrough.ts",
+    "audit:research-edge": "ts-node --project tsconfig.scripts.json scripts/audit-research-edge-vs-max.ts",
     "replay-four-values": "ts-node --project tsconfig.scripts.json scripts/replay-four-values-eval.ts",
     "replay-per-team-pick": "ts-node --project tsconfig.scripts.json scripts/replay-per-team-pick.ts",
     "replay-per-pick-draft": "ts-node --project tsconfig.scripts.json scripts/replay-per-pick-draft.ts",
