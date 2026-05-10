@@ -1,4 +1,5 @@
 import type { LeanPlayer } from "../types/brain";
+import { normalizeScoringCategoryName } from "../lib/scoringCategorySupport";
 import {
   isHitter,
   playerTokensFromLean,
@@ -53,22 +54,28 @@ export function getProjectionSection(
 }
 
 export function categoryWeight(name: string): number {
-  const key = name.toUpperCase();
-  if (key === "AVG" || key === "OBP" || key === "ERA" || key === "WHIP") return 14;
-  if (key === "HR" || key === "RBI" || key === "R" || key === "K") return 1;
-  if (key === "SB" || key === "SV" || key === "W") return 1.6;
+  const key = normalizeScoringCategoryName(name);
+  if (key === "AVG" || key === "OBP" || key === "SLG" || key === "OPS" || key === "ERA" || key === "WHIP")
+    return 14;
+  if (key === "HR" || key === "RBI" || key === "R" || key === "K" || key === "TB") return 1;
+  if (key === "K/9") return 1;
+  if (key === "SB" || key === "SV" || key === "W" || key === "HLD" || key === "SV+HLD") return 1.6;
   if (key === "QS") return 1.2;
   return 0.8;
 }
 
 export function statFieldForCategory(name: string): string | null {
-  const key = name.toUpperCase();
+  const key = normalizeScoringCategoryName(name);
   if (key === "HR") return "hr";
   if (key === "RBI") return "rbi";
   if (key === "R") return "runs";
   if (key === "SB") return "sb";
   if (key === "AVG") return "avg";
   if (key === "OBP") return "obp";
+  if (key === "SLG") return "slg";
+  if (key === "OPS") return "ops";
+  if (key === "TB") return "totalBases";
+  if (key === "HLD") return "holds";
   if (key === "K") return "strikeouts";
   if (key === "W") return "wins";
   if (key === "SV") return "saves";
@@ -79,7 +86,7 @@ export function statFieldForCategory(name: string): string | null {
 }
 
 export function categoryDirection(name: string): CategoryDirection {
-  const key = name.toUpperCase();
+  const key = normalizeScoringCategoryName(name);
   return key === "ERA" || key === "WHIP" ? "lower" : "higher";
 }
 
@@ -123,12 +130,33 @@ function projectedIpPitch(section: ProjectionNode): number {
  * analogs (e.g. AVG×AB, ERA×IP) so part-time rate spikes do not dominate.
  */
 export function categoryRawValue(section: ProjectionNode, name: string): number {
-  const key = name.toUpperCase();
+  const key = normalizeScoringCategoryName(name);
   if (key === "AVG") {
     return toNum(section.avg) * projectedAb(section);
   }
   if (key === "OBP") {
     return toNum(section.obp) * projectedPa(section);
+  }
+  if (key === "SLG") {
+    return toNum(section.slg) * projectedAb(section);
+  }
+  if (key === "OPS") {
+    return toNum(section.ops) * projectedPa(section);
+  }
+  if (key === "TB") {
+    return toNum(section.totalBases);
+  }
+  if (key === "HLD") {
+    return toNum(section.holds);
+  }
+  if (key === "SV+HLD") {
+    return toNum(section.saves) + toNum(section.holds);
+  }
+  if (key === "K/9") {
+    const ip = projectedIpPitch(section);
+    const k = toNum(section.strikeouts);
+    /** Per-player K/9 rate (9×K/IP); z-scored across pool — not multiplied by IP (volume already in K/IP). */
+    return ip > 0 ? (9 * k) / ip : 0;
   }
   if (key === "ERA") {
     return toNum(section.era) * projectedIpPitch(section);
@@ -148,10 +176,20 @@ export function pointsCategoryRaw(
   section: ProjectionNode,
   name: string
 ): number {
-  const key = name.toUpperCase();
+  const key = normalizeScoringCategoryName(name);
   const field = statFieldForCategory(name);
   if (key === "AVG" || key === "OBP") {
     return toNum(section[key === "AVG" ? "avg" : "obp"]);
+  }
+  if (key === "SLG") return toNum(section.slg);
+  if (key === "OPS") return toNum(section.ops);
+  if (key === "TB") return toNum(section.totalBases);
+  if (key === "HLD") return toNum(section.holds);
+  if (key === "SV+HLD") return toNum(section.saves) + toNum(section.holds);
+  if (key === "K/9") {
+    const ip = projectedIpPitch(section);
+    const k = toNum(section.strikeouts);
+    return ip > 0 ? (9 * k) / ip : 0;
   }
   if (field) return toNum(section[field as keyof ProjectionNode]);
   return 0;

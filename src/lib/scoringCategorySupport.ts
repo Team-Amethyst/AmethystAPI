@@ -12,6 +12,9 @@ export const SUPPORTED_ROTO_BATTING = new Set([
   "SB",
   "AVG",
   "OBP",
+  "SLG",
+  "OPS",
+  "TB",
 ]);
 
 export const SUPPORTED_ROTO_PITCHING = new Set([
@@ -21,11 +24,17 @@ export const SUPPORTED_ROTO_PITCHING = new Set([
   "ERA",
   "WHIP",
   "QS",
+  "HLD",
+  "SV+HLD",
+  "K/9",
 ]);
 
 export function normalizeScoringCategoryName(name: string): string {
   const u = name.trim().toUpperCase();
   if (u === "SO") return "K";
+  if (u === "K9") return "K/9";
+  if (u === "SVHLD" || u === "SVHD") return "SV+HLD";
+  if (u === "HOLD" || u === "HOLDS") return "HLD";
   return u;
 }
 
@@ -37,7 +46,7 @@ export type UnsupportedScoringCategory = {
 
 /**
  * Returns categories present in the request that are not implemented in v1
- * baseline math (they are effectively ignored today).
+ * baseline math (ignored with zero contribution unless caught by strict mode).
  */
 export function listUnsupportedScoringCategories(
   categories: ReadonlyArray<ScoringCategory>

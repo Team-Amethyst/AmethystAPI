@@ -17,6 +17,15 @@ function num(v: unknown): number {
 }
 
 /** A year counts for hitting when AB ≥ minAb. */
+function parseRateStat(v: unknown): number | null {
+  if (typeof v === "number" && Number.isFinite(v)) return v;
+  if (typeof v === "string") {
+    const x = parseFloat(v.trim());
+    if (Number.isFinite(x)) return x;
+  }
+  return null;
+}
+
 export function projectBatting(
   yr1?: MlbStatRecord | null,
   yr2?: MlbStatRecord | null,
@@ -31,6 +40,9 @@ export function projectBatting(
   atBats: number;
   obp: string;
   plateAppearances: number;
+  slg: string;
+  ops: string;
+  totalBases: number;
 } | null {
   const years = [yr1, yr2, yr3];
   let wTotal = 0;
@@ -42,6 +54,8 @@ export function projectBatting(
   let wSB = 0;
   let wPA = 0;
   let wObpPa = 0;
+  let wTB = 0;
+  let wOpsPa = 0;
 
   for (let i = 0; i < years.length; i++) {
     const s = years[i];
@@ -71,6 +85,21 @@ export function projectBatting(
           : 0;
     wPA += pa * w;
     wObpPa += obp * pa * w;
+    wTB += num(s.totalBases) * w;
+
+    const opsDirect = parseRateStat(s.ops);
+    const slgDirect = parseRateStat(s.slg);
+    const slgEst =
+      slgDirect ??
+      (ab > 0 ? num(s.totalBases) / ab : null);
+    const obpNum =
+      Number.isFinite(obpParse) && obpParse > 0 ? obpParse : pa > 0 ? obp : 0;
+    const opsNum =
+      opsDirect ??
+      (slgEst != null && Number.isFinite(obpNum) ? obpNum + slgEst : null);
+    if (opsNum != null && Number.isFinite(opsNum)) {
+      wOpsPa += opsNum * pa * w;
+    }
   }
 
   if (wTotal <= 0 || wAB <= 0) return null;
@@ -78,6 +107,11 @@ export function projectBatting(
   const avg = wH / wAB;
   const blendedPa = wPA / wTotal;
   const blendedObp = wPA > 0 ? wObpPa / wPA : 0;
+  const blendedTb = wTB / wTotal;
+  const slgNum = blendedTb / (wAB / wTotal);
+  const opsNum =
+    wPA > 0 && wOpsPa > 0 ? wOpsPa / wPA : blendedObp + slgNum;
+
   return {
     avg: avg.toFixed(3),
     hr: Math.round(wHR / wTotal),
@@ -87,6 +121,9 @@ export function projectBatting(
     atBats: Math.round(wAB / wTotal),
     obp: blendedObp.toFixed(3),
     plateAppearances: Math.max(0, Math.round(blendedPa)),
+    slg: Number.isFinite(slgNum) ? slgNum.toFixed(3) : ".000",
+    ops: Number.isFinite(opsNum) ? opsNum.toFixed(3) : ".000",
+    totalBases: Math.max(0, Math.round(blendedTb)),
   };
 }
 
@@ -104,6 +141,8 @@ export function projectPitching(
   saves: number;
   strikeouts: number;
   innings: string;
+  holds: number;
+  qualityStarts: number;
 } | null {
   const years = [yr1, yr2, yr3];
   let wTotal = 0;
@@ -113,6 +152,8 @@ export function projectPitching(
   let wW = 0;
   let wSV = 0;
   let wK = 0;
+  let wHolds = 0;
+  let wQS = 0;
 
   for (let i = 0; i < years.length; i++) {
     const s = years[i];
@@ -128,6 +169,8 @@ export function projectPitching(
     wW += num(s.wins) * w;
     wSV += sv * w;
     wK += num(s.strikeOuts) * w;
+    wHolds += num(s.holds) * w;
+    wQS += num(s.qualityStarts) * w;
   }
 
   if (wTotal <= 0 || wIP <= 0) return null;
@@ -141,5 +184,7 @@ export function projectPitching(
     saves: Math.round(wSV / wTotal),
     strikeouts: Math.round(wK / wTotal),
     innings: (wIP / wTotal).toFixed(1),
+    holds: Math.round(wHolds / wTotal),
+    qualityStarts: Math.round(wQS / wTotal),
   };
 }

@@ -166,7 +166,7 @@ function buildScenarios(): Scenario[] {
     },
     {
       id: "pitching_sv_hld_label",
-      description: "SV+HLD combined label (unsupported vs separate SV+HLD stats)",
+      description: "SV+HLD combined category (saves + holds projection)",
       input: {
         ...b,
         scoring_categories: CALIBRATION_CATS_5X5.map((c) =>
@@ -225,11 +225,62 @@ function buildScenarios(): Scenario[] {
       input: { ...b },
     },
     {
-      id: "unsupported_hld_addon",
-      description: "Adds HLD (unsupported) alongside modeled categories — expect warnings",
+      id: "pitching_hld_addon",
+      description: "Adds HLD alongside standard 5×5 (HLD is modeled from projected holds)",
       input: {
         ...b,
         scoring_categories: [...CALIBRATION_CATS_5X5, { name: "HLD", type: "pitching" }],
+      },
+    },
+    {
+      id: "batting_slg_replaces_avg",
+      description: "SLG replaces AVG (pitching unchanged)",
+      input: {
+        ...b,
+        scoring_categories: CALIBRATION_CATS_5X5.map((c) =>
+          c.name === "AVG" ? { name: "SLG", type: "batting" as const } : c
+        ),
+      },
+    },
+    {
+      id: "batting_ops_replaces_avg",
+      description: "OPS replaces AVG",
+      input: {
+        ...b,
+        scoring_categories: CALIBRATION_CATS_5X5.map((c) =>
+          c.name === "AVG" ? { name: "OPS", type: "batting" as const } : c
+        ),
+      },
+    },
+    {
+      id: "batting_tb_replaces_rbi",
+      description: "TB replaces RBI",
+      input: {
+        ...b,
+        scoring_categories: CALIBRATION_CATS_5X5.map((c) =>
+          c.name === "RBI" ? { name: "TB", type: "batting" as const } : c
+        ),
+      },
+    },
+    {
+      id: "pitching_k9_replaces_k",
+      description: "K/9 replaces K",
+      input: {
+        ...b,
+        scoring_categories: CALIBRATION_CATS_5X5.map((c) =>
+          c.name === "K" ? { name: "K/9", type: "pitching" as const } : c
+        ),
+      },
+    },
+    {
+      id: "unsupported_fake_addon",
+      description: "Adds ZZZ_UNSUPPORTED_FAKE batting category for warning regression",
+      input: {
+        ...b,
+        scoring_categories: [
+          ...CALIBRATION_CATS_5X5,
+          { name: "ZZZ_UNSUPPORTED_FAKE", type: "batting" },
+        ],
       },
     },
   ];

@@ -461,7 +461,7 @@ async function main(): Promise<void> {
     },
     {
       id: "10_sv_hld_label",
-      description: "SV+HLD label (unsupported stat; warnings)",
+      description: "SV+HLD combined pitching category (saves + holds)",
       input: {
         ...b(),
         scoring_categories: CALIBRATION_CATS_5X5.map((c) =>

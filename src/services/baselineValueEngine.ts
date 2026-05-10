@@ -4,6 +4,7 @@ import type {
   ScoringCategory,
   ScoringFormat,
 } from "../types/brain";
+import { normalizeScoringCategoryName } from "../lib/scoringCategorySupport";
 import type { BaselineRiskExplainFields } from "../types/baselineRiskExplain";
 import {
   fitsRosterSlot,
@@ -41,18 +42,23 @@ const ROTO_INTRINSIC_BASE_HITTER = 24;
 export const ROTO_INTRINSIC_BASE_PITCHER_REF = { value: 23 };
 
 function defaultPointsWeight(cat: ScoringCategory): number {
-  const k = cat.name.toUpperCase();
+  const k = normalizeScoringCategoryName(cat.name);
   if (cat.type === "batting") {
     if (k === "HR") return 4;
     if (k === "R" || k === "RBI") return 1;
     if (k === "SB") return 2;
     if (k === "AVG") return 120;
     if (k === "OBP") return 105;
+    if (k === "SLG") return 115;
+    if (k === "OPS") return 125;
+    if (k === "TB") return 1;
     return 0.85;
   }
-  if (k === "K") return 1;
+  if (k === "K" || k === "K/9") return 1;
   if (k === "W") return 6;
   if (k === "SV") return 5;
+  if (k === "HLD") return 5;
+  if (k === "SV+HLD") return 5;
   if (k === "QS") return 4;
   if (k === "ERA") return -4;
   if (k === "WHIP") return -6;

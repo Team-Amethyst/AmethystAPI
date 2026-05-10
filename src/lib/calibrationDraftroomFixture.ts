@@ -108,15 +108,23 @@ const POS_CYCLE = ["C", "1B", "2B", "3B", "SS", "OF", "OF", "OF", "SP", "RP"] as
 
 function battingProj(id: number): Record<string, number> {
   const ab = 400 + (id % 80);
+  const hr = 8 + (id % 35);
+  const singlesEstimate = Math.max(0, ab - hr * 4 - id % 40);
+  const tb = hr * 4 + singlesEstimate + (id % 50);
+  const slg = tb / ab;
+  const obp = Math.min(0.42, 0.3 + (id % 45) * 0.002);
   return {
-    hr: 8 + (id % 35),
+    hr,
     rbi: 40 + (id % 70),
     runs: 45 + (id % 80),
     sb: id % 28,
     avg: Math.min(0.33, 0.22 + (id % 50) * 0.002),
-    obp: Math.min(0.42, 0.3 + (id % 45) * 0.002),
+    obp,
     atBats: ab,
     plateAppearances: Math.round(ab * 1.08),
+    totalBases: tb,
+    slg,
+    ops: obp + slg,
   };
 }
 
@@ -126,6 +134,7 @@ function pitchingProj(id: number): Record<string, number> {
     wins: 5 + (id % 12),
     strikeouts: 85 + (id % 110),
     saves: id % 35,
+    holds: id % 18,
     era: Math.min(5.2, 3.0 + (id % 60) * 0.02),
     whip: Math.min(1.45, 1.05 + (id % 40) * 0.01),
     qualityStarts: id % 22,
@@ -153,6 +162,9 @@ export function buildSyntheticCalibrationDraftroomPool(): LeanPlayer[] {
             obp: 0.38,
             atBats: 560,
             plateAppearances: 620,
+            totalBases: 305,
+            slg: 0.545,
+            ops: 0.925,
           }
         : battingProj(seq);
     const projection = isPitch

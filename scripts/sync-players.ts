@@ -213,6 +213,13 @@ function buildPlayerDocFromAgg(
         : ab + bb;
     const obpStr = String(stat.obp ?? ".000");
     const obpNum = parseFloat(obpStr);
+    const tb = Number(stat.totalBases ?? 0);
+    const slgNum =
+      parseFloat(String(stat.slg ?? "").trim()) ||
+      (ab > 0 ? tb / ab : 0);
+    const opsNum =
+      parseFloat(String(stat.ops ?? "").trim()) ||
+      (Number.isFinite(obpNum) ? obpNum + slgNum : 0);
     projection.batting = {
       avg: String(stat.avg ?? ".000"),
       hr: Number(stat.homeRuns ?? 0),
@@ -222,6 +229,9 @@ function buildPlayerDocFromAgg(
       atBats: ab,
       obp: Number.isFinite(obpNum) ? obpStr : ".000",
       plateAppearances: Math.max(0, Math.round(pa)),
+      totalBases: tb,
+      slg: Number.isFinite(slgNum) ? slgNum.toFixed(3) : ".000",
+      ops: Number.isFinite(opsNum) ? opsNum.toFixed(3) : ".000",
     };
   }
   if (blendedPit) {
@@ -232,6 +242,8 @@ function buildPlayerDocFromAgg(
       saves: blendedPit.saves,
       strikeouts: blendedPit.strikeouts,
       innings: blendedPit.innings,
+      holds: blendedPit.holds,
+      qualityStarts: blendedPit.qualityStarts,
     };
   } else if (agg.pit) {
     const stat = agg.pit.stat;
@@ -242,6 +254,8 @@ function buildPlayerDocFromAgg(
       saves: Number(stat.saves ?? 0),
       strikeouts: Number(stat.strikeOuts ?? 0),
       innings: String(stat.inningsPitched ?? "0"),
+      holds: Number(stat.holds ?? 0),
+      qualityStarts: Number(stat.qualityStarts ?? 0),
     };
   }
 

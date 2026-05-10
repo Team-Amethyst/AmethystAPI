@@ -445,7 +445,7 @@ function defineScenarios(pool: LeanPlayer[]): ScenarioDef[] {
     },
     {
       id: "SV_HLD_warning_case",
-      description: "SV+HLD — HLD unsupported (warnings expected)",
+      description: "SV+HLD — combined saves + holds category",
       build: () => ({
         ...base(),
         scoring_categories: svHldCats,

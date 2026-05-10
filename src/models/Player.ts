@@ -27,6 +27,15 @@ interface IPlayerProjection {
     rbi?: number;
     runs?: number;
     sb?: number;
+    /** Optional slugging rate string or number — synced / blended for SLG/OPS leagues. */
+    slg?: string | number;
+    /** Optional OPS — may be derived from OBP+SLG when absent from source. */
+    ops?: string | number;
+    /** Season projected total bases when available. */
+    totalBases?: number;
+    atBats?: number;
+    plateAppearances?: number;
+    obp?: string | number;
   };
   pitching?: {
     era?: string;
@@ -34,6 +43,9 @@ interface IPlayerProjection {
     wins?: number;
     saves?: number;
     strikeouts?: number;
+    holds?: number;
+    qualityStarts?: number;
+    innings?: string | number;
   };
 }
 
