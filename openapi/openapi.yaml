@@ -445,6 +445,9 @@ components:
               maximum: 3
             injury_multiplier:
               type: number
+            injury_component:
+              type: number
+              description: Dollar delta from injury pass (after age/depth); omitted when healthy / zero severity.
             age_component:
               type: number
               description: Hypothetical dollar delta vs pre-risk baseline if only age applied (depth held at 1.0 in clip rules).
@@ -868,6 +871,21 @@ paths:
                   minimum: 1
                   maximum: 5
                   description: Optional clamp — recommended_bid ≤ ratio × auction_value after smoothing (auction_value unchanged).
+                injury_overrides:
+                  type: array
+                  description: Optional per-player injury severity from Draftroom; overrides Mongo catalog injurySeverity for the baseline injury pass only (see schemas/valuation-request.v1.schema.json).
+                  items:
+                    type: object
+                    required: [player_id, injury_severity]
+                    additionalProperties: false
+                    properties:
+                      player_id:
+                        type: string
+                        minLength: 1
+                      injury_severity:
+                        type: integer
+                        minimum: 0
+                        maximum: 3
               additionalProperties: true
       responses:
         "200":

@@ -19,6 +19,11 @@ export const positionOverrideEntrySchema = z.object({
   positions: z.array(z.string().min(1)).min(1),
 });
 
+export const injuryOverrideEntrySchema = z.object({
+  player_id: z.string().min(1),
+  injury_severity: z.coerce.number().int().min(0).max(3),
+});
+
 export const teamBucketSchema = z.object({
   team_id: z.string(),
   players: z.array(draftedPlayerInputSchema),
@@ -54,6 +59,7 @@ export const leagueBlockSchema = z.object({
   hitter_budget_pct: z.number().optional(),
   pos_eligibility_threshold: z.number().optional(),
   position_overrides: z.array(positionOverrideEntrySchema).optional(),
+  injury_overrides: z.array(injuryOverrideEntrySchema).optional(),
   strict_scoring_categories: z.boolean().optional(),
   inflation_model: inflationModelSchema.optional(),
 });
@@ -77,6 +83,7 @@ export const nestedValuationBodySchema = z.object({
   user_team_id: z.string().min(1).optional(),
   inflation_model: inflationModelSchema.optional(),
   position_overrides: z.array(positionOverrideEntrySchema).optional(),
+  injury_overrides: z.array(injuryOverrideEntrySchema).optional(),
   strict_scoring_categories: z.boolean().optional(),
   explain_valuation_rows: z.boolean().optional(),
   recommended_bid_soft_cap_ratio: z.number().finite().min(1).max(5).optional(),
@@ -99,6 +106,7 @@ export const flatValuationBodySchema = z.object({
   hitter_budget_pct: z.number().optional(),
   pos_eligibility_threshold: z.number().optional(),
   position_overrides: z.array(positionOverrideEntrySchema).optional(),
+  injury_overrides: z.array(injuryOverrideEntrySchema).optional(),
   minors: z.array(teamBucketSchema).optional(),
   taxi: z.array(teamBucketSchema).optional(),
   deterministic: z.boolean().optional(),

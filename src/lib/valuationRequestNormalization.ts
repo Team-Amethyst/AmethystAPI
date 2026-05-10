@@ -69,6 +69,11 @@ export function buildNormalizedFromNested(
     pos_eligibility_threshold: league.pos_eligibility_threshold,
     position_overrides:
       rest.position_overrides ?? league.position_overrides,
+    ...(rest.injury_overrides !== undefined || league.injury_overrides !== undefined
+      ? {
+          injury_overrides: rest.injury_overrides ?? league.injury_overrides,
+        }
+      : {}),
     ...(strictScoringCategories !== undefined
       ? { strict_scoring_categories: strictScoringCategories }
       : {}),
@@ -109,6 +114,9 @@ export function buildNormalizedFromFlat(
     hitter_budget_pct: parsed.hitter_budget_pct,
     pos_eligibility_threshold: parsed.pos_eligibility_threshold,
     position_overrides: parsed.position_overrides,
+    ...(parsed.injury_overrides !== undefined
+      ? { injury_overrides: parsed.injury_overrides }
+      : {}),
     ...(parsed.strict_scoring_categories !== undefined
       ? { strict_scoring_categories: parsed.strict_scoring_categories }
       : {}),

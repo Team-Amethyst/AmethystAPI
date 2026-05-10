@@ -91,6 +91,13 @@
         "$ref": "#/$defs/positionOverrideEntry"
       }
     },
+    "injury_overrides": {
+      "type": "array",
+      "description": "Optional per-player injury severity from Draftroom (MLB roster / IL). Overrides Mongo catalog injurySeverity for the baseline injury pass only.",
+      "items": {
+        "$ref": "#/$defs/injuryOverrideEntry"
+      }
+    },
     "strict_scoring_categories": {
       "type": "boolean",
       "description": "When true, valuation fails if scoring_categories includes names not modeled in v1 baselines. Default false: unsupported names yield scoring_category_warnings on the response."
@@ -194,6 +201,22 @@
             "type": "string",
             "minLength": 1
           }
+        }
+      }
+    },
+    "injuryOverrideEntry": {
+      "type": "object",
+      "required": ["player_id", "injury_severity"],
+      "additionalProperties": false,
+      "properties": {
+        "player_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "injury_severity": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 3
         }
       }
     },

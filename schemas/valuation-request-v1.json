@@ -113,6 +113,13 @@
         "$ref": "#/$defs/positionOverrideEntry"
       }
     },
+    "injury_overrides": {
+      "type": "array",
+      "description": "Optional; wins over league.injury_overrides when both set (nested body). Overrides catalog injurySeverity for baseline injury haircut.",
+      "items": {
+        "$ref": "#/$defs/injuryOverrideEntry"
+      }
+    },
     "strict_scoring_categories": {
       "type": "boolean",
       "description": "When true, valuation fails if scoring_categories includes names not modeled in v1 baselines; default false yields scoring_category_warnings instead."
@@ -149,6 +156,22 @@
             "type": "string",
             "minLength": 1
           }
+        }
+      }
+    },
+    "injuryOverrideEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["player_id", "injury_severity"],
+      "properties": {
+        "player_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "injury_severity": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 3
         }
       }
     },
@@ -255,6 +278,12 @@
           "type": "array",
           "items": {
             "$ref": "#/$defs/positionOverrideEntry"
+          }
+        },
+        "injury_overrides": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/injuryOverrideEntry"
           }
         },
         "inflation_model": {

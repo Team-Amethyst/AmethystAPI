@@ -180,6 +180,41 @@ describe("parseValuationRequest nested (Draft checkpoint interop)", () => {
     if (!topWins.success) return;
     expect(topWins.normalized.league_id).toBe("lg_top");
   });
+
+  it("top-level injury_overrides wins over league.injury_overrides", () => {
+    const leagueOnly = parseValuationRequest({
+      schemaVersion: "1.0.0",
+      league: {
+        roster_slots: [{ position: "OF", count: 3 }],
+        scoring_categories: [{ name: "HR", type: "batting" }],
+        total_budget: 260,
+        injury_overrides: [{ player_id: "1", injury_severity: 1 }],
+      },
+      draft_state: [],
+    });
+    expect(leagueOnly.success).toBe(true);
+    if (!leagueOnly.success) return;
+    expect(leagueOnly.normalized.injury_overrides).toEqual([
+      { player_id: "1", injury_severity: 1 },
+    ]);
+
+    const topWins = parseValuationRequest({
+      schemaVersion: "1.0.0",
+      injury_overrides: [{ player_id: "2", injury_severity: 3 }],
+      league: {
+        roster_slots: [{ position: "OF", count: 3 }],
+        scoring_categories: [{ name: "HR", type: "batting" }],
+        total_budget: 260,
+        injury_overrides: [{ player_id: "1", injury_severity: 1 }],
+      },
+      draft_state: [],
+    });
+    expect(topWins.success).toBe(true);
+    if (!topWins.success) return;
+    expect(topWins.normalized.injury_overrides).toEqual([
+      { player_id: "2", injury_severity: 3 },
+    ]);
+  });
 });
 
 describe("parseValuationRequest errors", () => {

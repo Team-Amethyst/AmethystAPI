@@ -217,6 +217,7 @@
         "age_depth_combined_multiplier": { "type": "number" },
         "injury_severity": { "type": "integer", "minimum": 0, "maximum": 3 },
         "injury_multiplier": { "type": "number" },
+        "injury_component": { "type": "number" },
         "age_component": { "type": "number" },
         "depth_component": { "type": "number" }
       },

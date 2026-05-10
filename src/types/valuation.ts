@@ -15,6 +15,13 @@ import type { BaselineRiskExplainFields } from "./baselineRiskExplain";
 /** Per-player catalog position overrides (Draftroom eligibility); replaces Mongo `position` / `positions` for valuation math. */
 export type PositionOverrideEntry = { player_id: string; positions: string[] };
 
+/** Per-player injury severity from Draftroom (roster / IL status); overrides Mongo `injurySeverity` for baseline injury pass only. */
+export type InjuryOverrideEntry = {
+  player_id: string;
+  /** 0 = healthy; 1–3 match `baselineInjuryAdjustments` severities. */
+  injury_severity: number;
+};
+
 export interface ValuationRequest {
   roster_slots: RosterSlot[];
   scoring_categories: ScoringCategory[];
@@ -38,6 +45,7 @@ export interface ValuationRequest {
   /** Reserved / informational — does not apply min-games eligibility from catalog (no games-by-position in Mongo). Use `position_overrides` for explicit eligibility. */
   pos_eligibility_threshold?: number;
   position_overrides?: PositionOverrideEntry[];
+  injury_overrides?: InjuryOverrideEntry[];
   strict_scoring_categories?: boolean;
   minors?: TeamRosterBucket[];
   taxi?: TeamRosterBucket[];
@@ -65,6 +73,7 @@ export interface ValuationLeagueBlock {
   /** Reserved / informational — does not apply min-games eligibility from catalog. Use `position_overrides` for explicit eligibility. */
   pos_eligibility_threshold?: number;
   position_overrides?: PositionOverrideEntry[];
+  injury_overrides?: InjuryOverrideEntry[];
   strict_scoring_categories?: boolean;
   inflation_model?: InflationModel;
 }
@@ -84,6 +93,8 @@ export interface NormalizedValuationInput {
   /** Reserved / informational — v1 does not apply min-games rules from Mongo. Use `position_overrides`. */
   pos_eligibility_threshold?: number;
   position_overrides?: PositionOverrideEntry[];
+  /** Per-player injury severity from Draftroom; overrides catalog `injurySeverity` before baseline. */
+  injury_overrides?: InjuryOverrideEntry[];
   /**
    * When true, valuation fails closed if `scoring_categories` includes any name
    * not wired in v1 baselines (see `scoringCategorySupport.ts`). Default false:
@@ -156,7 +167,6 @@ export interface ValuedPlayer {
     projection_component: number;
     scarcity_component: number;
     age_depth_component?: number;
-    injury_component?: number;
   } & BaselineRiskExplainFields;
   scarcity_adjustment?: number;
   inflation_adjustment?: number;

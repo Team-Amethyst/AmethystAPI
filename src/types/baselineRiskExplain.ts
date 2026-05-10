@@ -14,6 +14,8 @@ export interface BaselineRiskExplainFields {
   /** 0 = healthy / unknown; 1–3 per `baselineInjuryAdjustments`. */
   injury_severity: number;
   injury_multiplier: number;
+  /** Dollar delta from the injury pass (after age/depth); omitted when zero / healthy. */
+  injury_component?: number;
   /**
    * Hypothetical dollar delta vs pre-risk baseline if only the age curve were applied
    * (depth multiplier held at 1.0 in the same clip rules). Does not sum with
@@ -36,6 +38,7 @@ export const BASELINE_RISK_EXPLAIN_KEYS: readonly (keyof BaselineRiskExplainFiel
   "age_depth_combined_multiplier",
   "injury_severity",
   "injury_multiplier",
+  "injury_component",
   "age_component",
   "depth_component",
 ];

@@ -78,6 +78,7 @@ Draft ends every valuation call with **`finalizeEngineValuationPostPayload()`** 
 - **`drafted_players`**: **auction picks only** (not keepers bucketed separately).
 - **`pre_draft_rosters`**: optional keepers / pre-auction roster sections (nested array of `{ team_id, players[] }` or flat record keyed by `team_id` — Draft supports both shapes upstream; normalize/validate in Engine per your contract).
 - **`budget_by_team_id`**: optional map of remaining budgets.
+- **`injury_overrides`** (optional): `{ player_id, injury_severity: 0–3 }[]` — Draftroom roster/IL severity; **overrides Mongo catalog `injurySeverity`** for that player before baseline (last duplicate `player_id` wins). Nested body: top-level overrides beat `league.injury_overrides`.
 - **`schema_version`** and/or **`schemaVersion`**: when Draft sets a version, **`finalizeEngineValuationPostPayload` duplicates `schema_version` → `schemaVersion` if only snake_case is set** (Engine merge rules).
 - Optional: **`player_ids`**, **`minors`**, **`taxi`**, **`checkpoint`**, **`scoring_format`**, **`hitter_budget_pct`**, **`pos_eligibility_threshold`**, **`deterministic`**, **`seed`** (for **reproducible Activity #9 grading** — honor when present).
 

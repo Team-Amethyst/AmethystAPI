@@ -13,6 +13,7 @@ import {
   scoringCategorySupportWarnings,
 } from "../lib/scoringCategorySupport";
 import { calculateInflation } from "./inflationEngine";
+import { applyInjuryOverridesToPool } from "../lib/valuationInjuryOverrides";
 import { scoringAwareBaselinePlayers } from "./baselineValueEngine";
 import { filterValuationUniverse } from "../lib/valuationPlayerPool";
 import { computeRemainingLeagueRosterSlots } from "../lib/remainingLeagueRosterSlots";
@@ -29,7 +30,8 @@ import {
  *    from Draft/fixtures (roster_slots, scoring_categories, budgets, drafted_players, …).
  * 2. **Read eligible player data** — `LeanPlayer[]` from Mongo (`Player`); long-term this
  *    should carry 3-year stats, age, role, injury signals populated by your analytics/sync
- *    pipeline (not an external valuation API).
+ *    pipeline (not an external valuation API). Optional **`injury_overrides`** on the request
+ *    replace catalog `injurySeverity` per `player_id` before baseline (`applyInjuryOverridesToPool`).
  * 3. **Valuation universe** — `filterValuationUniverse` (`league_scope`, optional
  *    `eligible_player_ids` / `excluded_player_ids`) before baseline z-scores and inflation.
  *    **Filter drafted** — inside `calculateInflation` (drafted ids, minors/taxi, etc.).
@@ -142,8 +144,13 @@ export function executeValuationWorkflow(
   const scoringCategoryWarnings =
     unsupportedCats.length > 0 ? scoringCategorySupportWarnings(unsupportedCats) : [];
 
-  const basePlayers = scoringAwareBaselinePlayers(
+  const poolWithInjury = applyInjuryOverridesToPool(
     valuationPool,
+    input.injury_overrides
+  );
+
+  const basePlayers = scoringAwareBaselinePlayers(
+    poolWithInjury,
     input.scoring_format,
     input.scoring_categories,
     input.roster_slots,
