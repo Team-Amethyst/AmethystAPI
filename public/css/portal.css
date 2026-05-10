@@ -2753,12 +2753,14 @@
       max-width: 40rem;
     }
     #tab-keys .keys-webhook-message-field {
+      width: 100%;
+      max-width: none;
       margin-bottom: 0;
     }
     #tab-keys textarea.keys-webhook-message-input {
       display: block;
       width: 100%;
-      max-width: 40rem;
+      max-width: none;
       box-sizing: border-box;
       min-height: 96px;
       padding-top: 10px;
