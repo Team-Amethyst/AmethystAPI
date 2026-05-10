@@ -125,7 +125,7 @@ function heuristicFlags(params: {
 function printKnobsReference(): void {
   console.log(`
 --- Engine calibration knobs (inspect only) ---
-  baselineValueEngine: ROTO_INTRINSIC_BASE_HITTER = 24, ROTO_INTRINSIC_BASE_PITCHER = 20, ROTO_CATALOG_PRIOR_WEIGHT = 0.12
+  baselineValueEngine: ROTO_INTRINSIC_BASE_HITTER = 24, ROTO_INTRINSIC_BASE_PITCHER_REF = 23, ROTO_CATALOG_PRIOR_WEIGHT = 0.12
   baselineRotoZConfig.ts (rotoBaselineForGroup z → projectionMult):
     hitter  zScale=${ROTO_Z_HITTER.zScale}  zLo=${ROTO_Z_HITTER.zLo}  zHi=${ROTO_Z_HITTER.zHi}
     pitcher zScale=${ROTO_Z_PITCHER.zScale}  zLo=${ROTO_Z_PITCHER.zLo}  zHi=${ROTO_Z_PITCHER.zHi}

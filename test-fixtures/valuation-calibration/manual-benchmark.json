@@ -52,7 +52,7 @@
     }
   },
   "expectations": {
-    "top_player_id": "3001",
+    "top_player_id": "3002",
     "min_inflation_factor": 0.8,
     "max_inflation_factor": 3.0
   }

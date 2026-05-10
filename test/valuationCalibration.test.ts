@@ -16,8 +16,8 @@ const pool: LeanPlayer[] = [
     name: "Manual Top",
     team: "ATL",
     position: "OF",
-    adp: 3,
-    tier: 1,
+    catalog_rank: 3,
+    catalog_tier: 1,
     value: 48,
     projection: {
       batting: { hr: 40, rbi: 112, runs: 105, sb: 20, avg: 0.302, obp: 0.39 },
@@ -29,8 +29,8 @@ const pool: LeanPlayer[] = [
     name: "Ace Arm",
     team: "SEA",
     position: "SP",
-    adp: 6,
-    tier: 1,
+    catalog_rank: 6,
+    catalog_tier: 1,
     value: 41,
     projection: {
       pitching: { wins: 15, strikeouts: 235, saves: 0, era: 3.02, whip: 1.04 },
@@ -42,8 +42,8 @@ const pool: LeanPlayer[] = [
     name: "Cheap Keeper",
     team: "LAD",
     position: "SP",
-    adp: 50,
-    tier: 3,
+    catalog_rank: 50,
+    catalog_tier: 3,
     value: 18,
     projection: {
       pitching: { wins: 9, strikeouts: 140, saves: 0, era: 3.8, whip: 1.2 },
@@ -55,8 +55,8 @@ const pool: LeanPlayer[] = [
     name: "Keeper Star",
     team: "NYY",
     position: "OF",
-    adp: 14,
-    tier: 2,
+    catalog_rank: 14,
+    catalog_tier: 2,
     value: 32,
     projection: {
       batting: { hr: 29, rbi: 92, runs: 80, sb: 12, avg: 0.279, obp: 0.36 },

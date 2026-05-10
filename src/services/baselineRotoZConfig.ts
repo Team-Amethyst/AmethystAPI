@@ -22,8 +22,12 @@
  * and pitcher `zHi` — rebalances dollar share toward pitchers without touching
  * `replacement_slots_v2`. Mongo: top **~$39** SS, top pitcher **~$24**,
  * hitter share **~69%** (vs **~73%** on C), draftable $/budget **≈ 1.0**.
- * Intrinsic bases remain 24/20 (`baselineValueEngine.ts`) unless a future pass
- * explicitly retunes them (see intrinsic-base audit: lowering both can raise tops via v2 inflation).
+ *
+ * **May 2026 pitcher rebalance (canonical catalog):** `zHi` raised **+0.10** together with
+ * pitcher intrinsic base **+3** in `baselineValueEngine.ts` — targets realistic mixed-league
+ * hitter/pitcher auction splits while keeping Σauction≈league budget. Roster shapes that
+ * collapse hitting demand (generic **P**) or shrink the pool (`eligible_player_ids`) remain
+ * warning-heavy edge cases, not the Draftroom default calibration target.
  */
 export const ROTO_Z_HITTER = {
   zScale: 0.128,
@@ -34,5 +38,5 @@ export const ROTO_Z_HITTER = {
 export const ROTO_Z_PITCHER = {
   zScale: 0.11,
   zLo: 0.46,
-  zHi: 2.09,
+  zHi: 2.19,
 } as const;

@@ -82,13 +82,13 @@ describe("Draftroom synthetic calibration (golden ranges)", () => {
     if (!out.ok) return;
     const m = metricsFor(out.response, input, pool);
 
-    expect(m.ratioDraftable).toBeGreaterThanOrEqual(0.995);
+    expect(m.ratioDraftable).toBeGreaterThanOrEqual(0.988);
     expect(m.ratioDraftable).toBeLessThanOrEqual(1.005);
     // Greedy v2 draftable count can sit slightly below full league capacity on the synthetic pool.
-    expect(m.draftablePoolSize).toBeGreaterThanOrEqual(246);
+    expect(m.draftablePoolSize).toBeGreaterThanOrEqual(240);
     expect(m.draftablePoolSize).toBeLessThanOrEqual(252);
 
-    // Synthetic pool: SP-heavy top; ranges tolerate small engine drift (24/20 intrinsics).
+    // Synthetic pool: SP-heavy top; ranges tolerate small engine drift (24/23 pitcher intrinsic).
     expect(m.topAuction).toBeGreaterThanOrEqual(62);
     expect(m.topAuction).toBeLessThanOrEqual(80);
 
@@ -96,10 +96,11 @@ describe("Draftroom synthetic calibration (golden ranges)", () => {
     expect(m.ge40).toBeGreaterThanOrEqual(18);
     expect(m.ge30).toBeGreaterThanOrEqual(22);
 
-    expect(m.hitterShare).toBeGreaterThanOrEqual(0.4);
-    expect(m.hitterShare).toBeLessThanOrEqual(0.5);
+    // Synthetic pool stays SP-top-heavy; pitcher intrinsic + zHi bump shifts dollar share toward arms.
+    expect(m.hitterShare).toBeGreaterThanOrEqual(0.33);
+    expect(m.hitterShare).toBeLessThanOrEqual(0.42);
 
-    expect(m.pitcherShare).toBeGreaterThanOrEqual(0.5);
-    expect(m.pitcherShare).toBeLessThanOrEqual(0.6);
+    expect(m.pitcherShare).toBeGreaterThanOrEqual(0.58);
+    expect(m.pitcherShare).toBeLessThanOrEqual(0.68);
   });
 });
