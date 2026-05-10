@@ -4,7 +4,7 @@ import { classifyMlbTransaction } from "../lib/mlbTransactionSignals";
 import { stableSignalsPayloadFingerprint } from "../lib/signalsHttp";
 import { getCached, setCache } from "../lib/redis";
 import type { NewsSignal, SignalSeverity, SignalsResponse } from "../types/brain";
-import { notifyDraftNewsSignalsWebhook } from "./draftNewsSignalsWebhook";
+import { notifyNewsSignalsWebhookSubscribers } from "./draftNewsSignalsWebhook";
 
 const MLB_TRANSACTIONS_URL =
   "https://statsapi.mlb.com/api/v1/transactions";
@@ -148,7 +148,7 @@ export async function fetchSignals(
   await setCache(etagKey, fingerprint, SIGNALS_ETAG_TTL);
 
   if (previousFingerprint !== fingerprint) {
-    void notifyDraftNewsSignalsWebhook();
+    void notifyNewsSignalsWebhookSubscribers();
   }
 
   return response;

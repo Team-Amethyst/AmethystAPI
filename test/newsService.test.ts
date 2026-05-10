@@ -12,7 +12,7 @@ vi.mock("../src/lib/redis", () => ({
 }));
 
 vi.mock("../src/services/draftNewsSignalsWebhook", () => ({
-  notifyDraftNewsSignalsWebhook: vi.fn().mockResolvedValue(undefined),
+  notifyNewsSignalsWebhookSubscribers: vi.fn().mockResolvedValue(undefined),
 }));
 
 import { getCached, setCache } from "../src/lib/redis";

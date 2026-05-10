@@ -18,6 +18,10 @@ export interface IApiKey extends Document {
   usageCount: number;
   lastUsed: Date | null;
   isActive: boolean;
+  /** When set, Engine POSTs `signals_updated` to this URL for this key (requires `signals` scope). */
+  newsSignalsWebhookUrl?: string | null;
+  /** Optional dedicated Bearer; if unset, the registered API key secret is used as Bearer. */
+  newsSignalsWebhookBearerSealed?: string | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -87,6 +91,16 @@ const apiKeySchema = new Schema<IApiKey>(
     isActive: {
       type: Boolean,
       default: true,
+    },
+    newsSignalsWebhookUrl: {
+      type: String,
+      default: null,
+      trim: true,
+    },
+    newsSignalsWebhookBearerSealed: {
+      type: String,
+      default: null,
+      select: false,
     },
   },
   { timestamps: true }

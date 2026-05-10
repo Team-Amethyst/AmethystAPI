@@ -5,6 +5,7 @@ import DeveloperAccount from "../models/DeveloperAccount";
 import { ALLOWED_API_KEY_SCOPES, ALLOWED_API_KEY_TIERS, generateApiKeySecret, hashApiKey } from "../lib/apiKey";
 import { openPortalApiKeySecret, sealPortalApiKeySecret } from "../lib/portalApiKeySecret";
 import { NotFoundError, ServiceUnavailableError, ValidationError } from "../lib/appError";
+import { isAllowedNewsSignalsWebhookUrl } from "../lib/newsSignalsWebhookUrl";
 import { PortalRequest, requirePortalSession } from "../middleware/portalSession";
 import { issuanceEnabled } from "./keyIssuanceHelpers";
 
@@ -68,6 +69,11 @@ const listMyKeys: RequestHandler = async (req, res, next) => {
           createdAt: doc.createdAt ?? null,
           expiresAt: doc.expiresAt ?? null,
           isActive: doc.isActive,
+          newsSignalsWebhookUrl:
+            typeof doc.newsSignalsWebhookUrl === "string" &&
+            doc.newsSignalsWebhookUrl.length > 0
+              ? doc.newsSignalsWebhookUrl
+              : null,
           /** Full secret when stored for this account (newer keys); legacy rows may omit. */
           secret: secret ?? null,
         };
@@ -155,6 +161,147 @@ const issueMyKey: RequestHandler = async (req, res, next) => {
   }
 };
 
+const patchNewsSignalsWebhook: RequestHandler = async (req, res, next) => {
+  try {
+    const portalUser = (req as PortalRequest).portalUser;
+    if (!portalUser) {
+      throw new ValidationError("Missing portal session context.", 500, "PORTAL_CONTEXT_MISSING");
+    }
+    const rawId = typeof req.params.id === "string" ? req.params.id.trim() : "";
+    if (!rawId || !mongoose.isValidObjectId(rawId)) {
+      throw new ValidationError("Invalid key id.", 400, "KEY_ID_INVALID");
+    }
+
+    const body = req.body as Record<string, unknown>;
+    const urlIn = body.newsSignalsWebhookUrl;
+    const bearerIn = body.newsSignalsWebhookBearer;
+
+    if (urlIn === undefined && bearerIn === undefined) {
+      throw new ValidationError(
+        "Provide newsSignalsWebhookUrl (null to clear) and/or newsSignalsWebhookBearer.",
+        400,
+        "WEBHOOK_FIELDS_MISSING"
+      );
+    }
+
+    const keyDoc = await ApiKey.findOne({
+      _id: new mongoose.Types.ObjectId(rawId),
+      developerAccountId: portalUser.developerAccountId,
+    }).select("+key +newsSignalsWebhookBearerSealed");
+
+    if (!keyDoc) {
+      throw new NotFoundError("API key not found.", 404, "API_KEY_NOT_FOUND");
+    }
+
+    const scopes = keyDoc.scopes ?? [];
+    if (!scopes.includes("signals")) {
+      throw new ValidationError(
+        "API key must include the signals scope to register a news-signals webhook.",
+        400,
+        "KEY_SCOPE_SIGNALS_REQUIRED"
+      );
+    }
+
+    if (
+      urlIn !== undefined &&
+      urlIn !== null &&
+      typeof urlIn !== "string"
+    ) {
+      throw new ValidationError(
+        "newsSignalsWebhookUrl must be a string or null.",
+        400,
+        "WEBHOOK_URL_TYPE"
+      );
+    }
+
+    if (
+      bearerIn !== undefined &&
+      bearerIn !== null &&
+      typeof bearerIn !== "string"
+    ) {
+      throw new ValidationError(
+        "newsSignalsWebhookBearer must be a string or null.",
+        400,
+        "WEBHOOK_BEARER_TYPE"
+      );
+    }
+
+    if (
+      urlIn === null ||
+      (typeof urlIn === "string" && urlIn.trim() === "")
+    ) {
+      keyDoc.newsSignalsWebhookUrl = null;
+      keyDoc.newsSignalsWebhookBearerSealed = null;
+      await keyDoc.save();
+      res.json({
+        id: keyDoc._id,
+        newsSignalsWebhookUrl: null,
+        usesDedicatedWebhookBearer: false,
+      });
+      return;
+    }
+
+    if (urlIn === undefined && bearerIn !== undefined) {
+      const existingUrl = (keyDoc.newsSignalsWebhookUrl ?? "").trim();
+      if (!existingUrl) {
+        throw new ValidationError(
+          "Set newsSignalsWebhookUrl before configuring Bearer.",
+          400,
+          "WEBHOOK_URL_REQUIRED_FIRST"
+        );
+      }
+    }
+
+    if (typeof urlIn === "string" && urlIn.trim().length > 0) {
+      const trimmed = urlIn.trim();
+      if (!isAllowedNewsSignalsWebhookUrl(trimmed)) {
+        throw new ValidationError(
+          "newsSignalsWebhookUrl must be https (http allowed only for localhost when NODE_ENV=production).",
+          400,
+          "WEBHOOK_URL_INVALID"
+        );
+      }
+      keyDoc.newsSignalsWebhookUrl = trimmed;
+    }
+
+    if (bearerIn !== undefined) {
+      if (bearerIn === null || bearerIn === "") {
+        keyDoc.newsSignalsWebhookBearerSealed = null;
+      } else if (typeof bearerIn === "string" && bearerIn.trim().length > 0) {
+        keyDoc.newsSignalsWebhookBearerSealed = sealPortalApiKeySecret(
+          bearerIn.trim()
+        );
+      } else {
+        keyDoc.newsSignalsWebhookBearerSealed = null;
+      }
+    }
+
+    const urlFinal = (keyDoc.newsSignalsWebhookUrl ?? "").trim();
+    if (urlFinal.length > 0) {
+      const hasDedicated = Boolean(keyDoc.newsSignalsWebhookBearerSealed);
+      const apiKeyPlain =
+        keyDoc.key != null ? openPortalApiKeySecret(keyDoc.key) : null;
+      if (!hasDedicated && !apiKeyPlain) {
+        throw new ValidationError(
+          "Cannot authenticate webhook: set newsSignalsWebhookBearer to a secret your server validates, or use an API key minted with stored secret from this portal.",
+          400,
+          "WEBHOOK_BEARER_UNAVAILABLE"
+        );
+      }
+    }
+
+    await keyDoc.save();
+
+    res.json({
+      id: keyDoc._id,
+      newsSignalsWebhookUrl: keyDoc.newsSignalsWebhookUrl ?? null,
+      usesDedicatedWebhookBearer: Boolean(keyDoc.newsSignalsWebhookBearerSealed),
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
 const deleteMyKey: RequestHandler = async (req, res, next) => {
   try {
     const portalUser = (req as PortalRequest).portalUser;
@@ -181,6 +328,11 @@ const deleteMyKey: RequestHandler = async (req, res, next) => {
 router.get("/me", requirePortalSession, me);
 router.get("/keys", requirePortalSession, listMyKeys);
 router.post("/keys/issue", requirePortalSession, issueMyKey);
+router.patch(
+  "/keys/:id/news-signals-webhook",
+  requirePortalSession,
+  patchNewsSignalsWebhook
+);
 router.delete("/keys/:id", requirePortalSession, deleteMyKey);
 
 export default router;

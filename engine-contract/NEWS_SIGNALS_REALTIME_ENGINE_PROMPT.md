@@ -5,7 +5,7 @@
 ## Status
 
 - **Draft** ships Socket.IO + singleton poll + `POST /api/internal/news-signals/hook`.
-- **Engine (this repo)** ships conditional `GET /signals/news` (ETag / `If-None-Match` / `304`) + ingest webhook when MLB-backed snapshots change.
+- **Engine (this repo)** ships conditional `GET /signals/news` (ETag / `If-None-Match` / `304`) + outbound webhooks when MLB-backed snapshots change.
 
 ---
 
@@ -19,25 +19,51 @@
 - **Fast path:** Redis sidecar `${signalsCacheKey}:http-etag` (TTL ≥ 24h while payload cache stays ~15m) can answer `304` without calling `fetchSignals` when the validator matches.
 - **Second chance:** After `fetchSignals`, if the computed fingerprint matches `If-None-Match`, respond `304` (empty body).
 
-### 2. Ingest → Draft BFF webhook
+### 2. Many Draft apps — per–API-key webhook (primary)
 
-After a **cold MLB fetch**, Engine compares the new fingerprint to the previous value in Redis; **if it changed**, it `POST`s to **`DRAFT_NEWS_SIGNALS_WEBHOOK_URL`**:
+Each signed-up API key can register **its own** HTTPS endpoint. Engine fans out `signals_updated` to **every** active key that:
+
+- has **`signals`** scope,
+- has a non-empty **`newsSignalsWebhookUrl`** on the key document, and
+- can resolve a **Bearer** token (see below).
+
+**Portal registration (developer session):**
+
+`PATCH /api/account/keys/:id/news-signals-webhook`
+
+JSON body (any subset; send `newsSignalsWebhookUrl: null` or `""` to clear):
+
+```json
+{
+  "newsSignalsWebhookUrl": "https://<their-draft-host>/api/internal/news-signals/hook",
+  "newsSignalsWebhookBearer": "optional; omit to use the API key secret as Bearer"
+}
+```
+
+- **`newsSignalsWebhookBearer`:** Optional. If set, stored sealed server-side and sent as `Authorization: Bearer …`. If omitted / cleared, Engine uses the **same plaintext API key** minted from the portal (stored sealed on the document) — matches Draft validating **`AMETHYST_API_KEY`** on the hook.
+- Keys **without** stored plaintext and **without** a dedicated bearer cannot enable webhooks until one is configured.
+
+`GET /api/account/keys` includes **`newsSignalsWebhookUrl`** (never returns bearer material).
+
+### 3. Optional global webhook (single URL / ops / legacy)
+
+If **`DRAFT_NEWS_SIGNALS_WEBHOOK_URL`** is set on the Engine host, Engine **also** POSTs once using **`INTERNAL_WEBHOOK_SECRET`** or **`AMETHYST_API_KEY`** as Bearer (same as before). Omit this when every tenant uses per–API-key URLs only.
+
+Payload for every POST:
 
 ```json
 { "event": "signals_updated", "occurred_at": "<ISO8601>" }
 ```
 
-**`Authorization: Bearer …`** — Draft validates this token against **`INTERNAL_WEBHOOK_SECRET`** if set on Draft, **otherwise** **`AMETHYST_API_KEY`** (the same plaintext Draft uses as `x-api-key` to Engine). Easiest ops path: set **`AMETHYST_API_KEY`** on Engine and send `Bearer <AMETHYST_API_KEY>` — no extra Draft-only secret.
+Failures are logged only; they do not fail the signals response.
 
-If the webhook URL is set but **neither** `INTERNAL_WEBHOOK_SECRET` nor `AMETHYST_API_KEY` is set on Engine, Engine logs a warning and **does not** send. Failures are logged only; they do not fail the signals response.
-
-### 3. Engine env
+### 4. Engine env (global fallback only)
 
 | Variable | Purpose |
 |----------|---------|
-| `DRAFT_NEWS_SIGNALS_WEBHOOK_URL` | Full URL, e.g. `https://<draft-api-host>/api/internal/news-signals/hook` |
-| `INTERNAL_WEBHOOK_SECRET` | Optional dedicated Bearer secret (must match Draft if used) |
-| `AMETHYST_API_KEY` | Fallback Bearer value when `INTERNAL_WEBHOOK_SECRET` is unset; same key Draft uses as `x-api-key` to Engine |
+| `DRAFT_NEWS_SIGNALS_WEBHOOK_URL` | Optional single webhook URL (legacy / instance-level). |
+| `INTERNAL_WEBHOOK_SECRET` | Bearer for global URL when set. |
+| `AMETHYST_API_KEY` | Bearer for global URL when `INTERNAL_WEBHOOK_SECRET` unset. |
 
 **Last-Modified** was not implemented on Engine (optional).
 
@@ -55,22 +81,14 @@ If the webhook URL is set but **neither** `INTERNAL_WEBHOOK_SECRET` nor `AMETHYS
 
 ## Coordination checklist
 
-1. **Bearer token:** Either **dedicated** `INTERNAL_WEBHOOK_SECRET` on **both** sides, or **reuse** `AMETHYST_API_KEY` as Bearer on Engine (matches Draft fallback validation).
-2. **Webhook URL:** Engine `DRAFT_NEWS_SIGNALS_WEBHOOK_URL` = full Draft URL `https://<host>/api/internal/news-signals/hook` (HTTPS in prod).
+1. **Per-app (recommended):** Each Draft deployment registers **`newsSignalsWebhookUrl`** (+ optional bearer) via **portal** for the API key their BFF uses. Bearer matches what their hook validates (often the same key as `x-api-key` to Engine).
+2. **Global fallback:** Optional **`DRAFT_NEWS_SIGNALS_WEBHOOK_URL`** + env Bearer only if you still want one instance-level notify without Mongo registration.
 3. **IP allowlisting:** If Draft sits behind a WAF / API gateway, allow Engine egress IPs (or private link / tunnel). Optional.
 4. **Multi-instance Draft API:** Socket.IO fan-out across replicas may require Redis (pub/sub or adapter) — not automatic with multiple tasks yet.
 
-### AWS App Runner (this Engine deployment)
+### AWS App Runner (Engine)
 
-Set environment variables on the **App Runner service** (Configuration → Environment variables). Values are **not** committed to git.
-
-| Name | Notes |
-|------|--------|
-| `DRAFT_NEWS_SIGNALS_WEBHOOK_URL` | Full HTTPS URL to Draft’s hook, e.g. `https://<draft-api-host>/api/internal/news-signals/hook`. |
-| `AMETHYST_API_KEY` | Same plaintext Draft uses as `x-api-key` when calling Engine — webhook Bearer uses this if `INTERNAL_WEBHOOK_SECRET` is unset. |
-| `INTERNAL_WEBHOOK_SECRET` | Optional; if set on Engine **and** Draft, use this dedicated Bearer instead of the API key. |
-
-Redeploy after changing variables (push to `main` triggers deploy in this repo’s workflow).
+Per-key URLs live in **MongoDB** (`apikeys`); no App Runner env needed for multi-tenant push. Optional global vars from section 4 above still apply if used.
 
 ---
 
