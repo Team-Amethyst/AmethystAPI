@@ -11,6 +11,7 @@ import { executeValuationWorkflow } from "../src/services/valuationWorkflow";
 import { loadMongoCatalogForEngine } from "../src/lib/mongoCatalogPipeline";
 import { playerTokensFromLean } from "../src/lib/fantasyRosterSlots";
 import { isPitcherForBaseline } from "../src/services/baselineProjectionStats";
+import { POSITIONAL_NEED_FORMULA_REFERENCE } from "../src/services/teamAdjustedNeed";
 
 const NUM_TEAMS = 12;
 const TOTAL_BUDGET = 260;
@@ -400,13 +401,7 @@ async function main(): Promise<void> {
           team_adjusted_raw:
             "adjusted_value * need * budget * dollars_per_slot * slot_scarcity * replacement_dropoff",
           cap: "min(8000, max(adjusted_value*6, baseline_value*4 + adjusted_value))",
-          need: {
-            open_primary_fitting_slot: 1.25,
-            open_flex_UTIL_CI_MI_P: 1.1,
-            fits_some_starting_slot_but_primaries_flex_full: 0.85,
-            else: 1.0,
-            flex_slots: ["UTIL", "CI", "MI", "P"],
-          },
+          need: POSITIONAL_NEED_FORMULA_REFERENCE,
           budget: {
             userRemaining_vs_leagueAvgRemaining:
               "> 1.25x avg -> 1.15; < 0.75x -> 0.85; else 1.0",

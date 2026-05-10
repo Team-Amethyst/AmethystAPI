@@ -97,6 +97,16 @@ describe("positionalNeedMultiplier (primary + flex tiers)", () => {
     expect(positionalNeedMultiplier(sp, new Map([["P", 1]]))).toBeCloseTo(1.044, 3);
   });
 
+  it("generic P applies the same flex boost to SP and RP (broader, tiered weak signal)", () => {
+    const sp = player({ position: "SP" });
+    const rp = player({ position: "RP" });
+    const pOpen = new Map([["P", 1]]);
+    expect(positionalNeedMultiplier(sp, pOpen)).toBeCloseTo(
+      positionalNeedMultiplier(rp, pOpen),
+      6
+    );
+  });
+
   it("bench rows do not affect need when skipped from aggregation", () => {
     const ss = player({ position: "SS" });
     const withBn = positionalNeedMultiplier(

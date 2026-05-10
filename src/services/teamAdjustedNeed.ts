@@ -35,6 +35,38 @@ const W_P = 0.044;
 /** All fitting starting slots are full — roster already carries this player type. */
 const FILLED_LINEUP_NEED = 0.85;
 
+/**
+ * Single source of truth for audits/docs — mirrors {@link positionalNeedMultiplier}.
+ * Flex tiers: CI/MI > generic P > UTIL; flex-only boost capped at FLEX_BOOST_CAP (~1.10×).
+ */
+export const POSITIONAL_NEED_FORMULA_REFERENCE = {
+  PRIMARY_BOOST_CAP,
+  PRIMARY_BOOST_PER_PRIMARY_SEAT,
+  PRIMARY_BOOST_PER_EXTRA_PRIMARY_CHAIN,
+  flex_supplement_weights: {
+    CI_MI: SUPP_CI_MI,
+    UTIL: SUPP_UTIL,
+    P: SUPP_P,
+  },
+  FLEX_BOOST_CAP,
+  flex_only_weights_per_open_seat: {
+    CI_MI: W_CI_MI,
+    UTIL: W_UTIL,
+    P: W_P,
+  },
+  FILLED_LINEUP_NEED,
+  bench_ignored: ["BN"] as const,
+  formulas: {
+    primary_path:
+      "need = 1 + min(PRIMARY_BOOST_CAP, PRIMARY_BOOST_PER_PRIMARY_SEAT*u + PRIMARY_BOOST_PER_EXTRA_PRIMARY_CHAIN*max(0,u-1) + SUPP_CI_MI*ciMi + SUPP_UTIL*util + SUPP_P*p_open) when u = primary open units fitting the player",
+    flex_only_path:
+      "need = 1 + min(FLEX_BOOST_CAP, W_CI_MI*ciMi + W_UTIL*util + W_P*p_open) when u = 0 but flex opens fit",
+    filled_but_still_eligible_starting_slot:
+      "need = FILLED_LINEUP_NEED when every fitting slot is covered (no positive open count)",
+    no_starting_slot_fits: "need = 1",
+  },
+} as const;
+
 function isBenchSlotKey(slot: string): boolean {
   return slot.toUpperCase().trim() === "BN";
 }
