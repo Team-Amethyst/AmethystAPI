@@ -10,6 +10,7 @@ import { getPlayerId } from "../lib/playerId";
 import type { BaselineRiskExplainFields } from "../types/baselineRiskExplain";
 import { pickBaselineRiskExplainFromMeta } from "../types/baselineRiskExplain";
 import type { ReplacementSlotsV2Result } from "./replacementSlotsV2";
+import { valuedPlayerMarketFieldsFromLean } from "../lib/marketAdp/wire";
 
 const STEAL_SLOPE = 1.25;
 const REACH_SLOPE = 0.75;
@@ -170,6 +171,7 @@ export function buildValuedRows(params: {
       },
       scarcity_adjustment: 0,
       inflation_adjustment: parseFloat((adjustedRounded - baselineValue).toFixed(2)),
+      ...valuedPlayerMarketFieldsFromLean(p),
     };
   });
 }

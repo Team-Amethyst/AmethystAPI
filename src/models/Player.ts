@@ -57,6 +57,13 @@ export interface IPlayer extends Document {
   catalog_rank: number;
   /** Catalog dollar-band tier (sync); legacy Mongo key `tier` still ingested. */
   catalog_tier: number;
+  /** Optional vendor fantasy ADP when ingested (never derived from catalog_rank). */
+  market_adp?: number;
+  market_adp_source?: string;
+  market_adp_updated_at?: string;
+  market_adp_min?: number;
+  market_adp_max?: number;
+  market_pick_count?: number;
   value: number;
   outlook: string;
   stats?: IPlayerStats;
@@ -80,6 +87,12 @@ const playerSchema = new Schema<IPlayer>(
     injurySeverity: { type: Number, min: 0, max: 3 },
     catalog_rank: { type: Number, default: 9999 },
     catalog_tier: { type: Number, default: 0 },
+    market_adp: { type: Number },
+    market_adp_source: { type: String },
+    market_adp_updated_at: { type: String },
+    market_adp_min: { type: Number },
+    market_adp_max: { type: Number },
+    market_pick_count: { type: Number },
     value: { type: Number, default: 0 },
     outlook: { type: String, default: "" },
     stats: { type: Schema.Types.Mixed, default: {} },

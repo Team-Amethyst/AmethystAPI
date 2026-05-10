@@ -51,6 +51,57 @@ function coerceMlbId(raw: unknown): number | undefined {
   return undefined;
 }
 
+function pickMarketAdpFields(
+  d: Record<string, unknown>
+): Partial<
+  Pick<
+    LeanPlayer,
+    | "market_adp"
+    | "market_adp_source"
+    | "market_adp_updated_at"
+    | "market_adp_min"
+    | "market_adp_max"
+    | "market_pick_count"
+  >
+> {
+  const out: Partial<
+    Pick<
+      LeanPlayer,
+      | "market_adp"
+      | "market_adp_source"
+      | "market_adp_updated_at"
+      | "market_adp_min"
+      | "market_adp_max"
+      | "market_pick_count"
+    >
+  > = {};
+  const rawAdp = d.market_adp ?? d.marketAdp;
+  if (typeof rawAdp === "number" && Number.isFinite(rawAdp) && rawAdp > 0) {
+    out.market_adp = rawAdp;
+  }
+  const src = d.market_adp_source ?? d.marketAdpSource;
+  if (typeof src === "string" && src.trim() !== "") {
+    out.market_adp_source = src.trim();
+  }
+  const upd = d.market_adp_updated_at ?? d.marketAdpUpdatedAt;
+  if (typeof upd === "string" && upd.trim() !== "") {
+    out.market_adp_updated_at = upd.trim();
+  }
+  const mn = d.market_adp_min ?? d.marketAdpMin;
+  if (typeof mn === "number" && Number.isFinite(mn)) {
+    out.market_adp_min = mn;
+  }
+  const mx = d.market_adp_max ?? d.marketAdpMax;
+  if (typeof mx === "number" && Number.isFinite(mx)) {
+    out.market_adp_max = mx;
+  }
+  const pc = d.market_pick_count ?? d.marketPickCount;
+  if (typeof pc === "number" && Number.isFinite(pc) && pc >= 0) {
+    out.market_pick_count = Math.trunc(pc);
+  }
+  return out;
+}
+
 function coercePositions(raw: unknown): string[] | undefined {
   if (Array.isArray(raw)) {
     const arr = raw.filter(
@@ -130,6 +181,7 @@ export function normalizeCatalogPlayers(
       ...(injurySeverity != null ? { injurySeverity } : {}),
       catalog_rank,
       catalog_tier,
+      ...pickMarketAdpFields(d),
       value,
       outlook: typeof d.outlook === "string" ? d.outlook : undefined,
       stats:

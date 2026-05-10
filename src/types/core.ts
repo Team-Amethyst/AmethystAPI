@@ -57,6 +57,13 @@ export interface LeanPlayer {
   /** Tier from catalog dollar bands (`assignTier` / Mongo). Not auction-tier. */
   catalog_tier: number;
   value: number;
+  /** External fantasy ADP from an ingested vendor source (optional). Never derived from catalog_rank. */
+  market_adp?: number;
+  market_adp_source?: string;
+  market_adp_updated_at?: string;
+  market_adp_min?: number;
+  market_adp_max?: number;
+  market_pick_count?: number;
   outlook?: string;
   stats?: Record<string, unknown>;
   projection?: Record<string, unknown>;

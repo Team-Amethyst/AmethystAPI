@@ -12,6 +12,7 @@ import { getRequestId } from "../lib/requestContext";
 import { logger } from "../lib/logger";
 import { PLAYER_CATALOG_LEAN_SELECT } from "../lib/playerCatalogProjection";
 import { normalizeCatalogPlayers } from "../lib/playerCatalog";
+import { catalogPlayerMarketFieldsFromLean } from "../lib/marketAdp/wire";
 import { hydratePlaceholderCatalogTeamsFromMlb } from "../lib/catalogTeamHydration";
 import { zodIssuesToFieldErrors } from "../lib/zodErrors";
 import { cacheMiddleware } from "../middleware/cache";
@@ -98,6 +99,7 @@ const batchValues: RequestHandler = async (
       value: p.value ?? 0,
       catalog_tier: p.catalog_tier ?? 0,
       catalog_rank: p.catalog_rank ?? 0,
+      ...catalogPlayerMarketFieldsFromLean(p),
     })),
   };
 

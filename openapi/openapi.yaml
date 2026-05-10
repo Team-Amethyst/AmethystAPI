@@ -385,6 +385,24 @@ components:
           type: number
           nullable: true
           description: External consensus ADP when wired to a real source; otherwise omit.
+        market_adp_source:
+          type: string
+          nullable: true
+          description: Vendor or dataset label for market_adp.
+        market_adp_updated_at:
+          type: string
+          nullable: true
+          description: ISO timestamp when vendor ADP was fetched or applied.
+        market_adp_min:
+          type: number
+          nullable: true
+        market_adp_max:
+          type: number
+          nullable: true
+        market_pick_count:
+          type: integer
+          nullable: true
+          minimum: 0
         baseline_value:
           type: number
           description: >-
@@ -678,6 +696,20 @@ components:
                 type: integer
               catalog_rank:
                 type: number
+              market_adp:
+                type: number
+                description: Present when ingested from an external ADP vendor.
+              market_adp_source:
+                type: string
+              market_adp_updated_at:
+                type: string
+              market_adp_min:
+                type: number
+              market_adp_max:
+                type: number
+              market_pick_count:
+                type: integer
+                minimum: 0
 
     AppErrorEnvelope:
       type: object

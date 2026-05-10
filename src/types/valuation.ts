@@ -163,6 +163,13 @@ export interface ValuedPlayer {
   auction_tier: number;
   /** Present only when wired to a real external ADP source (otherwise omit). */
   market_adp?: number | null;
+  /** Vendor label when market_adp is present (e.g. NFBC 15-team). */
+  market_adp_source?: string | null;
+  /** ISO timestamp when vendor ADP was fetched or applied. */
+  market_adp_updated_at?: string | null;
+  market_adp_min?: number | null;
+  market_adp_max?: number | null;
+  market_pick_count?: number | null;
   baseline_value: number;
   /** Official dollar valuation for benchmarks and external evaluation; equals `adjusted_value`. */
   auction_value: number;

@@ -1,0 +1,32 @@
+[
+  {
+    "_id": "sample660271",
+    "mlbId": 660271,
+    "name": "Shohei Ohtani",
+    "team": "LAD",
+    "position": "DH",
+    "catalog_rank": 1,
+    "catalog_tier": 1,
+    "value": 95
+  },
+  {
+    "_id": "sample592450",
+    "mlbId": 592450,
+    "name": "Aaron Judge",
+    "team": "NYY",
+    "position": "OF",
+    "catalog_rank": 2,
+    "catalog_tier": 1,
+    "value": 92
+  },
+  {
+    "_id": "sample608070",
+    "mlbId": 608070,
+    "name": "Ronald Acuña Jr.",
+    "team": "ATL",
+    "position": "OF",
+    "catalog_rank": 3,
+    "catalog_tier": 1,
+    "value": 90
+  }
+]

@@ -180,6 +180,27 @@
           "type": ["number", "null"],
           "description": "External consensus ADP when a real source is wired; otherwise omit."
         },
+        "market_adp_source": {
+          "type": ["string", "null"],
+          "description": "Vendor or dataset label for market_adp (e.g. CSV fixture, NFBC export)."
+        },
+        "market_adp_updated_at": {
+          "type": ["string", "null"],
+          "description": "ISO timestamp when vendor ADP was fetched or last applied to catalog."
+        },
+        "market_adp_min": {
+          "type": ["number", "null"],
+          "description": "Optional lower bound from vendor (e.g. confidence interval)."
+        },
+        "market_adp_max": {
+          "type": ["number", "null"],
+          "description": "Optional upper bound from vendor."
+        },
+        "market_pick_count": {
+          "type": ["integer", "null"],
+          "minimum": 0,
+          "description": "Sample size / draft count underlying the ADP estimate when provided."
+        },
         "baseline_value": {
           "type": "number"
         },

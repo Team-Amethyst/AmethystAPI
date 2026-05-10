@@ -104,5 +104,34 @@ export function rowIssues(row: ValuedPlayer, index: number): string[] {
       out.push(`${p}.market_adp must be a positive finite number when set`);
     }
   }
+  if (row.market_adp_source !== undefined && row.market_adp_source !== null) {
+    if (typeof row.market_adp_source !== "string" || row.market_adp_source.trim() === "") {
+      out.push(`${p}.market_adp_source must be a non-empty string when set`);
+    }
+  }
+  if (row.market_adp_updated_at !== undefined && row.market_adp_updated_at !== null) {
+    if (typeof row.market_adp_updated_at !== "string" || row.market_adp_updated_at.trim() === "") {
+      out.push(`${p}.market_adp_updated_at must be a non-empty string when set`);
+    }
+  }
+  if (row.market_adp_min !== undefined && row.market_adp_min !== null) {
+    if (!isFiniteNumber(row.market_adp_min)) {
+      out.push(`${p}.market_adp_min must be a finite number when set`);
+    }
+  }
+  if (row.market_adp_max !== undefined && row.market_adp_max !== null) {
+    if (!isFiniteNumber(row.market_adp_max)) {
+      out.push(`${p}.market_adp_max must be a finite number when set`);
+    }
+  }
+  if (row.market_pick_count !== undefined && row.market_pick_count !== null) {
+    if (
+      !Number.isInteger(row.market_pick_count) ||
+      row.market_pick_count < 0 ||
+      !Number.isFinite(row.market_pick_count)
+    ) {
+      out.push(`${p}.market_pick_count must be a non-negative integer when set`);
+    }
+  }
   return out;
 }

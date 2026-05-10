@@ -14,6 +14,12 @@ export interface CatalogPlayerValueRow {
   value: number;
   catalog_tier: number;
   catalog_rank: number;
+  market_adp?: number;
+  market_adp_source?: string;
+  market_adp_updated_at?: string;
+  market_adp_min?: number;
+  market_adp_max?: number;
+  market_pick_count?: number;
 }
 
 export interface CatalogBatchValuesResponse {

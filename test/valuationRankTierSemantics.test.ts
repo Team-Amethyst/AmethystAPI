@@ -96,6 +96,26 @@ describe("rank/tier semantics on valuation rows", () => {
     expect(res.valuations[0]).not.toHaveProperty("market_adp");
   });
 
+  it("echoes ingested market_adp metadata from catalog lean rows", () => {
+    const players = [
+      mkLean("1", {
+        value: 30,
+        market_adp: 18.5,
+        market_adp_source: "fixture",
+        market_adp_updated_at: "2026-05-01T00:00:00.000Z",
+      }),
+    ];
+    const res = calculateInflation(players, [], 260, 2, roster, "Mixed", {
+      inflationModel: "global_v1",
+    });
+    const row = res.valuations[0]!;
+    expect(row.market_adp).toBe(18.5);
+    expect(row.market_adp_source).toBe("fixture");
+    expect(row.market_adp_updated_at).toBe("2026-05-01T00:00:00.000Z");
+    expect(row.catalog_rank).toBe(1);
+    expect(row.catalog_rank).not.toBe(row.market_adp);
+  });
+
   it("subset player_ids filter keeps ranks relative to returned valuations[] only", () => {
     const players = [
       mkLean("1", { value: 50 }),
