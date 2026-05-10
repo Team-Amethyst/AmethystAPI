@@ -165,6 +165,16 @@
     "user_team_id": {
       "type": "string",
       "description": "Optional team context for team_adjusted_value; defaults to team_1 when omitted."
+    },
+    "explain_valuation_rows": {
+      "type": "boolean",
+      "description": "When true, each valuations[] row may include valuation_explain (slot/replacement + pool context)."
+    },
+    "recommended_bid_soft_cap_ratio": {
+      "type": "number",
+      "minimum": 1,
+      "maximum": 5,
+      "description": "Optional: after smoothing, clamp recommended_bid to at most this multiple of auction_value (auction_value unchanged)."
     }
   },
   "$defs": {

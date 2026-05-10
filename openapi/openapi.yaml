@@ -223,8 +223,31 @@ components:
         recommended_bid_note:
           type: string
           description: |
-            Explains `recommended_bid`: a draftroom bid suggestion (UX smoothing), not the canonical player valuation;
-            use `auction_value` for evaluation.
+            Explains `recommended_bid`: draftroom bid anchor (clearing blend of auction_value toward baseline_value),
+            not league-wide FMV — use `auction_value` for evaluation.
+        edge_note:
+          type: string
+          description: |
+            Clarifies `edge` as team_adjusted_value minus recommended_bid; negative edge is common when
+            recommended_bid is intentionally above auction_value for stars.
+        valuation_context:
+          type: object
+          description: Eligible pool size vs league-wide empty roster slots (thin-pool diagnostics).
+          properties:
+            eligible_pool_size:
+              type: integer
+              minimum: 0
+            roster_demand_slots:
+              type: integer
+              minimum: 0
+            pool_to_slot_ratio:
+              type: number
+              nullable: true
+        valuation_context_warnings:
+          type: array
+          description: Non-fatal trust warnings (thin pool, small custom eligible universe, skewed keepers).
+          items:
+            type: string
         user_team_id_used:
           type: string
           description: Team context used for team_adjusted_value (defaults to team_1).
@@ -357,8 +380,8 @@ components:
         recommended_bid:
           type: number
           description: >-
-            Draftroom bid suggestion (phase/depth-aware anchor plus isotonic smoothing within hitters and pitchers).
-            Guidance for live bidding — not the canonical player valuation (`auction_value`).
+            Draftroom bid anchor (phase/depth clearing blend a+L·(r−a) with floors/caps and isotonic smoothing).
+            May exceed auction_value for stars when list baseline r is far above surplus-deflated a — not FMV.
         team_adjusted_value:
           type: number
           description: >-
@@ -368,7 +391,40 @@ components:
             equal per-team budgets when budget_by_team_id is set, equal rostered counts per team).
         edge:
           type: number
-          description: team_adjusted_value minus recommended_bid (room vs suggested bid).
+          description: team_adjusted_value minus recommended_bid; not "profit vs FMV" when recommended_bid > auction_value.
+        valuation_explain:
+          type: object
+          description: Present when request `explain_valuation_rows` is true — lightweight replacement/slot context.
+          properties:
+            effective_positions:
+              type: array
+              items:
+                type: string
+            replacement_key_used:
+              type: string
+              nullable: true
+            replacement_value_used:
+              type: number
+              nullable: true
+            surplus_basis:
+              type: number
+            inflation_factor:
+              type: number
+            pool_size:
+              type: integer
+            roster_demand_slots:
+              type: integer
+            pool_to_slot_ratio:
+              type: number
+              nullable: true
+            scoring_category_warnings:
+              type: array
+              items:
+                type: string
+            valuation_context_warnings:
+              type: array
+              items:
+                type: string
         indicator:
           type: string
           enum: [Steal, Reach, Fair Value]
@@ -752,6 +808,14 @@ paths:
                 user_team_id:
                   type: string
                   description: Optional team context for team_adjusted_value (defaults to team_1).
+                explain_valuation_rows:
+                  type: boolean
+                  description: When true, each valuations row may include valuation_explain (replacement + pool context).
+                recommended_bid_soft_cap_ratio:
+                  type: number
+                  minimum: 1
+                  maximum: 5
+                  description: Optional clamp — recommended_bid ≤ ratio × auction_value after smoothing (auction_value unchanged).
               additionalProperties: true
       responses:
         "200":

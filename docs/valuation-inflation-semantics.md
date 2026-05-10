@@ -132,6 +132,17 @@ So players at or below **replacement** in model dollars stay near **$1**; stars 
 
 ---
 
+## `recommended_bid` vs `auction_value` (trust)
+
+- **`auction_value`** (equals **`adjusted_value`**) is **league-wide fair market auction dollars** from the active **`inflation_model`** (default **`replacement_slots_v2`**). Use it for benchmarks, exports, and “what is this player worth in this league economy?”
+- **`recommended_bid`** is a **Draftroom bid anchor**: a phase/depth-aware clearing price that blends **`auction_value` (a)** toward **`baseline_value` (r)** via **`a + L·(r−a)`** (then hitter/pitcher floors, elite boosts, caps, and **isotonic smoothing** within hitters and pitchers). When list **`r` is well above surplus-deflated `a`** for stars, **`recommended_bid` can sit materially above `auction_value` by design** — treat it as an aggressive **ceiling / discipline signal**, not a second FMV.
+- **`team_adjusted_value`** is **marginal worth to the requesting team’s** roster and budget (need, dollars per slot vs peers, scarcity). In a **symmetric open** snapshot it collapses to **`adjusted_value`**; it diverges when rosters or budgets are asymmetric.
+- **`edge`** = **`team_adjusted_value − recommended_bid`**. Negative edge on stars is common when **`recommended_bid ≫ auction_value`**; **edge is not “profit vs FMV.”**
+- Optional request **`recommended_bid_soft_cap_ratio`** (≥ 1) clamps **`recommended_bid`** to at most **`ratio × auction_value`** after smoothing (trust / UI alignment) without changing **`auction_value`**.
+- Optional **`explain_valuation_rows`** adds per-row **`valuation_explain`** (effective slot tokens, replacement key/value, surplus basis). The response also carries **`valuation_context`** / **`valuation_context_warnings`** for thin pools and skewed keeper layouts.
+
+---
+
 ## Bounded-by flag
 
 - **`inflation_bounded_by: "none"`** — applied equals raw (within float tolerance).
