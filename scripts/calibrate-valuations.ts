@@ -19,14 +19,18 @@ import {
   buildDraftroomStandardValuationInput,
   buildSyntheticCalibrationDraftroomPool,
   CALIBRATION_CATS_5X5,
+  CALIBRATION_CATS_5X5_PLUS_HLD,
+  CALIBRATION_CATS_QS_REPLACES_W,
   CALIBRATION_CATS_SAVES_ONLY,
   draftroomUiDefaultRoster,
   legacyEngineCalibrationRoster,
 } from "../src/lib/calibrationDraftroomFixture";
+import { buildPitcherHarnessSplits } from "../src/lib/valuationHarnessPitcherSplits";
 import { executeValuationWorkflow } from "../src/services/valuationWorkflow";
 import { isPitcherForBaseline } from "../src/services/baselineProjectionStats";
 import { positionOverridesFromRequest } from "../src/lib/fantasyRosterSlots";
 import { ROTO_Z_HITTER, ROTO_Z_PITCHER } from "../src/services/baselineRotoZConfig";
+import { ROTO_INTRINSIC_BASE_PITCHER_REF } from "../src/services/baselineValueEngine";
 import { loadMongoCatalogForEngine } from "../src/lib/mongoCatalogPipeline";
 import { listUnsupportedScoringCategories } from "../src/lib/scoringCategorySupport";
 
@@ -125,7 +129,7 @@ function heuristicFlags(params: {
 function printKnobsReference(): void {
   console.log(`
 --- Engine calibration knobs (inspect only) ---
-  baselineValueEngine: ROTO_INTRINSIC_BASE_HITTER = 24, ROTO_INTRINSIC_BASE_PITCHER_REF = 23, ROTO_CATALOG_PRIOR_WEIGHT = 0.12
+  baselineValueEngine: ROTO_INTRINSIC_BASE_HITTER = 24, ROTO_INTRINSIC_BASE_PITCHER_REF = ${ROTO_INTRINSIC_BASE_PITCHER_REF.value}, ROTO_CATALOG_PRIOR_WEIGHT = 0.12
   baselineRotoZConfig.ts (rotoBaselineForGroup z → projectionMult):
     hitter  zScale=${ROTO_Z_HITTER.zScale}  zLo=${ROTO_Z_HITTER.zLo}  zHi=${ROTO_Z_HITTER.zHi}
     pitcher zScale=${ROTO_Z_PITCHER.zScale}  zLo=${ROTO_Z_PITCHER.zLo}  zHi=${ROTO_Z_PITCHER.zHi}
@@ -229,7 +233,7 @@ function buildScenarios(): Scenario[] {
       description: "Adds HLD alongside standard 5×5 (HLD is modeled from projected holds)",
       input: {
         ...b,
-        scoring_categories: [...CALIBRATION_CATS_5X5, { name: "HLD", type: "pitching" }],
+        scoring_categories: CALIBRATION_CATS_5X5_PLUS_HLD,
       },
     },
     {
@@ -270,6 +274,14 @@ function buildScenarios(): Scenario[] {
         scoring_categories: CALIBRATION_CATS_5X5.map((c) =>
           c.name === "K" ? { name: "K/9", type: "pitching" as const } : c
         ),
+      },
+    },
+    {
+      id: "pitching_qs_replaces_w",
+      description: "QS replaces W (same batting as standard 5×5)",
+      input: {
+        ...b,
+        scoring_categories: CALIBRATION_CATS_QS_REPLACES_W,
       },
     },
     {
@@ -402,6 +414,8 @@ function printScenarioReport(
     for (const h of hints) console.log(`  * ${h}`);
   }
 
+  const pitcherHarness = buildPitcherHarnessSplits(rows, byId, ov);
+
   if (scenario.id.startsWith("multi_pos") && synthetic) {
     const row = rows.find((r) => r.player_id === "777001");
     if (row) {
@@ -450,6 +464,7 @@ function printScenarioReport(
     replacement_values: response.replacement_values_by_slot_or_position ?? null,
     scoring_category_warnings: response.scoring_category_warnings ?? null,
     heuristicFlags: hints,
+    pitcherHarness,
   };
 }
 

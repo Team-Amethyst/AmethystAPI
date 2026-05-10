@@ -33,6 +33,17 @@ export const CALIBRATION_CATS_SAVES_ONLY: ScoringCategory[] = [
   { name: "K", type: "pitching" },
 ];
 
+/** Quality starts replace wins — common QS league wiring (batting unchanged). */
+export const CALIBRATION_CATS_QS_REPLACES_W: ScoringCategory[] = CALIBRATION_CATS_5X5.map((c) =>
+  c.name === "W" ? { name: "QS", type: "pitching" as const } : c
+);
+
+/** Standard 5×5 plus holds — reliever additive category. */
+export const CALIBRATION_CATS_5X5_PLUS_HLD: ScoringCategory[] = [
+  ...CALIBRATION_CATS_5X5,
+  { name: "HLD", type: "pitching" },
+];
+
 /** Draftroom web/mobile UI default roster — no generic `P`; 2 RP; 3 BN. */
 export function draftroomUiDefaultRoster(): RosterSlot[] {
   return [

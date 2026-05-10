@@ -10,10 +10,11 @@ import type { LeanPlayer, NormalizedValuationInput, ValuedPlayer, ValuationRespo
 import {
   buildDraftroomStandardValuationInput,
   CALIBRATION_CATS_5X5,
+  CALIBRATION_CATS_QS_REPLACES_W,
   CALIBRATION_CATS_SAVES_ONLY,
   draftroomUiDefaultRoster,
-  legacyEngineCalibrationRoster,
 } from "../src/lib/calibrationDraftroomFixture";
+import { buildPitcherHarnessSplits } from "../src/lib/valuationHarnessPitcherSplits";
 import { executeValuationWorkflow } from "../src/services/valuationWorkflow";
 import { filterValuationUniverse } from "../src/lib/valuationPlayerPool";
 import { positionOverridesFromRequest } from "../src/lib/fantasyRosterSlots";
@@ -22,6 +23,15 @@ import { loadMongoCatalogForEngine } from "../src/lib/mongoCatalogPipeline";
 import { computeRemainingLeagueRosterSlots } from "../src/lib/remainingLeagueRosterSlots";
 
 const ROOT = path.resolve(__dirname, "..");
+
+function sliceInjuryExplain(ex: ValuedPlayer["valuation_explain"]): Record<string, unknown> | null {
+  if (!ex) return null;
+  return {
+    injury_severity: ex.injury_severity ?? null,
+    injury_multiplier: ex.injury_multiplier ?? null,
+    injury_component: ex.injury_component ?? null,
+  };
+}
 
 /**
  * Twelve teams; first four teams each keep three low-ADP players at equal cost.
@@ -176,6 +186,7 @@ function metricsForScenario(
       { player_id: r.player_id, name: r.name, auction_value: r.auction_value },
     ])
   );
+  const pitcherHarness = buildPitcherHarnessSplits(rows, byId, ov);
   return {
     id,
     description,
@@ -205,10 +216,12 @@ function metricsForScenario(
       .map((c) => `${c.name}:${c.type}`)
       .join("|"),
     validation: { market_notes: response.market_notes ?? [] },
+    replacement_values_by_slot_or_position: response.replacement_values_by_slot_or_position ?? null,
     top25,
     top15Hitters: top15h,
     top15Pitchers: top15p,
     topByPosition,
+    pitcherHarness,
   };
 }
 
@@ -403,6 +416,11 @@ async function main(): Promise<void> {
           .map((r) => r.player_id)
       : [];
 
+  const injuryAnchorId =
+    ["665742", "660271", "592450"].find(
+      (id) => pool.some((p) => p.mlbId != null && String(p.mlbId) === id)
+    ) ?? "";
+
   const keeperHeavyDrafted = pool.slice(0, 32).map((p) => ({
     player_id: String(p.mlbId ?? p._id),
     name: p.name,
@@ -505,6 +523,40 @@ async function main(): Promise<void> {
       input: {
         ...b(),
         excluded_player_ids: eliteIds.slice(0, 6),
+      },
+    },
+    {
+      id: "17_pitching_qs_replaces_w",
+      description: "QS replaces W (5×5 batting unchanged)",
+      input: {
+        ...b(),
+        scoring_categories: CALIBRATION_CATS_QS_REPLACES_W,
+      },
+    },
+    {
+      id: "18_explicit_sp_rp_default",
+      description:
+        "Explicit SP + RP roster rows (Draftroom default 5 SP, 2 RP) — contrast pitcherHarness with 07_generic_p_slots",
+      input: { ...b() },
+    },
+    ...(injuryAnchorId
+      ? [
+          {
+            id: "19_injury_override_anchor",
+            description: `injury_overrides severity=3 on anchor player_id=${injuryAnchorId} (stable catalog ids used in tests)`,
+            input: {
+              ...b(),
+              injury_overrides: [{ player_id: injuryAnchorId, injury_severity: 3 }],
+            },
+          },
+        ]
+      : []),
+    {
+      id: "20_pitching_hld_addon",
+      description: "5×5 + HLD (holds additive pitching category)",
+      input: {
+        ...b(),
+        scoring_categories: [...CALIBRATION_CATS_5X5, { name: "HLD", type: "pitching" as const }],
       },
     },
   ];
@@ -652,6 +704,132 @@ async function main(): Promise<void> {
       : null,
   };
 
+  const sumTop20RpAuction = (block: Record<string, unknown> | undefined): number => {
+    const ph = block?.pitcherHarness as { top20RpClosersStyle?: Array<{ auction_value: number }> } | undefined;
+    return (ph?.top20RpClosersStyle ?? []).reduce((s, x) => s + x.auction_value, 0);
+  };
+
+  const midTierRpSum = (block: Record<string, unknown> | undefined): number | null => {
+    const ph = block?.pitcherHarness as { midTierRp_ranks_10_to_19_sum_auction?: number } | undefined;
+    return typeof ph?.midTierRp_ranks_10_to_19_sum_auction === "number"
+      ? ph.midTierRp_ranks_10_to_19_sum_auction
+      : null;
+  };
+
+  let injury_override_harness: Record<string, unknown> | null = null;
+  if (injuryAnchorId) {
+    const baseIn = b();
+    const healthy = executeValuationWorkflow(
+      pool,
+      {
+        ...baseIn,
+        injury_overrides: [{ player_id: injuryAnchorId, injury_severity: 0 }],
+        explain_valuation_rows: true,
+      },
+      {},
+      { debugSignals: true }
+    );
+    const injured = executeValuationWorkflow(
+      pool,
+      {
+        ...baseIn,
+        injury_overrides: [{ player_id: injuryAnchorId, injury_severity: 3 }],
+        explain_valuation_rows: true,
+      },
+      {},
+      { debugSignals: true }
+    );
+    const rowH = healthy.ok ? healthy.response.valuations.find((v) => v.player_id === injuryAnchorId) : undefined;
+    const rowI = injured.ok ? injured.response.valuations.find((v) => v.player_id === injuryAnchorId) : undefined;
+    injury_override_harness = {
+      anchor_player_id: injuryAnchorId,
+      healthy_override_severity_0: rowH
+        ? {
+            baseline_value: rowH.baseline_value,
+            auction_value: rowH.auction_value,
+            valuation_explain_injury: sliceInjuryExplain(rowH.valuation_explain),
+          }
+        : null,
+      injured_override_severity_3: rowI
+        ? {
+            baseline_value: rowI.baseline_value,
+            auction_value: rowI.auction_value,
+            valuation_explain_injury: sliceInjuryExplain(rowI.valuation_explain),
+          }
+        : null,
+      checks: {
+        baseline_strictly_lower_when_injured:
+          rowH != null && rowI != null ? rowI.baseline_value < rowH.baseline_value : null,
+        auction_value_changes_with_injury:
+          rowH != null && rowI != null ? rowI.auction_value !== rowH.auction_value : null,
+        explain_has_injury_fields_when_injured:
+          rowI?.valuation_explain != null &&
+          rowI.valuation_explain.injury_severity !== undefined &&
+          rowI.valuation_explain.injury_multiplier !== undefined,
+      },
+    };
+  }
+
+  const hldBlock = blockById("20_pitching_hld_addon");
+  const qsBlock = blockById("17_pitching_qs_replaces_w");
+  const genPBlock = blockById("07_generic_p_slots");
+  const spRpBlock = blockById("18_explicit_sp_rp_default");
+
+  const relief_scoring_harness = {
+    top20_rp_auction_sum_by_scenario: {
+      standard_mixed: sumTop20RpAuction(stdBlock),
+      saves_only: sumTop20RpAuction(savesBlock),
+      sv_hld_label: sumTop20RpAuction(svHldBlock),
+      hld_addon: sumTop20RpAuction(hldBlock),
+    },
+    mid_tier_rp_sum_ranks_10_to_19: {
+      standard_mixed: midTierRpSum(stdBlock),
+      saves_only: midTierRpSum(savesBlock),
+      sv_hld_label: midTierRpSum(svHldBlock),
+      hld_addon: midTierRpSum(hldBlock),
+    },
+    mid_tier_rp_delta_vs_standard: {
+      saves_only_minus_standard:
+        midTierRpSum(savesBlock) != null && midTierRpSum(stdBlock) != null
+          ? (midTierRpSum(savesBlock) as number) - (midTierRpSum(stdBlock) as number)
+          : null,
+      sv_hld_label_minus_standard:
+        midTierRpSum(svHldBlock) != null && midTierRpSum(stdBlock) != null
+          ? (midTierRpSum(svHldBlock) as number) - (midTierRpSum(stdBlock) as number)
+          : null,
+      hld_addon_minus_standard:
+        midTierRpSum(hldBlock) != null && midTierRpSum(stdBlock) != null
+          ? (midTierRpSum(hldBlock) as number) - (midTierRpSum(stdBlock) as number)
+          : null,
+    },
+  };
+
+  const roster_slot_compare_harness = {
+    note: "Compare explicit SP/RP default (18) vs generic P-only (07): replacement_values_by_slot_or_position and pitcherHarness.",
+    generic_p_slots: genPBlock
+      ? {
+          replacement_values_by_slot_or_position: genPBlock.replacement_values_by_slot_or_position ?? null,
+          pitcherHarness: genPBlock.pitcherHarness ?? null,
+        }
+      : null,
+    explicit_sp_rp_default: spRpBlock
+      ? {
+          replacement_values_by_slot_or_position: spRpBlock.replacement_values_by_slot_or_position ?? null,
+          pitcherHarness: spRpBlock.pitcherHarness ?? null,
+        }
+      : null,
+  };
+
+  const qs_scoring_harness = qsBlock
+    ? {
+        hitter_pitcher_split: qsBlock.hitterPitcherSplit ?? null,
+        scoring_category_warnings: qsBlock.scoring_category_warnings ?? null,
+        valuation_context_warnings: qsBlock.valuation_context_warnings ?? null,
+        top15_pitchers: qsBlock.top15Pitchers ?? null,
+        pitcherHarness: qsBlock.pitcherHarness ?? null,
+      }
+    : null;
+
   const out = {
     generatedAt: new Date().toISOString(),
     scenarios: blocks,
@@ -667,7 +845,13 @@ async function main(): Promise<void> {
     trust_engine_report: runTrustEngineReport(pool, () => buildDraftroomStandardValuationInput()),
     walkthrough_alignment_note:
       "Shallow/deep team counts (10 / 15) match scripts/calibrate-valuations.ts after alignment.",
+    coverage_expansion_note:
+      "Scenarios 17–20: QS replaces W; explicit SP/RP default (same roster as 01); optional 19 injury_overrides when anchor id exists in catalog; 5×5+HLD. Each scenario includes pitcherHarness (top10 SP/RP, top20 RP-closer focus, mid-tier RP ranks 10–19). injury_override_harness runs severity 0 vs 3 with explain_valuation_rows.",
     walkthrough_checks,
+    injury_override_harness,
+    relief_scoring_harness,
+    roster_slot_compare_harness,
+    qs_scoring_harness,
   };
 
   const abs = path.join(ROOT, "tmp", "real-walkthrough-scenarios.json");
