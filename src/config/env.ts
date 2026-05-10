@@ -66,6 +66,15 @@ const Schema = z.object({
   GITHUB_SHA: z.string().optional(),
   GIT_COMMIT: z.string().optional(),
   VERCEL_GIT_COMMIT_SHA: z.string().optional(),
+  /** Full URL for Draft BFF POST (e.g. https://draft.example.com/api/internal/news-signals/hook). */
+  DRAFT_NEWS_SIGNALS_WEBHOOK_URL: z.string().optional(),
+  /** Bearer secret shared with Draft API for internal webhook auth (same as Draft INTERNAL_WEBHOOK_SECRET). */
+  INTERNAL_WEBHOOK_SECRET: z.string().optional(),
+  /**
+   * Plaintext key Draft sends as `x-api-key` to Engine; optional fallback Bearer for Draft webhooks when
+   * INTERNAL_WEBHOOK_SECRET is unset (matches Draft hook validation).
+   */
+  AMETHYST_API_KEY: z.string().optional(),
 });
 
 const raw = Schema.safeParse(process.env);
@@ -115,4 +124,8 @@ export const env = {
     trim(e.VERCEL_GIT_COMMIT_SHA) ||
     trim(e.GIT_COMMIT) ||
     null,
+  draftNewsSignalsWebhookUrl: trim(e.DRAFT_NEWS_SIGNALS_WEBHOOK_URL),
+  internalWebhookSecret: trim(e.INTERNAL_WEBHOOK_SECRET),
+  /** Same value Draft uses for outbound `x-api-key`; reused as webhook Bearer if INTERNAL_WEBHOOK_SECRET unset. */
+  amethystApiKey: trim(e.AMETHYST_API_KEY),
 } as const;

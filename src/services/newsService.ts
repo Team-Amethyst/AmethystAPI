@@ -1,12 +1,33 @@
 import axios from "axios";
 import { logger } from "../lib/logger";
 import { classifyMlbTransaction } from "../lib/mlbTransactionSignals";
+import { stableSignalsPayloadFingerprint } from "../lib/signalsHttp";
 import { getCached, setCache } from "../lib/redis";
 import type { NewsSignal, SignalSeverity, SignalsResponse } from "../types/brain";
+import { notifyDraftNewsSignalsWebhook } from "./draftNewsSignalsWebhook";
 
 const MLB_TRANSACTIONS_URL =
   "https://statsapi.mlb.com/api/v1/transactions";
 const CACHE_TTL = 900; // 15 minutes
+/** Keep validators longer than payload cache so conditional GET + webhook compare survive TTL expiry. */
+const SIGNALS_ETAG_TTL = Math.max(CACHE_TTL * 10, 86_400);
+
+const fmtDate = (d: Date) => d.toISOString().split("T")[0];
+
+/** Redis key for MLB-derived signals (must stay aligned with `fetchSignals`). */
+export function buildSignalsCacheKey(
+  daysBack: number,
+  signalTypeFilter?: string
+): string {
+  const now = new Date();
+  const startDate = new Date(now);
+  startDate.setDate(startDate.getDate() - daysBack);
+  return `ae:signals:${fmtDate(startDate)}:${fmtDate(now)}:${signalTypeFilter ?? "all"}`;
+}
+
+export function signalsHttpEtagCacheKey(dataCacheKey: string): string {
+  return `${dataCacheKey}:http-etag`;
+}
 
 interface MlbTransaction {
   id: number;
@@ -39,11 +60,14 @@ export async function fetchSignals(
   const startDate = new Date(now);
   startDate.setDate(startDate.getDate() - daysBack);
 
-  const fmt = (d: Date) => d.toISOString().split("T")[0];
-  const cacheKey = `ae:signals:${fmt(startDate)}:${fmt(now)}:${signalTypeFilter ?? "all"}`;
+  const fmt = fmtDate;
+  const cacheKey = buildSignalsCacheKey(daysBack, signalTypeFilter);
 
   const cached = await getCached<SignalsResponse>(cacheKey);
   if (cached) return cached;
+
+  const etagKey = signalsHttpEtagCacheKey(cacheKey);
+  const previousFingerprint = await getCached<string>(etagKey);
 
   const params: Record<string, string | number> = {
     sportId: 1,
@@ -115,6 +139,17 @@ export async function fetchSignals(
     count: signals.length,
   };
 
+  const fingerprint = stableSignalsPayloadFingerprint(
+    response.signals,
+    response.count
+  );
+
   await setCache(cacheKey, response, CACHE_TTL);
+  await setCache(etagKey, fingerprint, SIGNALS_ETAG_TTL);
+
+  if (previousFingerprint !== fingerprint) {
+    void notifyDraftNewsSignalsWebhook();
+  }
+
   return response;
 }

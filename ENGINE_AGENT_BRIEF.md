@@ -23,6 +23,8 @@
 | `GET`  | `/signals/news` | Query: optional `days`, `signal_type` (strings in query; Draft forwards as `params`). |
 | `GET`  | `/signals/news-signals` | **Alias** of `/signals/news` (shared cache key by query params). |
 
+**News signals realtime:** ETag / `304`, Redis fast path, outbound webhook to Draft, and env coordination are summarized in **`engine-contract/NEWS_SIGNALS_REALTIME_ENGINE_PROMPT.md`**. Draft’s mirror doc: **`apps/api/engine-contract/NEWS_SIGNALS_REALTIME_ENGINE_PROMPT.md`** (AmethystDraft).
+
 ## Draft ↔ Engine coupling audit (AmethystDraft repo)
 
 These Draft-side locations must stay aligned with the table above when paths, auth headers, or valuation body shapes change. This repo does not vendor AmethystDraft; treat this list as the integration checklist.

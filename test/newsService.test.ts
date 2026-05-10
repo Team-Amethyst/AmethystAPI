@@ -11,6 +11,10 @@ vi.mock("../src/lib/redis", () => ({
   setCache: vi.fn(),
 }));
 
+vi.mock("../src/services/draftNewsSignalsWebhook", () => ({
+  notifyDraftNewsSignalsWebhook: vi.fn().mockResolvedValue(undefined),
+}));
+
 import { getCached, setCache } from "../src/lib/redis";
 
 const mockedGet = vi.mocked(axios.get);
@@ -43,7 +47,7 @@ describe("fetchSignals", () => {
     expect(types.has("injury")).toBe(true);
     expect(types.has("demotion")).toBe(true);
     expect(types.has("trade")).toBe(true);
-    expect(mockedSetCache).toHaveBeenCalledTimes(1);
+    expect(mockedSetCache).toHaveBeenCalledTimes(2);
   });
 
   it("returns cached response without calling MLB API", async () => {
