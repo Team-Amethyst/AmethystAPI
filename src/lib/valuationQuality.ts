@@ -49,6 +49,15 @@ export function validateValuationResponse(
     };
     checkOptInt("remaining_slots", response.remaining_slots);
     checkOptInt("draftable_pool_size", response.draftable_pool_size);
+    if (
+      response.draftable_player_ids !== undefined &&
+      response.draftable_pool_size !== undefined &&
+      response.draftable_player_ids.length !== response.draftable_pool_size
+    ) {
+      issues.push(
+        "draftable_player_ids length must equal draftable_pool_size when both are present"
+      );
+    }
     if (response.min_bid !== undefined) {
       if (!isFiniteNumber(response.min_bid) || response.min_bid < 0) {
         issues.push("min_bid must be a finite non-negative number when present");

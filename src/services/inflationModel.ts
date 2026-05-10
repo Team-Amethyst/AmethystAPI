@@ -87,6 +87,7 @@ export function selectInflationModel(params: {
         surplus_cash: v2Result.surplus_cash,
         total_surplus_mass: v2Result.total_surplus_mass,
         draftable_pool_size: v2Result.draftablePoolSize,
+        draftable_player_ids: v2Result.draftablePlayerIds,
         replacement_values_by_slot_or_position:
           v2Result.replacement_values_by_slot_or_position,
         fallback_reason: v2Result.fallback_reason,

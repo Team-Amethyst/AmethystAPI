@@ -272,6 +272,8 @@ export interface ValuationResponse {
   surplus_cash?: number;
   total_surplus_mass?: number;
   draftable_pool_size?: number;
+  /** Undrafted players counted as filling greedy slot demand in replacement_slots_v2 (same length as `draftable_pool_size` when defined). */
+  draftable_player_ids?: string[];
   replacement_values_by_slot_or_position?: Record<string, number>;
   fallback_reason?: string | null;
   /** Explains `auction_value` as the canonical official valuation (mirrors `adjusted_value`). */

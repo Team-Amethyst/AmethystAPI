@@ -5,6 +5,11 @@ export type ReplacementSlotsV2Result = {
   pool_value_remaining: number;
   playerIdToSurplusBasis: Map<string, number>;
   draftablePoolSize: number;
+  /**
+   * Undrafted players whose greedy slot assignment reduced remaining league demand
+   * (same cardinality as `draftablePoolSize` on the main path).
+   */
+  draftablePlayerIds: string[];
   remaining_slots: number;
   min_bid: number;
   surplus_cash: number;

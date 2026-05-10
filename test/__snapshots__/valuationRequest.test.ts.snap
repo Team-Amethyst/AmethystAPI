@@ -4,6 +4,9 @@ exports[`calculateInflation with normalized fixtures > legacy-empty deterministi
 {
   "auction_value_note": "auction_value is the official player dollar valuation for external evaluation and benchmarks. It always equals adjusted_value (league-wide auction dollars from the active inflation_model). The default inflation model is replacement_slots_v2.",
   "calculated_at": "1970-01-01T00:00:00.000Z",
+  "draftable_player_ids": [
+    "1",
+  ],
   "draftable_pool_size": 1,
   "edge_note": "edge is team_adjusted_value minus recommended_bid (marginal roster worth versus the bid anchor). Negative edge on stars is common when recommended_bid is intentionally above auction_value; edge is not 'profit versus fair market value.' Use auction_value for league-wide FMV and cross-roster comparisons.",
   "engine_contract_version": "1",
@@ -100,6 +103,7 @@ exports[`calculateInflation with normalized fixtures > nested-after-pick applies
 {
   "auction_value_note": "auction_value is the official player dollar valuation for external evaluation and benchmarks. It always equals adjusted_value (league-wide auction dollars from the active inflation_model). The default inflation model is replacement_slots_v2.",
   "calculated_at": "1970-01-01T00:00:00.000Z",
+  "draftable_player_ids": [],
   "draftable_pool_size": 0,
   "edge_note": "edge is team_adjusted_value minus recommended_bid (marginal roster worth versus the bid anchor). Negative edge on stars is common when recommended_bid is intentionally above auction_value; edge is not 'profit versus fair market value.' Use auction_value for league-wide FMV and cross-roster comparisons.",
   "engine_contract_version": "1",

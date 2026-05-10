@@ -80,6 +80,7 @@ export function computeReplacementSlotsV2(
       pool_value_remaining: 0,
       playerIdToSurplusBasis: new Map(),
       draftablePoolSize: 0,
+      draftablePlayerIds: [],
       remaining_slots,
       min_bid: REPLACEMENT_SLOTS_V2_MIN_BID,
       surplus_cash: Math.max(
@@ -117,6 +118,7 @@ export function computeReplacementSlotsV2(
       pool_value_remaining: 0,
       playerIdToSurplusBasis: m,
       draftablePoolSize: 0,
+      draftablePlayerIds: [],
       remaining_slots: 0,
       min_bid: REPLACEMENT_SLOTS_V2_MIN_BID,
       surplus_cash: Math.max(0, budgetRemaining),
@@ -220,6 +222,7 @@ export function computeReplacementSlotsV2(
     pool_value_remaining,
     playerIdToSurplusBasis,
     draftablePoolSize,
+    draftablePlayerIds: Array.from(undraftedAssignedIds),
     remaining_slots,
     min_bid: REPLACEMENT_SLOTS_V2_MIN_BID,
     surplus_cash,
