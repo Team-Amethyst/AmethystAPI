@@ -39,6 +39,27 @@ export function computeRecommendedBid(params: {
   return applySoftHighCap(clearing, ctx);
 }
 
+/**
+ * Optional trust mode: clamp each `recommended_bid` to at most `ratio × auction_value`
+ * after isotonic smoothing. Does not change `auction_value` / `adjusted_value`.
+ */
+export function applyRecommendedBidSoftCap(
+  valuations: ValuedPlayer[],
+  ratio: number,
+  minAuctionBid: number
+): void {
+  if (!Number.isFinite(ratio) || ratio < 1) return;
+  for (const row of valuations) {
+    const av = row.auction_value;
+    const rb = row.recommended_bid ?? minAuctionBid;
+    if (!Number.isFinite(av) || av <= 0) continue;
+    const cap = Math.max(minAuctionBid, av * ratio);
+    if (rb > cap) {
+      row.recommended_bid = parseFloat(cap.toFixed(2));
+    }
+  }
+}
+
 export function smoothRecommendedBids(
   valuations: ValuedPlayer[],
   minAuctionBid: number

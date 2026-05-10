@@ -40,6 +40,16 @@ export interface ValuationRequest {
   strict_scoring_categories?: boolean;
   minors?: TeamRosterBucket[];
   taxi?: TeamRosterBucket[];
+  /**
+   * When true, each `valuations[]` row may include `valuation_explain` with
+   * effective positions and replacement context (lighter than `debugSignals`).
+   */
+  explain_valuation_rows?: boolean;
+  /**
+   * Optional cap on `recommended_bid` as a multiple of `auction_value` (e.g. 1.15).
+   * Unset by default — clearing-anchor bids may exceed auction_value by design.
+   */
+  recommended_bid_soft_cap_ratio?: number;
 }
 
 export interface ValuationLeagueBlock {
@@ -91,6 +101,8 @@ export interface NormalizedValuationInput {
   budget_by_team_id?: Record<string, number>;
   user_team_id?: string;
   inflation_model?: InflationModel;
+  explain_valuation_rows?: boolean;
+  recommended_bid_soft_cap_ratio?: number;
 }
 
 export interface CalculateInflationOptions {
@@ -110,6 +122,13 @@ export interface CalculateInflationOptions {
   debugSignals?: boolean;
   /** From request `position_overrides`; replaces Mongo positions for slot/token logic across baseline, replacement v2, team-adjusted, scarcity. */
   positionOverrides?: Map<string, string[]>;
+  /** When true, attach `valuation_explain` on each valued row (replacement + tokens). */
+  explainValuationRows?: boolean;
+  /**
+   * When set (e.g. 1.15), clamp `recommended_bid` to at most this multiple of `auction_value`
+   * after isotonic smoothing (trust / UI alignment mode).
+   */
+  recommendedBidSoftCapRatio?: number;
 }
 
 export interface ValuedPlayer {
@@ -171,6 +190,26 @@ export interface ValuedPlayer {
         }
       | { symmetric_open_collapsed: 1 };
   };
+  /**
+   * Present when `explain_valuation_rows` was set on the request: slot/replacement
+   * context for this row (no full debug_v2 payload).
+   */
+  valuation_explain?: {
+    effective_positions: string[];
+    replacement_key_used: string | null;
+    replacement_value_used: number | null;
+    surplus_basis?: number;
+    inflation_factor: number;
+    /** Eligible valuation universe size (same for every row in a response). */
+    pool_size?: number;
+    /** League-wide empty roster slots used for thin-pool heuristics. */
+    roster_demand_slots?: number;
+    pool_to_slot_ratio?: number | null;
+    /** Echo of response `scoring_category_warnings` when non-empty (explain mode). */
+    scoring_category_warnings?: string[];
+    /** Echo of response `valuation_context_warnings` when non-empty (explain mode). */
+    valuation_context_warnings?: string[];
+  };
 }
 
 export interface ValuationResponse {
@@ -200,8 +239,18 @@ export interface ValuationResponse {
   /** Explains `auction_value` as the canonical official valuation (mirrors `adjusted_value`). */
   auction_value_note?: string;
   recommended_bid_note?: string;
+  /** Clarifies `edge` vs `auction_value` / `recommended_bid`. */
+  edge_note?: string;
   user_team_id_used?: string;
   team_adjusted_value_note?: string;
+  /** Eligible pool size vs remaining roster demand (same basis as thin-pool warnings). */
+  valuation_context?: {
+    eligible_pool_size: number;
+    roster_demand_slots: number;
+    pool_to_slot_ratio: number | null;
+  };
+  /** Non-fatal trust warnings (thin pool, custom eligible universe, skewed keepers). */
+  valuation_context_warnings?: string[];
   phase_indicator?: DraftPhaseIndicator;
   context_v2?: {
     schema_version: "2";

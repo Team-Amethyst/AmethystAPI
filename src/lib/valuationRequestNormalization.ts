@@ -86,6 +86,8 @@ export function buildNormalizedFromNested(
       rest.inflation_model ?? league.inflation_model ?? DEFAULT_INFLATION_MODEL,
     eligible_player_ids: rest.eligible_player_ids,
     excluded_player_ids: rest.excluded_player_ids,
+    explain_valuation_rows: rest.explain_valuation_rows,
+    recommended_bid_soft_cap_ratio: rest.recommended_bid_soft_cap_ratio,
   };
 }
 
@@ -123,5 +125,7 @@ export function buildNormalizedFromFlat(
     inflation_model: parsed.inflation_model ?? DEFAULT_INFLATION_MODEL,
     eligible_player_ids: parsed.eligible_player_ids,
     excluded_player_ids: parsed.excluded_player_ids,
+    explain_valuation_rows: parsed.explain_valuation_rows,
+    recommended_bid_soft_cap_ratio: parsed.recommended_bid_soft_cap_ratio,
   };
 }

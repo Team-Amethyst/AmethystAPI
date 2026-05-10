@@ -12,7 +12,9 @@ export const DETERMINISTIC_CALCULATED_AT = "1970-01-01T00:00:00.000Z";
 export const AUCTION_VALUE_NOTE =
   "auction_value is the official player dollar valuation for external evaluation and benchmarks. It always equals adjusted_value (league-wide auction dollars from the active inflation_model). The default inflation model is replacement_slots_v2.";
 export const RECOMMENDED_BID_NOTE =
-  "recommended_bid is a draftroom bid suggestion (phase-aware clearing anchor with floors/caps and isotonic smoothing within hitters and pitchers). It guides bidding behavior in the draft UI; it is not the engine's canonical valuation of the player — use auction_value for that.";
+  "recommended_bid is a draftroom bid anchor (not league-wide FMV). The clearing step blends auction_value (a=adjusted_value) toward list baseline_value (r) via a phase/depth lambda L: initialClearingPrice = a + L*(r-a), then hitter floors/caps/elite boosts and isotonic smoothing within hitters and pitchers. When r>>a for stars, recommended_bid can sit well above auction_value by design — treat it as an aggressive ceiling / bidding discipline signal, not the official dollar.";
+export const EDGE_NOTE =
+  "edge is team_adjusted_value minus recommended_bid (marginal roster worth versus the bid anchor). Negative edge on stars is common when recommended_bid is intentionally above auction_value; edge is not 'profit versus fair market value.' Use auction_value for league-wide FMV and cross-roster comparisons.";
 export const TEAM_ADJUSTED_NOTE =
   "team_adjusted_value is marginal worth to the requesting team's roster and budget context (need, dollars per open slot vs peers, remaining-slot scarcity, replacement drop-off). It is not a league-universal player price and must not replace auction_value for cross-player evaluation or leaderboards.";
 
@@ -49,6 +51,7 @@ export function buildInflationResponse(params: {
     valuations: params.valuations,
     auction_value_note: AUCTION_VALUE_NOTE,
     recommended_bid_note: RECOMMENDED_BID_NOTE,
+    edge_note: EDGE_NOTE,
     user_team_id_used: params.userTeamId,
     team_adjusted_value_note: TEAM_ADJUSTED_NOTE,
     phase_indicator: params.draftPhase,

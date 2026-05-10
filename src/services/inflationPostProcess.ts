@@ -86,6 +86,31 @@ export function applyRecommendedBidPass(params: {
       minAuctionBid,
     });
     row.recommended_bid = parseFloat(clearing.toFixed(2));
+    if (options?.explainValuationRows) {
+      const lpEx = byRowPlayerId.get(row.player_id);
+      const tokens = lpEx
+        ? playerTokensFromLean(lpEx, options?.positionOverrides)
+        : [];
+      const replBestEx = bestReplacementForPlayer(
+        tokens,
+        replForTeam,
+        rosterSlotKeysForFit
+      );
+      const sbEx = surplusBasisByPlayerId?.get(row.player_id);
+      row.valuation_explain = {
+        effective_positions: [...tokens],
+        replacement_key_used: replBestEx?.key ?? null,
+        replacement_value_used:
+          replBestEx?.value != null
+            ? Number(replBestEx.value.toFixed(4))
+            : null,
+        surplus_basis:
+          sbEx != null && Number.isFinite(sbEx)
+            ? Number(sbEx.toFixed(4))
+            : undefined,
+        inflation_factor: row.inflation_factor,
+      };
+    }
     if (!options?.debugSignals) continue;
     const lp = byRowPlayerId.get(row.player_id);
     const tokens = lp ? playerTokensFromLean(lp, options?.positionOverrides) : [];

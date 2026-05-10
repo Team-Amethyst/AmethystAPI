@@ -1,6 +1,7 @@
 import { DEFAULT_INFLATION_MODEL } from "../lib/valuationDefaults";
 import { isSymmetricOpenLeagueContext } from "../lib/symmetricLeagueOpen";
 import {
+  applyRecommendedBidSoftCap,
   smoothRecommendedBids,
 } from "./recommendedBid";
 import {
@@ -208,6 +209,11 @@ export function calculateInflation(
   });
 
   smoothRecommendedBids(valuations, MIN_AUCTION_BID);
+
+  const capRatio = options?.recommendedBidSoftCapRatio;
+  if (capRatio != null) {
+    applyRecommendedBidSoftCap(valuations, capRatio, MIN_AUCTION_BID);
+  }
 
   const symmetricOpenLeague = isSymmetricOpenLeagueContext({
     numTeams,

@@ -17,6 +17,10 @@ import { scoringAwareBaselinePlayers } from "./baselineValueEngine";
 import { filterValuationUniverse } from "../lib/valuationPlayerPool";
 import { computeRemainingLeagueRosterSlots } from "../lib/remainingLeagueRosterSlots";
 import { buildRosteredPlayersForSlotEngine } from "../lib/rosteredPlayersForSlots";
+import {
+  buildValuationContextMetrics,
+  buildValuationContextWarnings,
+} from "../lib/valuationContextGuards";
 
 /**
  * Valuation pipeline (course UML activity diagram — first pass mapping)
@@ -184,6 +188,8 @@ export function executeValuationWorkflow(
         remainingLeagueSlots,
         rosteredPlayersForSlots,
         debugSignals: options.debugSignals,
+        explainValuationRows: input.explain_valuation_rows === true,
+        recommendedBidSoftCapRatio: input.recommended_bid_soft_cap_ratio,
         positionOverrides,
       }
     );
@@ -196,20 +202,63 @@ export function executeValuationWorkflow(
           "valuation recovered after bounded recompute"
         );
       }
+      const rosterDemandSlots = response.remaining_slots ?? 0;
+      const valuation_context = buildValuationContextMetrics({
+        eligiblePoolSize: valuationPool.length,
+        rosterDemandSlots,
+      });
+      const ctxWarnList = buildValuationContextWarnings({
+        eligiblePoolSize: valuationPool.length,
+        rosterDemandSlots,
+        customEligibleUniverse: (input.eligible_player_ids?.length ?? 0) > 0,
+        rosteredPlayers: rosteredPlayersForSlots,
+      });
+      const responseWithContext: ValuationResponse = {
+        ...response,
+        valuation_context,
+        ...(ctxWarnList.length > 0
+          ? { valuation_context_warnings: ctxWarnList }
+          : {}),
+      };
       const explained = attachValuationExplainability(
-        response,
+        responseWithContext,
         input,
         basePlayers,
         scope
       );
+      let merged: ValuationResponse = {
+        ...explained,
+        ...(scoringCategoryWarnings.length > 0
+          ? { scoring_category_warnings: scoringCategoryWarnings }
+          : {}),
+      };
+      if (input.explain_valuation_rows) {
+        const ratio = valuation_context.pool_to_slot_ratio;
+        merged = {
+          ...merged,
+          valuations: merged.valuations.map((v) => {
+            if (!v.valuation_explain) return v;
+            return {
+              ...v,
+              valuation_explain: {
+                ...v.valuation_explain,
+                pool_size: valuationPool.length,
+                roster_demand_slots: rosterDemandSlots,
+                pool_to_slot_ratio: ratio,
+                ...(scoringCategoryWarnings.length > 0
+                  ? { scoring_category_warnings: scoringCategoryWarnings }
+                  : {}),
+                ...(ctxWarnList.length > 0
+                  ? { valuation_context_warnings: ctxWarnList }
+                  : {}),
+              },
+            };
+          }),
+        };
+      }
       return {
         ok: true,
-        response: {
-          ...explained,
-          ...(scoringCategoryWarnings.length > 0
-            ? { scoring_category_warnings: scoringCategoryWarnings }
-            : {}),
-        },
+        response: merged,
       };
     }
     lastIssues = quality.issues;

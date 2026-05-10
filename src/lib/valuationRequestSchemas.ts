@@ -78,6 +78,8 @@ export const nestedValuationBodySchema = z.object({
   inflation_model: inflationModelSchema.optional(),
   position_overrides: z.array(positionOverrideEntrySchema).optional(),
   strict_scoring_categories: z.boolean().optional(),
+  explain_valuation_rows: z.boolean().optional(),
+  recommended_bid_soft_cap_ratio: z.number().finite().min(1).max(5).optional(),
 });
 
 export const flatValuationBodySchema = z.object({
@@ -107,6 +109,8 @@ export const flatValuationBodySchema = z.object({
   pre_draft_rosters: preDraftRostersInputSchema.optional(),
   inflation_model: inflationModelSchema.optional(),
   strict_scoring_categories: z.boolean().optional(),
+  explain_valuation_rows: z.boolean().optional(),
+  recommended_bid_soft_cap_ratio: z.number().finite().min(1).max(5).optional(),
 });
 
 export type NestedValuationBody = z.infer<typeof nestedValuationBodySchema>;
