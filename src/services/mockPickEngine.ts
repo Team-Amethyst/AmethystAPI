@@ -12,7 +12,7 @@ import { calcTeamNeeds, fitsSlot } from "./mockPickHelpers";
 
 /**
  * Predicts the most likely pick for each team in the pick_order using
- * a simple but effective ADP + team-need heuristic.
+ * a simple but effective catalog-rank + team-need heuristic.
  *
  * Algorithm:
  *   1. For each team in pick order:
@@ -52,9 +52,9 @@ export function simulateMockPicks(
     })
   );
 
-  // Sort available players by ADP once for efficiency
-  const availableByAdp = [...available.values()].sort(
-    (a, b) => (a.adp || 9999) - (b.adp || 9999)
+  // Sort available players by catalog_rank once for efficiency
+  const availableByCatalogRank = [...available.values()].sort(
+    (a, b) => (a.catalog_rank || 9999) - (b.catalog_rank || 9999)
   );
 
   const teamMap = new Map(teams.map((t) => [t.team_id, { ...t, roster: [...t.roster] }]));
@@ -75,23 +75,23 @@ export function simulateMockPicks(
     let confidence = 0.5;
 
     for (const [neededPos, urgency] of sortedNeeds) {
-      // Find the best ADP player who fits this slot
-      const candidate = availableByAdp.find((p) =>
+      // Find the best catalog-ranked player who fits this slot
+      const candidate = availableByCatalogRank.find((p) =>
         fitsSlot(p.position, neededPos)
       );
       if (candidate) {
         chosenPlayer = candidate;
-        chosenReason = `Team needs ${neededPos} (urgency ${(urgency * 100).toFixed(0)}%); best available by ADP.`;
-        // Confidence scales with urgency and how early the player's ADP falls
-        const adpPercentile = 1 - (candidate.adp || 200) / 300;
-        confidence = Math.min(0.95, 0.5 + urgency * 0.3 + adpPercentile * 0.15);
+        chosenReason = `Team needs ${neededPos} (urgency ${(urgency * 100).toFixed(0)}%); best available by catalog rank.`;
+        // Confidence scales with urgency and how early the player's catalog_rank falls
+        const rankPercentile = 1 - (candidate.catalog_rank || 200) / 300;
+        confidence = Math.min(0.95, 0.5 + urgency * 0.3 + rankPercentile * 0.15);
         break;
       }
     }
 
     // Fallback: best available overall
-    if (!chosenPlayer && availableByAdp.length > 0) {
-      chosenPlayer = availableByAdp[0];
+    if (!chosenPlayer && availableByCatalogRank.length > 0) {
+      chosenPlayer = availableByCatalogRank[0];
       chosenReason = "Best available player overall (no specific positional need unmet).";
       confidence = 0.40;
     }
@@ -107,7 +107,7 @@ export function simulateMockPicks(
         player_id: chosenId,
         name: chosenPlayer.name,
         position: chosenPlayer.position,
-        adp: chosenPlayer.adp || 0,
+        catalog_rank: chosenPlayer.catalog_rank || 0,
         reason: chosenReason,
       },
       confidence: parseFloat(confidence.toFixed(2)),
@@ -115,8 +115,8 @@ export function simulateMockPicks(
 
     // Remove player from available pool so subsequent teams can't pick them
     available.delete(chosenId);
-    const removedIdx = availableByAdp.findIndex((p) => getPlayerId(p) === chosenId);
-    if (removedIdx !== -1) availableByAdp.splice(removedIdx, 1);
+    const removedIdx = availableByCatalogRank.findIndex((p) => getPlayerId(p) === chosenId);
+    if (removedIdx !== -1) availableByCatalogRank.splice(removedIdx, 1);
 
     // "Draft" the player onto the team for subsequent need calculations
     team.roster.push({

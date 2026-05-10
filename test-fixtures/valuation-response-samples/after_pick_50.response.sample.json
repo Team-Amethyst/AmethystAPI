@@ -11,7 +11,7 @@
     "total_budget_remaining": 851,
     "pool_value_remaining": 14.4,
     "players_remaining": 512,
-    "recommended_bid_note": "recommended_bid is a phase-aware model clearing target (star floors, pitcher dampening, isotonic smoothing)—a bidding guide, not a prediction of the winning hammer price; room behavior can diverge materially.",
+    "recommended_bid_note": "recommended_bid is a phase-aware model clearing target (star floors, pitcher dampening, isotonic smoothing)\u2014a bidding guide, not a prediction of the winning hammer price; room behavior can diverge materially.",
     "user_team_id_used": "team_1",
     "team_adjusted_value_note": "team_adjusted_value scales adjusted_value by roster need, dollars per open slot vs league peers, remaining-slot scarcity, and replacement drop-off for eligible slots; when the league snapshot is symmetric (no auction picks, no keeper/minors/taxi off-board ids, equal per-team budgets in budget_by_team_id when provided, equal rostered counts per team), it equals adjusted_value",
     "phase_indicator": "mid",
@@ -38,9 +38,9 @@
     "inflation_percent_vs_auction_open": 0,
     "market_notes": [
       "Market is near auction-open baseline and 1B is the key position to monitor.",
-      "1B: No Tier 1 1B players remaining — act immediately.",
-      "2B: No Tier 1 2B players remaining — act immediately.",
-      "3B: No Tier 1 3B players remaining — act immediately."
+      "1B: No Tier 1 1B players remaining \u2014 act immediately.",
+      "2B: No Tier 1 2B players remaining \u2014 act immediately.",
+      "3B: No Tier 1 3B players remaining \u2014 act immediately."
     ],
     "context_v2": {
       "schema_version": "2",
@@ -65,7 +65,7 @@
           "position": "1B",
           "severity": "critical",
           "urgency_score": 100,
-          "message": "No Tier 1 1B players remaining — act immediately.",
+          "message": "No Tier 1 1B players remaining \u2014 act immediately.",
           "evidence": {
             "elite_remaining": 0,
             "mid_tier_remaining": 0,
@@ -77,7 +77,7 @@
           "position": "2B",
           "severity": "critical",
           "urgency_score": 100,
-          "message": "No Tier 1 2B players remaining — act immediately.",
+          "message": "No Tier 1 2B players remaining \u2014 act immediately.",
           "evidence": {
             "elite_remaining": 0,
             "mid_tier_remaining": 0,
@@ -89,7 +89,7 @@
           "position": "3B",
           "severity": "critical",
           "urgency_score": 100,
-          "message": "No Tier 1 3B players remaining — act immediately.",
+          "message": "No Tier 1 3B players remaining \u2014 act immediately.",
           "evidence": {
             "elite_remaining": 0,
             "mid_tier_remaining": 0,
@@ -101,7 +101,7 @@
           "position": "C",
           "severity": "critical",
           "urgency_score": 100,
-          "message": "No Tier 1 C players remaining — act immediately.",
+          "message": "No Tier 1 C players remaining \u2014 act immediately.",
           "evidence": {
             "elite_remaining": 0,
             "mid_tier_remaining": 0,
@@ -113,7 +113,7 @@
           "position": "RP",
           "severity": "critical",
           "urgency_score": 100,
-          "message": "No Tier 1 RP players remaining — act immediately.",
+          "message": "No Tier 1 RP players remaining \u2014 act immediately.",
           "evidence": {
             "elite_remaining": 0,
             "mid_tier_remaining": 0,
@@ -125,7 +125,7 @@
           "position": "SP",
           "severity": "critical",
           "urgency_score": 100,
-          "message": "No Tier 1 SP players remaining — act immediately.",
+          "message": "No Tier 1 SP players remaining \u2014 act immediately.",
           "evidence": {
             "elite_remaining": 0,
             "mid_tier_remaining": 0,
@@ -137,7 +137,7 @@
           "position": "SS",
           "severity": "critical",
           "urgency_score": 100,
-          "message": "No Tier 1 SS players remaining — act immediately.",
+          "message": "No Tier 1 SS players remaining \u2014 act immediately.",
           "evidence": {
             "elite_remaining": 0,
             "mid_tier_remaining": 0,
@@ -159,7 +159,7 @@
         }
       ],
       "assumptions": [
-        "Auction inflation used replacement_slots_v2: greedy league-wide slot fill yields per-slot replacement baselines; surplus cash maps to value above replacement (see docs/valuation-inflation-semantics.md). inflation_percent_vs_auction_open and inflation_index_vs_opening_auction (1.00×) describe change vs a replayed auction-open state; inflation_percent_vs_neutral is always (inflation_factor−1)×100 (allocator vs 1.0, not \"list neutral\").",
+        "Auction inflation used replacement_slots_v2: greedy league-wide slot fill yields per-slot replacement baselines; surplus cash maps to value above replacement (see docs/valuation-inflation-semantics.md). inflation_percent_vs_auction_open and inflation_index_vs_opening_auction (1.00\u00d7) describe change vs a replayed auction-open state; inflation_percent_vs_neutral is always (inflation_factor\u22121)\u00d7100 (allocator vs 1.0, not \"list neutral\").",
         "The inflation factor may be clamped to a workflow floor/cap when list dollars versus remaining cash are extreme.",
         "This response used inflation_raw=53.8889 before clamp; applied factor is 3.0000 (cap).",
         "Scarcity urgency uses remaining elite and mid-tier supply versus league demand.",
@@ -167,16 +167,16 @@
         "players_remaining is always the count of the full undrafted pool; valuations.length may be smaller when player_ids filters the response.",
         "pool_value_remaining equals total_surplus_mass (sum of marginal surplus $ in the slot-assigned draftable pool).",
         "Real auction accuracy depends on catalog value quality and id/name alignment with the player pool.",
-        "recommended_bid is a clearing-style guide (phase- and list-informed); it is not framed as the exact price the room will pay—compare to adjusted_value and team_adjusted_value for surplus vs roster context."
+        "recommended_bid is a clearing-style guide (phase- and list-informed); it is not framed as the exact price the room will pay\u2014compare to adjusted_value and team_adjusted_value for surplus vs roster context."
       ],
       "confidence": {
         "overall": 0.9
       },
       "market_notes": [
         "Market is near auction-open baseline and 1B is the key position to monitor.",
-        "1B: No Tier 1 1B players remaining — act immediately.",
-        "2B: No Tier 1 2B players remaining — act immediately.",
-        "3B: No Tier 1 3B players remaining — act immediately."
+        "1B: No Tier 1 1B players remaining \u2014 act immediately.",
+        "2B: No Tier 1 2B players remaining \u2014 act immediately.",
+        "3B: No Tier 1 3B players remaining \u2014 act immediately."
       ]
     }
   },
@@ -186,8 +186,6 @@
       "name": "Player_1",
       "position": "OF",
       "team": "NYY",
-      "adp": 1,
-      "tier": 1,
       "baseline_value": 108,
       "adjusted_value": 4.6,
       "indicator": "Fair Value",
@@ -203,10 +201,10 @@
       "team_adjusted_value": 6.63,
       "edge": -66.21,
       "why": [
-        "ADP and model auction value are broadly aligned.",
-        "Adjusted auction $4.6 vs baseline $108.0 after league inflation (3.00×).",
+        "Catalog-order rank and baseline strength rank are broadly aligned.",
+        "Adjusted auction $4.6 vs baseline $108.0 after league inflation (3.00\u00d7).",
         "Roster/scarcity is reflected in baseline list price (scarcity_component=0.200 on baseline_components), before the league inflation factor.",
-        "Elite tier in an inflated market — expect competitive bidding."
+        "Elite tier in an inflated market \u2014 expect competitive bidding."
       ],
       "explain_v2": {
         "indicator": "Fair Value",
@@ -221,29 +219,34 @@
           {
             "label": "League inflation",
             "impact": -103.4,
-            "reason": "replacement_slots_v2: slot-aware surplus allocation (factor 3.00× on marginal list $ above replacement); see response replacement_values_by_slot_or_position and fallback_reason. Auction-open index 1.00× (1.0 = same allocator at replayed auction open). Raw ratio was 53.89× before the workflow cap."
+            "reason": "replacement_slots_v2: slot-aware surplus allocation (factor 3.00\u00d7 on marginal list $ above replacement); see response replacement_values_by_slot_or_position and fallback_reason. Auction-open index 1.00\u00d7 (1.0 = same allocator at replayed auction open). Raw ratio was 53.89\u00d7 before the workflow cap."
           },
           {
             "label": "Scarcity context (OF)",
             "impact": 0,
-            "reason": "Scarcity multiplier 0.200 is embedded in list_value; scarcity_adjustment stays 0 so drivers reconcile to auction_target − list_value."
+            "reason": "Scarcity multiplier 0.200 is embedded in list_value; scarcity_adjustment stays 0 so drivers reconcile to auction_target \u2212 list_value."
           },
           {
             "label": "Other model effects",
             "impact": 0,
-            "reason": "No residual; Steal/Reach comes from ADP vs value rank, not an extra dollar line item."
+            "reason": "No residual; Steal/Reach comes from catalog-order rank vs baseline rank, not an extra dollar line item."
           }
         ],
         "confidence": 0.7
-      }
+      },
+      "catalog_rank": 1,
+      "catalog_tier": 1,
+      "baseline_rank": 1,
+      "auction_rank": 1,
+      "baseline_tier": 1,
+      "auction_tier": 1,
+      "auction_value": 4.6
     },
     {
       "player_id": "46",
       "name": "Player_46",
       "position": "OF",
       "team": "NYY",
-      "adp": 46,
-      "tier": 1,
       "baseline_value": 108,
       "adjusted_value": 4.6,
       "indicator": "Steal",
@@ -259,10 +262,10 @@
       "team_adjusted_value": 6.63,
       "edge": -66.16,
       "why": [
-        "Model ranks this player higher than ADP implies the market does — possible value.",
-        "Adjusted auction $4.6 vs baseline $108.0 after league inflation (3.00×).",
+        "Model baseline rank is stronger than catalog-order rank suggests \u2014 possible value.",
+        "Adjusted auction $4.6 vs baseline $108.0 after league inflation (3.00\u00d7).",
         "Roster/scarcity is reflected in baseline list price (scarcity_component=0.200 on baseline_components), before the league inflation factor.",
-        "Elite tier in an inflated market — expect competitive bidding."
+        "Elite tier in an inflated market \u2014 expect competitive bidding."
       ],
       "explain_v2": {
         "indicator": "Steal",
@@ -277,29 +280,34 @@
           {
             "label": "League inflation",
             "impact": -103.4,
-            "reason": "replacement_slots_v2: slot-aware surplus allocation (factor 3.00× on marginal list $ above replacement); see response replacement_values_by_slot_or_position and fallback_reason. Auction-open index 1.00× (1.0 = same allocator at replayed auction open). Raw ratio was 53.89× before the workflow cap."
+            "reason": "replacement_slots_v2: slot-aware surplus allocation (factor 3.00\u00d7 on marginal list $ above replacement); see response replacement_values_by_slot_or_position and fallback_reason. Auction-open index 1.00\u00d7 (1.0 = same allocator at replayed auction open). Raw ratio was 53.89\u00d7 before the workflow cap."
           },
           {
             "label": "Scarcity context (OF)",
             "impact": 0,
-            "reason": "Scarcity multiplier 0.200 is embedded in list_value; scarcity_adjustment stays 0 so drivers reconcile to auction_target − list_value."
+            "reason": "Scarcity multiplier 0.200 is embedded in list_value; scarcity_adjustment stays 0 so drivers reconcile to auction_target \u2212 list_value."
           },
           {
             "label": "Other model effects",
             "impact": 0,
-            "reason": "No residual; Steal/Reach comes from ADP vs value rank, not an extra dollar line item."
+            "reason": "No residual; Steal/Reach comes from catalog-order rank vs baseline rank, not an extra dollar line item."
           }
         ],
         "confidence": 0.78
-      }
+      },
+      "catalog_rank": 46,
+      "catalog_tier": 1,
+      "baseline_rank": 2,
+      "auction_rank": 2,
+      "baseline_tier": 2,
+      "auction_tier": 2,
+      "auction_value": 4.6
     },
     {
       "player_id": "91",
       "name": "Player_91",
       "position": "OF",
       "team": "NYY",
-      "adp": 91,
-      "tier": 1,
       "baseline_value": 108,
       "adjusted_value": 4.6,
       "indicator": "Steal",
@@ -315,10 +323,10 @@
       "team_adjusted_value": 6.63,
       "edge": -66.1,
       "why": [
-        "Model ranks this player higher than ADP implies the market does — possible value.",
-        "Adjusted auction $4.6 vs baseline $108.0 after league inflation (3.00×).",
+        "Model baseline rank is stronger than catalog-order rank suggests \u2014 possible value.",
+        "Adjusted auction $4.6 vs baseline $108.0 after league inflation (3.00\u00d7).",
         "Roster/scarcity is reflected in baseline list price (scarcity_component=0.200 on baseline_components), before the league inflation factor.",
-        "Elite tier in an inflated market — expect competitive bidding."
+        "Elite tier in an inflated market \u2014 expect competitive bidding."
       ],
       "explain_v2": {
         "indicator": "Steal",
@@ -333,29 +341,34 @@
           {
             "label": "League inflation",
             "impact": -103.4,
-            "reason": "replacement_slots_v2: slot-aware surplus allocation (factor 3.00× on marginal list $ above replacement); see response replacement_values_by_slot_or_position and fallback_reason. Auction-open index 1.00× (1.0 = same allocator at replayed auction open). Raw ratio was 53.89× before the workflow cap."
+            "reason": "replacement_slots_v2: slot-aware surplus allocation (factor 3.00\u00d7 on marginal list $ above replacement); see response replacement_values_by_slot_or_position and fallback_reason. Auction-open index 1.00\u00d7 (1.0 = same allocator at replayed auction open). Raw ratio was 53.89\u00d7 before the workflow cap."
           },
           {
             "label": "Scarcity context (OF)",
             "impact": 0,
-            "reason": "Scarcity multiplier 0.200 is embedded in list_value; scarcity_adjustment stays 0 so drivers reconcile to auction_target − list_value."
+            "reason": "Scarcity multiplier 0.200 is embedded in list_value; scarcity_adjustment stays 0 so drivers reconcile to auction_target \u2212 list_value."
           },
           {
             "label": "Other model effects",
             "impact": 0,
-            "reason": "No residual; Steal/Reach comes from ADP vs value rank, not an extra dollar line item."
+            "reason": "No residual; Steal/Reach comes from catalog-order rank vs baseline rank, not an extra dollar line item."
           }
         ],
         "confidence": 0.78
-      }
+      },
+      "catalog_rank": 91,
+      "catalog_tier": 1,
+      "baseline_rank": 3,
+      "auction_rank": 3,
+      "baseline_tier": 3,
+      "auction_tier": 3,
+      "auction_value": 4.6
     },
     {
       "player_id": "136",
       "name": "Player_136",
       "position": "OF",
       "team": "NYY",
-      "adp": 136,
-      "tier": 1,
       "baseline_value": 108,
       "adjusted_value": 4.6,
       "indicator": "Steal",
@@ -371,10 +384,10 @@
       "team_adjusted_value": 6.63,
       "edge": -66.05,
       "why": [
-        "Model ranks this player higher than ADP implies the market does — possible value.",
-        "Adjusted auction $4.6 vs baseline $108.0 after league inflation (3.00×).",
+        "Model baseline rank is stronger than catalog-order rank suggests \u2014 possible value.",
+        "Adjusted auction $4.6 vs baseline $108.0 after league inflation (3.00\u00d7).",
         "Roster/scarcity is reflected in baseline list price (scarcity_component=0.200 on baseline_components), before the league inflation factor.",
-        "Elite tier in an inflated market — expect competitive bidding."
+        "Elite tier in an inflated market \u2014 expect competitive bidding."
       ],
       "explain_v2": {
         "indicator": "Steal",
@@ -389,29 +402,34 @@
           {
             "label": "League inflation",
             "impact": -103.4,
-            "reason": "replacement_slots_v2: slot-aware surplus allocation (factor 3.00× on marginal list $ above replacement); see response replacement_values_by_slot_or_position and fallback_reason. Auction-open index 1.00× (1.0 = same allocator at replayed auction open). Raw ratio was 53.89× before the workflow cap."
+            "reason": "replacement_slots_v2: slot-aware surplus allocation (factor 3.00\u00d7 on marginal list $ above replacement); see response replacement_values_by_slot_or_position and fallback_reason. Auction-open index 1.00\u00d7 (1.0 = same allocator at replayed auction open). Raw ratio was 53.89\u00d7 before the workflow cap."
           },
           {
             "label": "Scarcity context (OF)",
             "impact": 0,
-            "reason": "Scarcity multiplier 0.200 is embedded in list_value; scarcity_adjustment stays 0 so drivers reconcile to auction_target − list_value."
+            "reason": "Scarcity multiplier 0.200 is embedded in list_value; scarcity_adjustment stays 0 so drivers reconcile to auction_target \u2212 list_value."
           },
           {
             "label": "Other model effects",
             "impact": 0,
-            "reason": "No residual; Steal/Reach comes from ADP vs value rank, not an extra dollar line item."
+            "reason": "No residual; Steal/Reach comes from catalog-order rank vs baseline rank, not an extra dollar line item."
           }
         ],
         "confidence": 0.78
-      }
+      },
+      "catalog_rank": 136,
+      "catalog_tier": 1,
+      "baseline_rank": 4,
+      "auction_rank": 4,
+      "baseline_tier": 4,
+      "auction_tier": 4,
+      "auction_value": 4.6
     },
     {
       "player_id": "181",
       "name": "Player_181",
       "position": "OF",
       "team": "NYY",
-      "adp": 181,
-      "tier": 1,
       "baseline_value": 108,
       "adjusted_value": 4.6,
       "indicator": "Steal",
@@ -427,10 +445,10 @@
       "team_adjusted_value": 6.63,
       "edge": -65.99,
       "why": [
-        "Model ranks this player higher than ADP implies the market does — possible value.",
-        "Adjusted auction $4.6 vs baseline $108.0 after league inflation (3.00×).",
+        "Model baseline rank is stronger than catalog-order rank suggests \u2014 possible value.",
+        "Adjusted auction $4.6 vs baseline $108.0 after league inflation (3.00\u00d7).",
         "Roster/scarcity is reflected in baseline list price (scarcity_component=0.200 on baseline_components), before the league inflation factor.",
-        "Elite tier in an inflated market — expect competitive bidding."
+        "Elite tier in an inflated market \u2014 expect competitive bidding."
       ],
       "explain_v2": {
         "indicator": "Steal",
@@ -445,21 +463,28 @@
           {
             "label": "League inflation",
             "impact": -103.4,
-            "reason": "replacement_slots_v2: slot-aware surplus allocation (factor 3.00× on marginal list $ above replacement); see response replacement_values_by_slot_or_position and fallback_reason. Auction-open index 1.00× (1.0 = same allocator at replayed auction open). Raw ratio was 53.89× before the workflow cap."
+            "reason": "replacement_slots_v2: slot-aware surplus allocation (factor 3.00\u00d7 on marginal list $ above replacement); see response replacement_values_by_slot_or_position and fallback_reason. Auction-open index 1.00\u00d7 (1.0 = same allocator at replayed auction open). Raw ratio was 53.89\u00d7 before the workflow cap."
           },
           {
             "label": "Scarcity context (OF)",
             "impact": 0,
-            "reason": "Scarcity multiplier 0.200 is embedded in list_value; scarcity_adjustment stays 0 so drivers reconcile to auction_target − list_value."
+            "reason": "Scarcity multiplier 0.200 is embedded in list_value; scarcity_adjustment stays 0 so drivers reconcile to auction_target \u2212 list_value."
           },
           {
             "label": "Other model effects",
             "impact": 0,
-            "reason": "No residual; Steal/Reach comes from ADP vs value rank, not an extra dollar line item."
+            "reason": "No residual; Steal/Reach comes from catalog-order rank vs baseline rank, not an extra dollar line item."
           }
         ],
         "confidence": 0.78
-      }
+      },
+      "catalog_rank": 181,
+      "catalog_tier": 1,
+      "baseline_rank": 5,
+      "auction_rank": 5,
+      "baseline_tier": 5,
+      "auction_tier": 5,
+      "auction_value": 4.6
     }
   ]
 }

@@ -15,8 +15,8 @@ vi.mock("../src/models/Player", () => ({
               name: "One",
               team: "NYY",
               position: "OF",
-              adp: 1,
-              tier: 1,
+              catalog_rank: 1,
+              catalog_tier: 1,
               value: 10,
             },
           ])

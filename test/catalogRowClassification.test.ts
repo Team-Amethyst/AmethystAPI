@@ -25,8 +25,8 @@ describe("catalogRowClassification", () => {
       team: "NYY",
       position: "C",
       mlbId: 1,
-      adp: 1,
-      tier: 1,
+      catalog_rank: 1,
+      catalog_tier: 1,
       value: 10,
     };
     const custom: LeanPlayer & { catalogKind?: "mlb" | "custom" } = {
@@ -35,8 +35,8 @@ describe("catalogRowClassification", () => {
       team: "FA",
       position: "P",
       catalogKind: "custom",
-      adp: 99,
-      tier: 9,
+      catalog_rank: 99,
+      catalog_tier: 9,
       value: 1,
     };
     const bad: LeanPlayer = {
@@ -44,8 +44,8 @@ describe("catalogRowClassification", () => {
       name: "Bad",
       team: "FA",
       position: "P",
-      adp: 99,
-      tier: 9,
+      catalog_rank: 99,
+      catalog_tier: 9,
       value: 1,
     };
     expect(isValuationEligibleCatalogRow(canon)).toBe(true);

@@ -27,7 +27,7 @@ const batchBodySchema = z.object({
 /**
  * POST /catalog/batch-values
  *
- * Baseline `value` / `tier` / `adp` from Mongo for requested MLB `player_id` strings.
+ * Baseline `value` / `catalog_tier` / `catalog_rank` from Mongo for requested MLB `player_id` strings.
  * Same id rules as `/valuation/calculate`. Cached 120s per request body (Redis when available).
  * Placeholder-team hydration matches `loadMongoCatalogForEngine` (respects
  * `AMETHYST_SKIP_MLB_TEAM_HYDRATE=1` for offline CI).
@@ -96,8 +96,8 @@ const batchValues: RequestHandler = async (
       position: p.position,
       team: p.team,
       value: p.value ?? 0,
-      tier: p.tier ?? 0,
-      adp: p.adp ?? 0,
+      catalog_tier: p.catalog_tier ?? 0,
+      catalog_rank: p.catalog_rank ?? 0,
     })),
   };
 

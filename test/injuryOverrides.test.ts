@@ -11,8 +11,8 @@ function mkLean(id: number, over: Partial<LeanPlayer> = {}): LeanPlayer {
     name: `Ov${id}`,
     team: "TST",
     position: "OF",
-    adp: 35,
-    tier: 3,
+    catalog_rank: 35,
+    catalog_tier: 3,
     value: 24,
     projection: {
       batting: { hr: 20, rbi: 70, runs: 72, sb: 6, avg: 0.272 },
@@ -27,8 +27,8 @@ function filler(): LeanPlayer[] {
   return Array.from({ length: 45 }, (_, i) =>
     mkLean(20_000 + i, {
       name: `F${i}`,
-      adp: 160 + i,
-      tier: 6,
+      catalog_rank: 160 + i,
+      catalog_tier: 6,
     })
   );
 }

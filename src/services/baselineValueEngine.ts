@@ -17,6 +17,7 @@ import {
   categoryWeight,
   getProjectionSection,
   isPitcherForBaseline,
+  isTwoWayEligibleForBaseline,
   mean,
   pointsCategoryRaw,
   stdDev,
@@ -28,7 +29,16 @@ import { ROTO_Z_HITTER, ROTO_Z_PITCHER } from "./baselineRotoZConfig";
 const ROTO_CATALOG_PRIOR_WEIGHT = 0.12;
 /** Intrinsic dollar scale before scarcity when stats are neutral (not Mongo dollars). */
 const ROTO_INTRINSIC_BASE_HITTER = 24;
-const ROTO_INTRINSIC_BASE_PITCHER = 20;
+/**
+ * Pitcher intrinsic rotisserie baseline anchor (`statCore = intrinsic * projectionMult × …`).
+ * Wrapped so offline calibration scripts can sweep without editing literals.
+ *
+ * **May 2026:** Raised **+3** after canonical catalog cleanup — pairs with `ROTO_Z_PITCHER.zHi`
+ * so standard mixed auction dollars shift toward realistic hitter/pitcher balance (~70%/30% vs
+ * prior hitter-heavy boards). Generic **P** slots and thin eligible pools remain stress cases;
+ * see scenario-matrix audit scripts under `scripts/pitcher-balance-scenario-matrix.ts`.
+ */
+export const ROTO_INTRINSIC_BASE_PITCHER_REF = { value: 23 };
 
 function defaultPointsWeight(cat: ScoringCategory): number {
   const k = cat.name.toUpperCase();
@@ -60,20 +70,44 @@ type BaselineComponents = {
 
 type RotoGroupKind = "hitter" | "pitcher";
 
+type TwoWayBaselineExplainFields = {
+  two_way_role_selected: "hitter" | "pitcher";
+  hitter_baseline_candidate: number;
+  pitcher_baseline_candidate: number;
+};
+
+function computeTwoWayExplainFields(
+  hitterCandidate: number,
+  pitcherCandidate: number
+): TwoWayBaselineExplainFields {
+  const preferHitter = hitterCandidate >= pitcherCandidate;
+  return {
+    two_way_role_selected: preferHitter ? "hitter" : "pitcher",
+    hitter_baseline_candidate: Number(hitterCandidate.toFixed(2)),
+    pitcher_baseline_candidate: Number(pitcherCandidate.toFixed(2)),
+  };
+}
+
 /**
- * When catalog dollars are tiny but ADP/tier still show real draft interest,
+ * When catalog dollars are tiny but catalog rank/tier still show real draft interest,
  * lift baseline slightly so late picks and spec arms are not all $1 anchors.
  */
 function speculativePriorBaselineFloor(p: LeanPlayer): number | null {
   const catalog = catalogValuePrior(p);
   if (catalog >= 4) return null;
-  const adp = typeof p.adp === "number" && Number.isFinite(p.adp) && p.adp > 0 ? p.adp : null;
-  const tier = typeof p.tier === "number" && Number.isFinite(p.tier) ? p.tier : null;
-  if (adp == null || adp > 200) return null;
+  const cr =
+    typeof p.catalog_rank === "number" && Number.isFinite(p.catalog_rank) && p.catalog_rank > 0
+      ? p.catalog_rank
+      : null;
+  const tier =
+    typeof p.catalog_tier === "number" && Number.isFinite(p.catalog_tier)
+      ? p.catalog_tier
+      : null;
+  if (cr == null || cr > 200) return null;
   if (tier == null || tier > 4) return null;
-  const fromAdp = 2.4 + (200 - adp) * 0.034;
+  const fromCatalogRank = 2.4 + (200 - cr) * 0.034;
   const fromTier = (5 - tier) * 0.85;
-  return Math.min(15, fromAdp + fromTier);
+  return Math.min(15, fromCatalogRank + fromTier);
 }
 
 function scarcityMultiplierForPosition(
@@ -104,13 +138,15 @@ function rotoBaselineForGroup(
 ): Map<string, BaselineComponents> {
   const out = new Map<string, BaselineComponents>();
   if (group.length === 0) return out;
+  const projectionSectionKey = groupKind === "pitcher" ? "pitching" : "batting";
+  const isPitcherSide = groupKind === "pitcher";
   if (categories.length === 0) {
     for (const p of group) {
       const scarcityComponent =
         scarcityMultiplierForPosition(p, rosterSlots, positionOverrides) - 1;
       const intrinsicBase =
         groupKind === "pitcher"
-          ? ROTO_INTRINSIC_BASE_PITCHER
+          ? ROTO_INTRINSIC_BASE_PITCHER_REF.value
           : ROTO_INTRINSIC_BASE_HITTER;
       const blendedCore =
         intrinsicBase * (1 - ROTO_CATALOG_PRIOR_WEIGHT) +
@@ -121,7 +157,7 @@ function rotoBaselineForGroup(
       const risk = applyBaselineRiskChain({
         player: p,
         baselineValue: baseValue,
-        isPitcher: isPitcherForBaseline(p, positionOverrides),
+        isPitcher: isPitcherSide,
       });
       out.set(String(p._id), {
         value: Number(risk.adjustedValue.toFixed(2)),
@@ -137,13 +173,7 @@ function rotoBaselineForGroup(
 
   const catStats = categories.map((cat) => {
     const vals = group.map((p) =>
-      categoryRawValue(
-        getProjectionSection(
-          p,
-          isPitcherForBaseline(p, positionOverrides) ? "pitching" : "batting"
-        ),
-        cat.name
-      )
+      categoryRawValue(getProjectionSection(p, projectionSectionKey), cat.name)
     );
     return {
       cat,
@@ -153,10 +183,7 @@ function rotoBaselineForGroup(
   });
 
   for (const p of group) {
-    const section = getProjectionSection(
-      p,
-      isPitcherForBaseline(p, positionOverrides) ? "pitching" : "batting"
-    );
+    const section = getProjectionSection(p, projectionSectionKey);
     let zWeighted = 0;
     for (const c of catStats) {
       const raw = categoryRawValue(section, c.cat.name);
@@ -174,7 +201,7 @@ function rotoBaselineForGroup(
       scarcityMultiplierForPosition(p, rosterSlots, positionOverrides) - 1;
     const intrinsicBase =
       groupKind === "pitcher"
-        ? ROTO_INTRINSIC_BASE_PITCHER
+        ? ROTO_INTRINSIC_BASE_PITCHER_REF.value
         : ROTO_INTRINSIC_BASE_HITTER;
     const statCore = intrinsicBase * projectionMult;
     const prior = catalogValuePrior(p);
@@ -187,7 +214,7 @@ function rotoBaselineForGroup(
     const risk = applyBaselineRiskChain({
       player: p,
       baselineValue: value,
-      isPitcher: isPitcherForBaseline(p, positionOverrides),
+      isPitcher: isPitcherSide,
     });
     out.set(String(p._id), {
       value: Number(risk.adjustedValue.toFixed(2)),
@@ -219,7 +246,7 @@ function rotisserieBaseline(
     scarcityMultiplierForPosition(p, rosterSlots, positionOverrides) - 1;
   const prior = catalogValuePrior(p);
   const intrinsicBase = isPitcherForBaseline(p, positionOverrides)
-    ? ROTO_INTRINSIC_BASE_PITCHER
+    ? ROTO_INTRINSIC_BASE_PITCHER_REF.value
     : ROTO_INTRINSIC_BASE_HITTER;
   const blendedCore =
     intrinsicBase * (1 - ROTO_CATALOG_PRIOR_WEIGHT) +
@@ -240,11 +267,12 @@ function rotisserieBaseline(
   };
 }
 
-function pointsBaseline(
+function pointsBaselineForSide(
   p: LeanPlayer,
   rosterSlots: RosterSlot[],
   scoringCategories: ScoringCategory[],
-  positionOverrides?: PositionOverrideMap
+  positionOverrides: PositionOverrideMap | undefined,
+  side: "hitter" | "pitcher"
 ): {
   value: number;
   projectionComponent: number;
@@ -261,9 +289,9 @@ function pointsBaseline(
   let points = 0;
   for (const c of scoringCategories) {
     const w = defaultPointsWeight(c);
-    if (c.type === "batting" && !isPitcherForBaseline(p, positionOverrides)) {
+    if (side === "hitter" && c.type === "batting") {
       points += pointsCategoryRaw(batting, c.name) * w;
-    } else if (c.type === "pitching" && isPitcherForBaseline(p, positionOverrides)) {
+    } else if (side === "pitcher" && c.type === "pitching") {
       points += pointsCategoryRaw(pitching, c.name) * w;
     }
   }
@@ -279,7 +307,7 @@ function pointsBaseline(
   const risk = applyBaselineRiskChain({
     player: p,
     baselineValue: value,
-    isPitcher: isPitcherForBaseline(p, positionOverrides),
+    isPitcher: side === "pitcher",
   });
   return {
     value: risk.adjustedValue,
@@ -291,6 +319,32 @@ function pointsBaseline(
   };
 }
 
+/** Points baseline for hitter-only or pitcher-only players. */
+function pointsBaselineSingleRole(
+  p: LeanPlayer,
+  rosterSlots: RosterSlot[],
+  scoringCategories: ScoringCategory[],
+  positionOverrides?: PositionOverrideMap
+): {
+  value: number;
+  projectionComponent: number;
+  scarcityComponent: number;
+  ageDepthComponent?: number;
+  injuryComponent?: number;
+  riskExplain: BaselineRiskExplainFields;
+} {
+  const side: "hitter" | "pitcher" = isPitcherForBaseline(p, positionOverrides)
+    ? "pitcher"
+    : "hitter";
+  return pointsBaselineForSide(
+    p,
+    rosterSlots,
+    scoringCategories,
+    positionOverrides,
+    side
+  );
+}
+
 export function scoringAwareBaselinePlayers(
   players: LeanPlayer[],
   scoringFormat: ScoringFormat | undefined,
@@ -299,34 +353,111 @@ export function scoringAwareBaselinePlayers(
   positionOverrides?: PositionOverrideMap
 ): LeanPlayer[] {
   const fmt = scoringFormat ?? "5x5";
-  let rotoMap = new Map<string, BaselineComponents>();
+  const rotoMap = new Map<string, BaselineComponents>();
+  const twoWayExplainById = new Map<string, TwoWayBaselineExplainFields>();
+
   if (fmt !== "points") {
     const hitterCats = scoringCategories.filter((c) => c.type === "batting");
     const pitcherCats = scoringCategories.filter((c) => c.type === "pitching");
-    const hitters = players.filter((p) => !isPitcherForBaseline(p, positionOverrides));
-    const pitchers = players.filter((p) => isPitcherForBaseline(p, positionOverrides));
+    const hitterPool = players.filter(
+      (p) =>
+        !isPitcherForBaseline(p, positionOverrides) ||
+        isTwoWayEligibleForBaseline(p, positionOverrides)
+    );
+    const pitcherPool = players.filter(
+      (p) =>
+        isPitcherForBaseline(p, positionOverrides) ||
+        isTwoWayEligibleForBaseline(p, positionOverrides)
+    );
     const hitterMap = rotoBaselineForGroup(
-      hitters,
+      hitterPool,
       hitterCats,
       rosterSlots,
       "hitter",
       positionOverrides
     );
     const pitcherMap = rotoBaselineForGroup(
-      pitchers,
+      pitcherPool,
       pitcherCats,
       rosterSlots,
       "pitcher",
       positionOverrides
     );
-    rotoMap = new Map([...hitterMap, ...pitcherMap]);
+
+    for (const p of players) {
+      if (!isTwoWayEligibleForBaseline(p, positionOverrides)) continue;
+      const id = String(p._id);
+      const hComp = hitterMap.get(id);
+      const pComp = pitcherMap.get(id);
+      if (hComp == null || pComp == null) continue;
+      twoWayExplainById.set(
+        id,
+        computeTwoWayExplainFields(hComp.value, pComp.value)
+      );
+    }
+
+    for (const p of players) {
+      const id = String(p._id);
+      if (isTwoWayEligibleForBaseline(p, positionOverrides)) {
+        const hComp = hitterMap.get(id);
+        const pComp = pitcherMap.get(id);
+        if (hComp != null && pComp != null) {
+          rotoMap.set(id, hComp.value >= pComp.value ? hComp : pComp);
+        }
+      } else if (!isPitcherForBaseline(p, positionOverrides)) {
+        const hComp = hitterMap.get(id);
+        if (hComp != null) rotoMap.set(id, hComp);
+      } else {
+        const pComp = pitcherMap.get(id);
+        if (pComp != null) rotoMap.set(id, pComp);
+      }
+    }
   }
+
   return players.map((p) => {
-    const derived =
-      fmt === "points"
-        ? pointsBaseline(p, rosterSlots, scoringCategories, positionOverrides)
-        : rotoMap.get(String(p._id)) ??
-          rotisserieBaseline(p, rosterSlots, positionOverrides);
+    let derived: {
+      value: number;
+      projectionComponent: number;
+      scarcityComponent: number;
+      ageDepthComponent?: number;
+      injuryComponent?: number;
+      riskExplain: BaselineRiskExplainFields;
+    };
+    let twoWayExplain: TwoWayBaselineExplainFields | undefined;
+
+    if (fmt === "points") {
+      if (isTwoWayEligibleForBaseline(p, positionOverrides)) {
+        const hCand = pointsBaselineForSide(
+          p,
+          rosterSlots,
+          scoringCategories,
+          positionOverrides,
+          "hitter"
+        );
+        const pCand = pointsBaselineForSide(
+          p,
+          rosterSlots,
+          scoringCategories,
+          positionOverrides,
+          "pitcher"
+        );
+        twoWayExplain = computeTwoWayExplainFields(hCand.value, pCand.value);
+        derived = hCand.value >= pCand.value ? hCand : pCand;
+      } else {
+        derived = pointsBaselineSingleRole(
+          p,
+          rosterSlots,
+          scoringCategories,
+          positionOverrides
+        );
+      }
+    } else {
+      twoWayExplain = twoWayExplainById.get(String(p._id));
+      derived =
+        rotoMap.get(String(p._id)) ??
+        rotisserieBaseline(p, rosterSlots, positionOverrides);
+    }
+
     const baselineComponents = {
       scoring_format: fmt,
       projection_component: Number(derived.projectionComponent.toFixed(2)),
@@ -342,6 +473,7 @@ export function scoringAwareBaselinePlayers(
           }
         : {}),
       ...derived.riskExplain,
+      ...(twoWayExplain ?? {}),
     };
     return {
       ...p,

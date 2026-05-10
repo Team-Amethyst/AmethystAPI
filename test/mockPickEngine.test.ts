@@ -9,8 +9,8 @@ const players: LeanPlayer[] = [
     name: "SP Ace",
     team: "NYY",
     position: "SP",
-    adp: 8,
-    tier: 1,
+    catalog_rank: 8,
+    catalog_tier: 1,
     value: 40,
   },
   {
@@ -19,8 +19,8 @@ const players: LeanPlayer[] = [
     name: "OF Bat",
     team: "LAD",
     position: "OF",
-    adp: 12,
-    tier: 1,
+    catalog_rank: 12,
+    catalog_tier: 1,
     value: 35,
   },
   {
@@ -29,8 +29,8 @@ const players: LeanPlayer[] = [
     name: "RP Arm",
     team: "SEA",
     position: "RP",
-    adp: 20,
-    tier: 2,
+    catalog_rank: 20,
+    catalog_tier: 2,
     value: 22,
   },
 ];
@@ -41,7 +41,7 @@ const rosterSlots: RosterSlot[] = [
 ];
 
 describe("simulateMockPicks", () => {
-  it("prioritizes urgent positional need by ADP", () => {
+  it("prioritizes urgent positional need by catalog rank", () => {
     const teams: MockPickTeam[] = [{ team_id: "t1", roster: [] }];
     const out = simulateMockPicks(players, teams, ["t1"], rosterSlots);
     expect(out.predictions).toHaveLength(1);

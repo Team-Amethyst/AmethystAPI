@@ -158,7 +158,8 @@ export function buildSyntheticCalibrationDraftroomPool(): LeanPlayer[] {
     const projection = isPitch
       ? { batting: battingProj(seq), pitching: pitchingProj(seq) }
       : { batting };
-    const tier = mlbId === 777001 ? 1 : seq <= 48 ? 1 : seq <= 120 ? 2 : seq <= 260 ? 3 : 4;
+    const catalog_tier =
+      mlbId === 777001 ? 1 : seq <= 48 ? 1 : seq <= 120 ? 2 : seq <= 260 ? 3 : 4;
     const value =
       mlbId === 777001 ? 52 : Math.max(1.5, 42 - seq * 0.055 + (isPitch ? 2 : 0));
     out.push({
@@ -167,8 +168,8 @@ export function buildSyntheticCalibrationDraftroomPool(): LeanPlayer[] {
       name: `Synthetic ${mlbId}`,
       team,
       position: pos,
-      adp: seq,
-      tier,
+      catalog_rank: seq,
+      catalog_tier,
       value: Math.round(value * 100) / 100,
       projection,
     });

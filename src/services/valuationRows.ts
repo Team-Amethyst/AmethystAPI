@@ -38,12 +38,13 @@ export function compareByValueDesc(
   return getPlayerId(a).localeCompare(getPlayerId(b));
 }
 
-export function compareByAdpAsc(
+/** Sort by internal catalog rank (lower = stronger). Not market ADP. */
+export function compareByCatalogRankAsc(
   a: LeanPlayer,
   b: LeanPlayer,
   options?: CalculateInflationOptions
 ): number {
-  const diff = (a.adp || 9999) - (b.adp || 9999);
+  const diff = (a.catalog_rank || 9999) - (b.catalog_rank || 9999);
   if (diff !== 0) return diff;
   if (options?.deterministic && options.seed != null && Number.isFinite(options.seed)) {
     return (
@@ -60,8 +61,8 @@ export function buildValuedRows(params: {
   replacementValue: number;
   inflationFactor: number;
   minAuctionBid: number;
-  valueRank: Map<string, number>;
-  adpRank: Map<string, number>;
+  baselineOrderRank: Map<string, number>;
+  catalogOrderRank: Map<string, number>;
   undraftedCount: number;
 }): ValuedPlayer[] {
   const {
@@ -71,8 +72,8 @@ export function buildValuedRows(params: {
     replacementValue,
     inflationFactor,
     minAuctionBid,
-    valueRank,
-    adpRank,
+    baselineOrderRank,
+    catalogOrderRank,
     undraftedCount,
   } = params;
   return byValueRows.map((p) => {
@@ -108,10 +109,10 @@ export function buildValuedRows(params: {
 
     let indicator: ValueIndicator = "Fair Value";
     if (undraftedCount > 0) {
-      const vRank = valueRank.get(pid) ?? 0;
-      const aRank = adpRank.get(pid) ?? 0;
-      if (aRank > vRank * STEAL_SLOPE) indicator = "Steal";
-      else if (aRank < vRank * REACH_SLOPE) indicator = "Reach";
+      const vRank = baselineOrderRank.get(pid) ?? 0;
+      const cRank = catalogOrderRank.get(pid) ?? 0;
+      if (cRank > vRank * STEAL_SLOPE) indicator = "Steal";
+      else if (cRank < vRank * REACH_SLOPE) indicator = "Reach";
     }
 
     const adjustedRounded = parseFloat(adjustedValue.toFixed(2));
@@ -136,8 +137,12 @@ export function buildValuedRows(params: {
       name: p.name,
       position: p.position,
       team: p.team,
-      adp: p.adp || 0,
-      tier: p.tier || 0,
+      catalog_rank: p.catalog_rank || 0,
+      catalog_tier: p.catalog_tier || 0,
+      baseline_rank: 0,
+      auction_rank: 0,
+      baseline_tier: 1,
+      auction_tier: 1,
       baseline_value: baselineValue,
       auction_value: adjustedRounded,
       adjusted_value: adjustedRounded,
@@ -152,6 +157,14 @@ export function buildValuedRows(params: {
           : {}),
         ...(meta?.injury_component != null
           ? { injury_component: Number(meta.injury_component) }
+          : {}),
+        ...(meta?.two_way_role_selected === "hitter" ||
+        meta?.two_way_role_selected === "pitcher"
+          ? {
+              two_way_role_selected: meta.two_way_role_selected,
+              hitter_baseline_candidate: Number(meta.hitter_baseline_candidate),
+              pitcher_baseline_candidate: Number(meta.pitcher_baseline_candidate),
+            }
           : {}),
         ...riskExplain,
       },

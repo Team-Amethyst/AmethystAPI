@@ -9,8 +9,8 @@ function mkLean(id: number, over: Partial<LeanPlayer> = {}): LeanPlayer {
     name: `RiskPlayer${id}`,
     team: "TST",
     position: "OF",
-    adp: 40,
-    tier: 5,
+    catalog_rank: 40,
+    catalog_tier: 5,
     value: 20,
     projection: {
       batting: { hr: 25, rbi: 85, runs: 80, sb: 5, avg: 0.27 },
@@ -54,7 +54,7 @@ function baseInput(
 }
 
 const filler = Array.from({ length: 24 }, (_, i) =>
-  mkLean(900 + i, { position: "OF", tier: 6, adp: 200 + i })
+  mkLean(900 + i, { position: "OF", catalog_tier: 6, catalog_rank: 200 + i })
 );
 
 describe("baseline risk explainability", () => {

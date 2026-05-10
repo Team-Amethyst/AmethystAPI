@@ -120,8 +120,12 @@
         "name",
         "position",
         "team",
-        "adp",
-        "tier",
+        "catalog_rank",
+        "catalog_tier",
+        "baseline_rank",
+        "auction_rank",
+        "baseline_tier",
+        "auction_tier",
         "baseline_value",
         "auction_value",
         "adjusted_value",
@@ -142,11 +146,39 @@
         "team": {
           "type": "string"
         },
-        "adp": {
-          "type": "number"
+        "catalog_rank": {
+          "type": "number",
+          "description": "Internal catalog rank by preseason model value (not market ADP)."
         },
-        "tier": {
-          "type": "integer"
+        "catalog_tier": {
+          "type": "integer",
+          "description": "Catalog dollar-band tier from preseason model."
+        },
+        "baseline_rank": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Rank by baseline_value among valuations[] in this response."
+        },
+        "auction_rank": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Rank by auction_value among valuations[] in this response."
+        },
+        "baseline_tier": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 5,
+          "description": "Quintile tier from baseline_value distribution in this response (1 = top)."
+        },
+        "auction_tier": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 5,
+          "description": "Quintile tier from auction_value distribution in this response (1 = top)."
+        },
+        "market_adp": {
+          "type": ["number", "null"],
+          "description": "External consensus ADP when a real source is wired; otherwise omit."
         },
         "baseline_value": {
           "type": "number"

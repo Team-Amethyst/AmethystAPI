@@ -149,8 +149,20 @@ export interface ValuedPlayer {
   name: string;
   position: string;
   team: string;
-  adp: number;
-  tier: number;
+  /** From catalog — internal rank by model value, not market ADP. */
+  catalog_rank: number;
+  /** From catalog — internal tier from preseason dollar bands. */
+  catalog_tier: number;
+  /** Rank by baseline_value within this response's valuations[]. */
+  baseline_rank: number;
+  /** Rank by auction_value within this response's valuations[]. */
+  auction_rank: number;
+  /** Quintile by baseline_value distribution within this response (1 = top). */
+  baseline_tier: number;
+  /** Quintile by auction_value distribution within this response (1 = top). */
+  auction_tier: number;
+  /** Present only when wired to a real external ADP source (otherwise omit). */
+  market_adp?: number | null;
   baseline_value: number;
   /** Official dollar valuation for benchmarks and external evaluation; equals `adjusted_value`. */
   auction_value: number;
@@ -167,6 +179,10 @@ export interface ValuedPlayer {
     projection_component: number;
     scarcity_component: number;
     age_depth_component?: number;
+    /** Present when eligibility spans hitter + pitcher tokens — baseline is max of role candidates. */
+    two_way_role_selected?: "hitter" | "pitcher";
+    hitter_baseline_candidate?: number;
+    pitcher_baseline_candidate?: number;
   } & BaselineRiskExplainFields;
   scarcity_adjustment?: number;
   inflation_adjustment?: number;
@@ -221,6 +237,9 @@ export interface ValuedPlayer {
     scoring_category_warnings?: string[];
     /** Echo of response `valuation_context_warnings` when non-empty (explain mode). */
     valuation_context_warnings?: string[];
+    two_way_role_selected?: "hitter" | "pitcher";
+    hitter_baseline_candidate?: number;
+    pitcher_baseline_candidate?: number;
   } & Partial<BaselineRiskExplainFields>;
 }
 

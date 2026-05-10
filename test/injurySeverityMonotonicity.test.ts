@@ -10,8 +10,8 @@ function mkLean(id: number, injurySeverity: number | undefined): LeanPlayer {
     name: `InjMono${id}`,
     team: "TST",
     position: "OF",
-    adp: 30,
-    tier: 3,
+    catalog_rank: 30,
+    catalog_tier: 3,
     value: 22,
     projection: {
       batting: { hr: 22, rbi: 72, runs: 75, sb: 8, avg: 0.275 },
@@ -28,8 +28,8 @@ function filler(): LeanPlayer[] {
   ).map((p, i) => ({
     ...p,
     mlbId: 10_000 + i,
-    adp: 150 + i,
-    tier: 6,
+    catalog_rank: 150 + i,
+    catalog_tier: 6,
     name: `Filler${i}`,
   }));
 }

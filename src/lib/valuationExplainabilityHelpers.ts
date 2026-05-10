@@ -100,7 +100,7 @@ export function buildDriverRows(row: ValuedPlayer, response: ValuationResponse) 
       impact: otherImpact,
       reason:
         Math.abs(otherImpact) < 0.25
-          ? "No residual; Steal/Reach comes from ADP vs value rank, not an extra dollar line item."
+          ? "No residual; Steal/Reach comes from catalog-order rank vs baseline rank, not an extra dollar line item."
           : "Rounding residual only.",
     },
   ].sort((a, b) => Math.abs(b.impact) - Math.abs(a.impact));
@@ -115,14 +115,14 @@ export function buildPlayerWhy(
   const why: string[] = [];
   if (row.indicator === "Steal") {
     why.push(
-      "Model ranks this player higher than ADP implies the market does — possible value."
+      "Model baseline rank is stronger than catalog-order rank suggests — possible value."
     );
   } else if (row.indicator === "Reach") {
     why.push(
-      "ADP is ahead of model rank — paying full sticker price may be risky."
+      "Catalog-order rank is ahead of baseline rank — paying full sticker price may be risky."
     );
   } else {
-    why.push("ADP and model auction value are broadly aligned.");
+    why.push("Catalog-order rank and baseline strength rank are broadly aligned.");
   }
 
   why.push(
@@ -144,7 +144,7 @@ export function buildPlayerWhy(
     }
   }
 
-  if ((row.tier || 99) <= 1 && leagueInflation > 1.08) {
+  if ((row.auction_tier || 99) <= 1 && leagueInflation > 1.08) {
     why.push("Elite tier in an inflated market — expect competitive bidding.");
   }
 

@@ -26,7 +26,7 @@ export const draftedPlayerInputSchema = z
     team: z.string(),
     team_id: z.string(),
     paid: z.number().nonnegative().optional(),
-    adp: z.number().optional(),
+    catalog_rank: z.number().optional(),
     pick_number: z.number().optional(),
     is_keeper: z.boolean().optional(),
     keeper_cost: z.number().optional(),
@@ -44,7 +44,7 @@ export const draftedPlayerInputSchema = z
     };
     if (val.positions !== undefined) out.positions = val.positions;
     if (val.paid !== undefined) out.paid = val.paid;
-    if (val.adp !== undefined) out.adp = val.adp;
+    if (val.catalog_rank !== undefined) out.catalog_rank = val.catalog_rank;
     if (val.pick_number !== undefined) out.pick_number = val.pick_number;
     if (val.is_keeper !== undefined) out.is_keeper = val.is_keeper;
     if (val.keeper_cost !== undefined) out.keeper_cost = val.keeper_cost;

@@ -29,8 +29,8 @@ function leanToIdentityRow(p: LeanPlayer & { catalogKind?: CatalogKind }): Catal
     team: p.team,
     position: p.position,
     positions: p.positions,
-    adp: p.adp ?? 0,
-    tier: p.tier ?? 0,
+    catalog_rank: p.catalog_rank ?? 0,
+    catalog_tier: p.catalog_tier ?? 0,
     value: p.value ?? 0,
     projection: p.projection,
   };
@@ -70,9 +70,9 @@ export function runSyncQualityGates(
       proj != null &&
       typeof proj === "object" &&
       ("batting" in (proj as object) || "pitching" in (proj as object));
-    if ((p.tier ?? 99) <= cutoff && p.value > 0 && !hasProj) {
+    if ((p.catalog_tier ?? 99) <= cutoff && p.value > 0 && !hasProj) {
       errors.push(
-        `top-tier player missing projection object: mlbId=${p.mlbId ?? "none"} ${p.name} tier=${p.tier}`
+        `top-tier player missing projection object: mlbId=${p.mlbId ?? "none"} ${p.name} catalog_tier=${p.catalog_tier}`
       );
     }
     const teamU = (p.team ?? "").trim().toUpperCase();
@@ -81,7 +81,7 @@ export function runSyncQualityGates(
       hasCanonicalMlbId(leanToIdentityRow(p)) &&
       cls !== "custom_player" &&
       teamU === "--" &&
-      (p.tier ?? 99) <= 3 &&
+      (p.catalog_tier ?? 99) <= 3 &&
       (p.value ?? 0) > 0
     ) {
       warnings.push(

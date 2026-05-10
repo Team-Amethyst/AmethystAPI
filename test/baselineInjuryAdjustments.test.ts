@@ -12,8 +12,8 @@ function mk(p: Partial<LeanPlayer>): LeanPlayer {
     name: "X",
     team: "NYY",
     position: "OF",
-    adp: 50,
-    tier: 2,
+    catalog_rank: 50,
+    catalog_tier: 2,
     value: 20,
     ...p,
   };

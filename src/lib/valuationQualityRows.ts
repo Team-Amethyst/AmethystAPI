@@ -69,5 +69,40 @@ export function rowIssues(row: ValuedPlayer, index: number): string[] {
   if (typeof row.name !== "string") {
     out.push(`${p}.name must be a string`);
   }
+  if (!isFiniteNumber(row.catalog_rank) || row.catalog_rank < 0) {
+    out.push(`${p}.catalog_rank must be a finite non-negative number`);
+  }
+  if (
+    !Number.isInteger(row.catalog_tier) ||
+    row.catalog_tier < 0 ||
+    !Number.isFinite(row.catalog_tier)
+  ) {
+    out.push(`${p}.catalog_tier must be a non-negative integer`);
+  }
+  if (!Number.isInteger(row.baseline_rank) || row.baseline_rank < 1 || !Number.isFinite(row.baseline_rank)) {
+    out.push(`${p}.baseline_rank must be a positive integer`);
+  }
+  if (!Number.isInteger(row.auction_rank) || row.auction_rank < 1 || !Number.isFinite(row.auction_rank)) {
+    out.push(`${p}.auction_rank must be a positive integer`);
+  }
+  if (
+    !Number.isInteger(row.baseline_tier) ||
+    row.baseline_tier < 1 ||
+    row.baseline_tier > 5
+  ) {
+    out.push(`${p}.baseline_tier must be an integer from 1 to 5`);
+  }
+  if (
+    !Number.isInteger(row.auction_tier) ||
+    row.auction_tier < 1 ||
+    row.auction_tier > 5
+  ) {
+    out.push(`${p}.auction_tier must be an integer from 1 to 5`);
+  }
+  if (row.market_adp !== undefined && row.market_adp !== null) {
+    if (!isFiniteNumber(row.market_adp) || row.market_adp <= 0) {
+      out.push(`${p}.market_adp must be a positive finite number when set`);
+    }
+  }
   return out;
 }

@@ -35,8 +35,17 @@ export function bucketUrgency(remaining: number, target: number): number {
   return Math.min(100, Math.max(0, Math.round((1 - remaining / target) * 100)));
 }
 
+/** Prefer Mongo `catalog_tier`; fall back to legacy `tier` on lean fixtures and older rows. */
+function rosterTier(p: LeanPlayer): number {
+  const c = p.catalog_tier;
+  if (c != null && c > 0) return Math.trunc(c);
+  const legacy = (p as LeanPlayer & { tier?: number }).tier;
+  if (legacy != null && legacy > 0) return Math.trunc(legacy);
+  return 99;
+}
+
 function tierPlayersCount(atPos: LeanPlayer[], tier: number): number {
-  return atPos.filter((p) => (p.tier || 99) === tier).length;
+  return atPos.filter((p) => rosterTier(p) === tier).length;
 }
 
 export function buildPositionScarcity(params: {
@@ -63,11 +72,11 @@ export function buildPositionScarcity(params: {
     const atPos = undrafted.filter((p) =>
       fitsRosterSlot(posKey, playerTokensFromLean(p, positionOverrides))
     );
-    const elite = atPos.filter((p) => (p.tier || 99) === 1).length;
+    const elite = atPos.filter((p) => rosterTier(p) === 1).length;
     const midTier = atPos.filter(
-      (p) => (p.tier || 99) >= 2 && (p.tier || 99) <= 3
+      (p) => rosterTier(p) >= 2 && rosterTier(p) <= 3
     ).length;
-    const depth = atPos.filter((p) => (p.tier || 99) >= 4).length;
+    const depth = atPos.filter((p) => rosterTier(p) >= 4).length;
     const total = atPos.length;
     const slotsPerTeam = SINGLE_SLOT_POSITIONS.has(pos)
       ? 1

@@ -9,8 +9,8 @@ function mk(id: number, value: number, position: string): LeanPlayer {
     name: `P${id}`,
     team: "NYY",
     position,
-    adp: id,
-    tier: 1,
+    catalog_rank: id,
+    catalog_tier: 1,
     value,
   };
 }

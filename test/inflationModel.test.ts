@@ -43,9 +43,36 @@ describe("inflationModel helpers", () => {
 
   it("builds surplus plan from top-k draftable slice", () => {
     const byValueFull: LeanPlayer[] = [
-      { _id: "a", mlbId: 1, name: "A", team: "NYY", position: "OF", adp: 1, tier: 1, value: 30 },
-      { _id: "b", mlbId: 2, name: "B", team: "NYY", position: "OF", adp: 2, tier: 1, value: 20 },
-      { _id: "c", mlbId: 3, name: "C", team: "NYY", position: "OF", adp: 3, tier: 1, value: 10 },
+      {
+        _id: "a",
+        mlbId: 1,
+        name: "A",
+        team: "NYY",
+        position: "OF",
+        catalog_rank: 1,
+        catalog_tier: 1,
+        value: 30,
+      },
+      {
+        _id: "b",
+        mlbId: 2,
+        name: "B",
+        team: "NYY",
+        position: "OF",
+        catalog_rank: 2,
+        catalog_tier: 1,
+        value: 20,
+      },
+      {
+        _id: "c",
+        mlbId: 3,
+        name: "C",
+        team: "NYY",
+        position: "OF",
+        catalog_rank: 3,
+        catalog_tier: 1,
+        value: 10,
+      },
     ];
     const plan = tryBuildSurplusPlan({
       byValueFull,

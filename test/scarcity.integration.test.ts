@@ -12,8 +12,8 @@ vi.mock("../src/models/Player", () => {
       name: "Elite SS",
       team: "NYY",
       position: "SS",
-      adp: 10,
-      tier: 1,
+      catalog_rank: 10,
+      catalog_tier: 1,
       value: 20,
     },
     {
@@ -22,8 +22,8 @@ vi.mock("../src/models/Player", () => {
       name: "Depth SS",
       team: "NYY",
       position: "SS",
-      adp: 100,
-      tier: 4,
+      catalog_rank: 100,
+      catalog_tier: 4,
       value: 5,
     },
     ...Array.from({ length: 40 }, (_, i) => ({
@@ -32,8 +32,8 @@ vi.mock("../src/models/Player", () => {
       name: `OF ${i}`,
       team: "BOS",
       position: "OF",
-      adp: 120 + i,
-      tier: 3,
+      catalog_rank: 120 + i,
+      catalog_tier: 3,
       value: 7,
     })),
   ];

@@ -184,8 +184,13 @@ function selectPickIndexProxy(
 ): number {
   const scored = undrafted.map((p, i) => {
     const catVal = Number.isFinite(p.value) ? p.value : 0;
-    const adp = Number.isFinite(p.adp) && p.adp > 0 ? p.adp : 9999;
-    return { i, p, catVal, adp };
+    const rank =
+      Number.isFinite(p.catalog_rank) &&
+      p.catalog_rank > 0 &&
+      p.catalog_rank < 9999
+        ? p.catalog_rank
+        : 9999;
+    return { i, p, catVal, adp: rank };
   });
   if (scored.length === 0) return 0;
 
@@ -696,8 +701,13 @@ async function main(): Promise<void> {
   }
 
   const drafted75Adp = [...pool]
-    .filter((p) => Number.isFinite(p.adp) && p.adp > 0)
-    .sort((a, b) => a.adp - b.adp)
+    .filter(
+      (p) =>
+        Number.isFinite(p.catalog_rank) &&
+        p.catalog_rank > 0 &&
+        p.catalog_rank < 9999
+    )
+    .sort((a, b) => a.catalog_rank - b.catalog_rank)
     .slice(0, 75)
     .map((p, i) => ({
       player_id: getPlayerId(p),

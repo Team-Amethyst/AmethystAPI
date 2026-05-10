@@ -123,8 +123,8 @@ export function mergeMongoWithFixtureIdentities(
         name: meta.name || "Unknown",
         team: meta.team || "",
         position: normPos(meta.position),
-        adp: 9999,
-        tier: 4,
+        catalog_rank: 9999,
+        catalog_tier: 4,
         value: stubVal,
       });
     }

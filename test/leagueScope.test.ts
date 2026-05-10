@@ -9,8 +9,8 @@ function row(team: string, id = 1): LeanPlayer {
     name: "n",
     team,
     position: "OF",
-    adp: 1,
-    tier: 1,
+    catalog_rank: 1,
+    catalog_tier: 1,
     value: 1,
   };
 }

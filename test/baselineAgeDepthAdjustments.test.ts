@@ -14,8 +14,8 @@ function mkPlayer(overrides: Partial<LeanPlayer> = {}): LeanPlayer {
     name: "Player",
     team: "NYY",
     position: "OF",
-    adp: 100,
-    tier: 2,
+    catalog_rank: 100,
+    catalog_tier: 2,
     value: 20,
     ...overrides,
   };
@@ -23,22 +23,22 @@ function mkPlayer(overrides: Partial<LeanPlayer> = {}): LeanPlayer {
 
 describe("baselineAgeDepthAdjustments", () => {
   it("resolves explicit depthChartPosition first", () => {
-    const p = mkPlayer({ depthChartPosition: 1, tier: 4 });
+    const p = mkPlayer({ depthChartPosition: 1, catalog_tier: 4 });
     expect(resolveDepthChartPosition(p)).toBe(1);
   });
 
   it("falls back to projection depth fields when direct field is absent", () => {
     const p = mkPlayer({
       projection: { depth_chart_position: 3 } as Record<string, unknown>,
-      tier: 1,
+      catalog_tier: 1,
     });
     expect(resolveDepthChartPosition(p)).toBe(3);
   });
 
   it("falls back to tier proxy when depth data is absent", () => {
-    expect(resolveDepthChartPosition(mkPlayer({ tier: 1 }))).toBe(1);
-    expect(resolveDepthChartPosition(mkPlayer({ tier: 3 }))).toBe(2);
-    expect(resolveDepthChartPosition(mkPlayer({ tier: 6 }))).toBe(3);
+    expect(resolveDepthChartPosition(mkPlayer({ catalog_tier: 1 }))).toBe(1);
+    expect(resolveDepthChartPosition(mkPlayer({ catalog_tier: 3 }))).toBe(2);
+    expect(resolveDepthChartPosition(mkPlayer({ catalog_tier: 6 }))).toBe(3);
   });
 
   it("applies stronger multiplier to starters than reserves", () => {

@@ -51,9 +51,13 @@ export function resolveDepthChartPosition(p: LeanPlayer): number | undefined {
     toFinite(proj?.depthChartRank);
   if (fromProj != null && fromProj > 0) return Math.trunc(fromProj);
 
-  // Fallback proxy when no explicit depth data exists.
-  if ((p.tier ?? 99) <= 1) return 1;
-  if ((p.tier ?? 99) <= 3) return 2;
+  // Fallback proxy when no explicit depth data exists (prefer catalog_tier; legacy `tier` on fixtures).
+  const ct = p.catalog_tier;
+  const legacyTier = (p as LeanPlayer & { tier?: number }).tier;
+  const tierProxy =
+    ct != null && ct > 0 ? ct : legacyTier != null && legacyTier > 0 ? legacyTier : 99;
+  if (tierProxy <= 1) return 1;
+  if (tierProxy <= 3) return 2;
   return 3;
 }
 

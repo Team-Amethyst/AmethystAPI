@@ -357,10 +357,34 @@ components:
           type: string
         team:
           type: string
-        adp:
+        catalog_rank:
           type: number
-        tier:
+          description: Internal catalog rank by preseason model value (not market ADP).
+        catalog_tier:
           type: integer
+          description: Catalog dollar-band tier from preseason model.
+        baseline_rank:
+          type: integer
+          minimum: 1
+          description: Rank by baseline_value within valuations[] for this response.
+        auction_rank:
+          type: integer
+          minimum: 1
+          description: Rank by auction_value within valuations[] for this response.
+        baseline_tier:
+          type: integer
+          minimum: 1
+          maximum: 5
+          description: Quintile tier from baseline_value distribution in this response (1 = top).
+        auction_tier:
+          type: integer
+          minimum: 1
+          maximum: 5
+          description: Quintile tier from auction_value distribution in this response (1 = top).
+        market_adp:
+          type: number
+          nullable: true
+          description: External consensus ADP when wired to a real source; otherwise omit.
         baseline_value:
           type: number
           description: >-
@@ -650,9 +674,9 @@ components:
                 type: string
               value:
                 type: number
-              tier:
+              catalog_tier:
                 type: integer
-              adp:
+              catalog_rank:
                 type: number
 
     AppErrorEnvelope:
@@ -920,7 +944,7 @@ paths:
 
   /catalog/batch-values:
     post:
-      summary: Baseline value / tier / adp for player ids
+      summary: Baseline value / catalog_tier / catalog_rank for player ids
       security:
         - ApiKeyAuth: []
       parameters:

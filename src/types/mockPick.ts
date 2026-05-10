@@ -19,7 +19,7 @@ export interface PredictedPick {
     player_id: string;
     name: string;
     position: string;
-    adp: number;
+    catalog_rank: number;
     reason: string;
   };
   confidence: number;

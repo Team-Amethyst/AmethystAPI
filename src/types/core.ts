@@ -18,7 +18,8 @@ export interface DraftedPlayer {
   team: string;
   team_id: string;
   paid?: number;
-  adp?: number;
+  /** Internal catalog sort order (not market ADP). */
+  catalog_rank?: number;
   is_keeper?: boolean;
   keeper_cost?: number;
   pick_number?: number;
@@ -51,8 +52,10 @@ export interface LeanPlayer {
   depthChartPosition?: number;
   /** 0 healthy/unknown; 1 day-to-day; 2 IL short; 3 long-term — used in baseline injury haircut. */
   injurySeverity?: number;
-  adp: number;
-  tier: number;
+  /** Rank by catalog/preseason model value (sync assigns from sorted pool). Not market ADP. */
+  catalog_rank: number;
+  /** Tier from catalog dollar bands (`assignTier` / Mongo). Not auction-tier. */
+  catalog_tier: number;
   value: number;
   outlook?: string;
   stats?: Record<string, unknown>;

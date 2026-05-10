@@ -1,5 +1,6 @@
 import type { LeanPlayer } from "../types/brain";
 import {
+  isHitter,
   playerTokensFromLean,
   type PositionOverrideMap,
 } from "../lib/fantasyRosterSlots";
@@ -26,6 +27,18 @@ export function isPitcherForBaseline(
 ): boolean {
   return playerTokensFromLean(p, overrides).some(
     (t) => t === "SP" || t === "RP" || t === "P"
+  );
+}
+
+/** Both hitter-eligible and pitcher-eligible fantasy tokens (single-row two-way). */
+export function isTwoWayEligibleForBaseline(
+  p: LeanPlayer,
+  overrides?: PositionOverrideMap
+): boolean {
+  const tokens = playerTokensFromLean(p, overrides);
+  return (
+    isHitter(tokens) &&
+    tokens.some((t) => t === "SP" || t === "RP" || t === "P")
   );
 }
 

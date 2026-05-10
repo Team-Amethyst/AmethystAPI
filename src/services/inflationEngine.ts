@@ -17,9 +17,10 @@ import {
   buildLeagueSlotDemand,
 } from "../lib/fantasyRosterSlots";
 import { getPlayerId } from "../lib/playerId";
+import { attachAuctionBaselineRanksAndTiers } from "../lib/distributionTier";
 import {
   buildValuedRows,
-  compareByAdpAsc,
+  compareByCatalogRankAsc,
   compareByValueDesc,
 } from "./valuationRows";
 import {
@@ -96,13 +97,15 @@ export function calculateInflation(
   const byValueFull = [...undraftedFull].sort((a, b) =>
     compareByValueDesc(a, b, options)
   );
-  const byAdpFull = [...undraftedFull].sort((a, b) =>
-    compareByAdpAsc(a, b, options)
+  const byCatalogRankFull = [...undraftedFull].sort((a, b) =>
+    compareByCatalogRankAsc(a, b, options)
   );
-  const valueRank = new Map(
+  const baselineOrderRank = new Map(
     byValueFull.map((p, i) => [getPlayerId(p), i + 1])
   );
-  const adpRank = new Map(byAdpFull.map((p, i) => [getPlayerId(p), i + 1]));
+  const catalogOrderRank = new Map(
+    byCatalogRankFull.map((p, i) => [getPlayerId(p), i + 1])
+  );
 
   const byValueRows = [...undraftedForRows].sort((a, b) =>
     compareByValueDesc(a, b, options)
@@ -169,10 +172,12 @@ export function calculateInflation(
     replacementValue,
     inflationFactor,
     minAuctionBid: MIN_AUCTION_BID,
-    valueRank,
-    adpRank,
+    baselineOrderRank,
+    catalogOrderRank,
     undraftedCount: undraftedFull.length,
   });
+
+  attachAuctionBaselineRanksAndTiers(valuations, options);
 
   const leagueCap = leagueSlotCapacity(rosterSlots, numTeams);
   const remainingSlotsLeague =

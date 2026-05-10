@@ -20,7 +20,7 @@ function mk(
     name: `P${id}`,
     team: "NYY",
     position,
-    adp: id,
+    catalog_rank: id,
     tier,
     value,
   };

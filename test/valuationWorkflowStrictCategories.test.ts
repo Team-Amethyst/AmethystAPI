@@ -9,8 +9,8 @@ const tinyPool: LeanPlayer[] = [
     name: "One",
     team: "NYY",
     position: "OF",
-    adp: 5,
-    tier: 1,
+    catalog_rank: 5,
+    catalog_tier: 1,
     value: 30,
     projection: {
       batting: {
@@ -30,8 +30,8 @@ const tinyPool: LeanPlayer[] = [
     name: "Ace",
     team: "LAD",
     position: "SP",
-    adp: 20,
-    tier: 1,
+    catalog_rank: 20,
+    catalog_tier: 1,
     value: 28,
     projection: {
       pitching: {

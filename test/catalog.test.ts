@@ -17,8 +17,8 @@ vi.mock("../src/models/Player", () => ({
               team: "LAD",
               position: "DH",
               value: 55,
-              tier: 1,
-              adp: 1,
+              catalog_tier: 1,
+              catalog_rank: 1,
             },
           ] as LeanPlayer[])
         ),
@@ -49,8 +49,8 @@ describe("POST /catalog/batch-values", () => {
       player_id: "660271",
       name: "Shohei",
       value: 55,
-      tier: 1,
-      adp: 1,
+      catalog_tier: 1,
+      catalog_rank: 1,
     });
   });
 

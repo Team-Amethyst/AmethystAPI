@@ -53,8 +53,10 @@ export interface IPlayer extends Document {
   age: number;
   depthChartPosition?: number;
   injurySeverity?: number;
-  adp: number;
-  tier: number;
+  /** Internal catalog sort order (sync); legacy Mongo key `adp` still ingested in normalizeCatalogPlayers. */
+  catalog_rank: number;
+  /** Catalog dollar-band tier (sync); legacy Mongo key `tier` still ingested. */
+  catalog_tier: number;
   value: number;
   outlook: string;
   stats?: IPlayerStats;
@@ -76,8 +78,8 @@ const playerSchema = new Schema<IPlayer>(
     age: { type: Number, default: 0 },
     depthChartPosition: { type: Number },
     injurySeverity: { type: Number, min: 0, max: 3 },
-    adp: { type: Number, default: 0 },
-    tier: { type: Number, default: 0 },
+    catalog_rank: { type: Number, default: 9999 },
+    catalog_tier: { type: Number, default: 0 },
     value: { type: Number, default: 0 },
     outlook: { type: String, default: "" },
     stats: { type: Schema.Types.Mixed, default: {} },

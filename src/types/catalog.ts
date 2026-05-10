@@ -12,8 +12,8 @@ export interface CatalogPlayerValueRow {
   position: string;
   team: string;
   value: number;
-  tier: number;
-  adp: number;
+  catalog_tier: number;
+  catalog_rank: number;
 }
 
 export interface CatalogBatchValuesResponse {

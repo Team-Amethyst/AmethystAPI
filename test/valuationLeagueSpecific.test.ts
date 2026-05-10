@@ -17,8 +17,8 @@ function mkHitter(
     name: `p-${id}`,
     team,
     position: "OF",
-    adp: 50,
-    tier: 3,
+    catalog_rank: 50,
+    catalog_tier: 3,
     value: catalogValue,
     projection: { batting: proj },
   };
@@ -31,8 +31,8 @@ function mkSp(id: string, team: string, proj: Record<string, unknown>, catalogVa
     name: `p-${id}`,
     team,
     position: "SP",
-    adp: 60,
-    tier: 3,
+    catalog_rank: 60,
+    catalog_tier: 3,
     value: catalogValue,
     projection: { pitching: proj },
   };

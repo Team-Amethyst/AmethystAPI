@@ -3,8 +3,8 @@ import type { CatalogKind } from "./catalogRowClassification";
 
 const DEFAULT_NUMERIC = {
   value: 0,
-  adp: 9999,
-  tier: 0,
+  catalog_rank: 9999,
+  catalog_tier: 0,
 } as const;
 
 function coerceFiniteNumber(
@@ -15,7 +15,7 @@ function coerceFiniteNumber(
 }
 
 function coerceTier(raw: unknown): number {
-  const n = coerceFiniteNumber(raw, DEFAULT_NUMERIC.tier);
+  const n = coerceFiniteNumber(raw, DEFAULT_NUMERIC.catalog_tier);
   return Math.max(0, Math.trunc(n));
 }
 
@@ -94,16 +94,16 @@ export function normalizeCatalogPlayers(
       onIssue(`player ${label}: invalid value, using 0`);
     }
 
-    const rawAdp = d.adp;
-    const adp = coerceFiniteNumber(rawAdp, DEFAULT_NUMERIC.adp);
-    if (adp !== rawAdp) {
-      onIssue(`player ${label}: invalid adp, using 9999`);
+    const rawCatalogRank = d.catalog_rank ?? d.adp;
+    const catalog_rank = coerceFiniteNumber(rawCatalogRank, DEFAULT_NUMERIC.catalog_rank);
+    if (catalog_rank !== rawCatalogRank) {
+      onIssue(`player ${label}: invalid catalog_rank, using 9999`);
     }
 
-    const rawTier = d.tier;
-    const tier = coerceTier(rawTier);
-    if (tier !== rawTier) {
-      onIssue(`player ${label}: invalid tier, using 0`);
+    const rawCatalogTier = d.catalog_tier ?? d.tier;
+    const catalog_tier = coerceTier(rawCatalogTier);
+    if (catalog_tier !== rawCatalogTier) {
+      onIssue(`player ${label}: invalid catalog_tier, using 0`);
     }
 
     const mlbId = coerceMlbId(d.mlbId);
@@ -128,8 +128,8 @@ export function normalizeCatalogPlayers(
       ...(age != null ? { age } : {}),
       ...(depthChartPosition != null ? { depthChartPosition } : {}),
       ...(injurySeverity != null ? { injurySeverity } : {}),
-      adp,
-      tier,
+      catalog_rank,
+      catalog_tier,
       value,
       outlook: typeof d.outlook === "string" ? d.outlook : undefined,
       stats:

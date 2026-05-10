@@ -32,8 +32,14 @@ function buildKeeperSpreadRealistic(
   base: NormalizedValuationInput
 ): NormalizedValuationInput {
   const sorted = [...pool]
-    .filter((p) => p.mlbId != null && Number.isFinite(p.adp) && p.adp > 0)
-    .sort((a, b) => a.adp - b.adp);
+    .filter(
+      (p) =>
+        p.mlbId != null &&
+        Number.isFinite(p.catalog_rank) &&
+        p.catalog_rank > 0 &&
+        p.catalog_rank < 9999
+    )
+    .sort((a, b) => a.catalog_rank - b.catalog_rank);
   const teams = ["team_1", "team_2", "team_3", "team_4"] as const;
   const perTeam = 3;
   const keeperCost = 10;

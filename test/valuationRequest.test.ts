@@ -15,8 +15,8 @@ const mockPlayers: LeanPlayer[] = [
     name: "Alpha",
     team: "NYY",
     position: "OF",
-    adp: 5,
-    tier: 1,
+    catalog_rank: 5,
+    catalog_tier: 1,
     value: 40,
   },
   {
@@ -25,8 +25,8 @@ const mockPlayers: LeanPlayer[] = [
     name: "Beta",
     team: "BOS",
     position: "SP",
-    adp: 50,
-    tier: 3,
+    catalog_rank: 50,
+    catalog_tier: 3,
     value: 12,
   },
 ];

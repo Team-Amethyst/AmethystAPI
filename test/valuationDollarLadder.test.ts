@@ -10,8 +10,8 @@ function mkOf(id: number, value: number): LeanPlayer {
     name: `Outfield ${id}`,
     team: "NYY",
     position: "OF",
-    adp: id,
-    tier: 1,
+    catalog_rank: id,
+    catalog_tier: 1,
     value,
   };
 }
@@ -23,8 +23,8 @@ function mkSp(id: number, value: number): LeanPlayer {
     name: `Starter ${id}`,
     team: "BOS",
     position: "SP",
-    adp: id + 50,
-    tier: 2,
+    catalog_rank: id + 50,
+    catalog_tier: 2,
     value,
   };
 }

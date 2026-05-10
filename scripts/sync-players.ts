@@ -70,11 +70,11 @@ type PlayerSyncDoc = {
   age: number;
   depthChartPosition?: number;
   value: number;
-  tier: number;
+  catalog_tier: number;
   stats: Record<string, unknown>;
   projection: Record<string, unknown>;
   outlook: string;
-  adp?: number;
+  catalog_rank?: number;
   catalogMeta?: {
     stats_season: number;
     projection_blend_seasons: number[];
@@ -254,7 +254,7 @@ function buildPlayerDocFromAgg(
     age: calcAge(bio?.birthDate),
     depthChartPosition: deriveDepthChartPosition(agg),
     value,
-    tier: assignTier(value),
+    catalog_tier: assignTier(value),
     stats,
     projection,
     outlook: "",
@@ -399,10 +399,10 @@ function aggregatePositiveSplits(
   return aggMap;
 }
 
-function assignAdpByValue(players: PlayerSyncDoc[]): PlayerSyncDoc[] {
+function assignCatalogRankByValue(players: PlayerSyncDoc[]): PlayerSyncDoc[] {
   const sorted = [...players].sort((a, b) => b.value - a.value);
   sorted.forEach((p, i) => {
-    p.adp = i + 1;
+    p.catalog_rank = i + 1;
   });
   return sorted;
 }
@@ -415,8 +415,14 @@ function docToIdentityRow(doc: Record<string, unknown>): CatalogIdentityRow {
     team: String(doc.team ?? ""),
     position: String(doc.position ?? ""),
     positions: Array.isArray(doc.positions) ? (doc.positions as string[]) : undefined,
-    adp: typeof doc.adp === "number" ? doc.adp : Number(doc.adp) || 0,
-    tier: typeof doc.tier === "number" ? doc.tier : Number(doc.tier) || 0,
+    catalog_rank:
+      typeof doc.catalog_rank === "number"
+        ? doc.catalog_rank
+        : Number(doc.catalog_rank ?? doc.adp) || 0,
+    catalog_tier:
+      typeof doc.catalog_tier === "number"
+        ? doc.catalog_tier
+        : Number(doc.catalog_tier ?? doc.tier) || 0,
     value: typeof doc.value === "number" ? doc.value : Number(doc.value) || 0,
     projection: doc.projection,
   };
@@ -505,7 +511,7 @@ async function fetchMlbPlayerDocs(): Promise<PlayerSyncDoc[]> {
     console.warn(`[Sync] Wrote projection quarantine ${qPath} (${rejectedProjectionQuarantine.length})`);
   }
 
-  return assignAdpByValue([...playerMap.values()]);
+  return assignCatalogRankByValue([...playerMap.values()]);
 }
 
 async function runRebuildCatalog(cli: SyncCli): Promise<{

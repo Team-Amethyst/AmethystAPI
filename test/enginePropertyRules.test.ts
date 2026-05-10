@@ -8,7 +8,7 @@ const roster: RosterSlot[] = [{ position: "OF", count: 3 }];
 function mkPlayer(
   id: number,
   value: number,
-  tier: number,
+  catalog_tier: number,
   position = "OF"
 ): LeanPlayer {
   return {
@@ -17,8 +17,8 @@ function mkPlayer(
     name: `P${id}`,
     team: "NYY",
     position,
-    adp: id,
-    tier,
+    catalog_rank: id,
+    catalog_tier,
     value,
   };
 }

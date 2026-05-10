@@ -30,7 +30,8 @@ exports[`calculateInflation with normalized fixtures > legacy-empty deterministi
   "valuations": [
     {
       "adjusted_value": 40,
-      "adp": 5,
+      "auction_rank": 1,
+      "auction_tier": 1,
       "auction_value": 40,
       "baseline_components": {
         "age_depth_combined_multiplier": 1,
@@ -42,7 +43,11 @@ exports[`calculateInflation with normalized fixtures > legacy-empty deterministi
         "scarcity_component": 0,
         "scoring_format": "default",
       },
+      "baseline_rank": 1,
+      "baseline_tier": 1,
       "baseline_value": 40,
+      "catalog_rank": 5,
+      "catalog_tier": 1,
       "edge": -4,
       "indicator": "Fair Value",
       "inflation_adjustment": 0,
@@ -54,11 +59,11 @@ exports[`calculateInflation with normalized fixtures > legacy-empty deterministi
       "scarcity_adjustment": 0,
       "team": "NYY",
       "team_adjusted_value": 40,
-      "tier": 1,
     },
     {
       "adjusted_value": 12,
-      "adp": 50,
+      "auction_rank": 2,
+      "auction_tier": 3,
       "auction_value": 12,
       "baseline_components": {
         "age_depth_combined_multiplier": 1,
@@ -70,7 +75,11 @@ exports[`calculateInflation with normalized fixtures > legacy-empty deterministi
         "scarcity_component": 0,
         "scoring_format": "default",
       },
+      "baseline_rank": 2,
+      "baseline_tier": 3,
       "baseline_value": 12,
+      "catalog_rank": 50,
+      "catalog_tier": 3,
       "edge": 0,
       "indicator": "Fair Value",
       "inflation_adjustment": 0,
@@ -82,7 +91,6 @@ exports[`calculateInflation with normalized fixtures > legacy-empty deterministi
       "scarcity_adjustment": 0,
       "team": "BOS",
       "team_adjusted_value": 12,
-      "tier": 3,
     },
   ],
 }
@@ -118,7 +126,8 @@ exports[`calculateInflation with normalized fixtures > nested-after-pick applies
   "valuations": [
     {
       "adjusted_value": 12,
-      "adp": 50,
+      "auction_rank": 1,
+      "auction_tier": 1,
       "auction_value": 12,
       "baseline_components": {
         "age_depth_combined_multiplier": 1,
@@ -130,7 +139,11 @@ exports[`calculateInflation with normalized fixtures > nested-after-pick applies
         "scarcity_component": 0,
         "scoring_format": "default",
       },
+      "baseline_rank": 1,
+      "baseline_tier": 1,
       "baseline_value": 12,
+      "catalog_rank": 50,
+      "catalog_tier": 3,
       "edge": -0.05,
       "indicator": "Fair Value",
       "inflation_adjustment": 0,
@@ -142,7 +155,6 @@ exports[`calculateInflation with normalized fixtures > nested-after-pick applies
       "scarcity_adjustment": 0,
       "team": "BOS",
       "team_adjusted_value": 11.95,
-      "tier": 3,
     },
   ],
 }

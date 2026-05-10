@@ -51,7 +51,7 @@ function mkLean(id: number, value: number, position: string, tier = 2): LeanPlay
     team: "NYY",
     position,
     positions: position.includes(",") ? undefined : [position],
-    adp: id,
+    catalog_rank: id,
     tier,
     value,
   };

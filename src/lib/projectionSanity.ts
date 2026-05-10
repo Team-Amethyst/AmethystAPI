@@ -122,7 +122,7 @@ export function collectProjectionSanityIssues(
     if (
       bat &&
       obpS === undefined &&
-      (p.tier ?? 99) <= 6 &&
+      (p.catalog_tier ?? 99) <= 6 &&
       (p.value ?? 0) >= 8 &&
       !pitcherPrimary
     ) {

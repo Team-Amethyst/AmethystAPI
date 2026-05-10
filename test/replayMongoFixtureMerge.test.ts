@@ -23,8 +23,8 @@ describe("mergeMongoWithFixtureIdentities", () => {
         name: "Fernando Tatis Jr.",
         team: "SD",
         position: "OF",
-        adp: 3,
-        tier: 1,
+        catalog_rank: 3,
+        catalog_tier: 1,
         value: 44,
       },
     ];
@@ -46,8 +46,8 @@ describe("mergeMongoWithFixtureIdentities", () => {
         name: "Xander Bogaerts",
         team: "SD",
         position: "SS",
-        adp: 20,
-        tier: 1,
+        catalog_rank: 20,
+        catalog_tier: 1,
         value: 31,
       },
     ];
@@ -68,8 +68,8 @@ describe("mergeMongoWithFixtureIdentities", () => {
         name: "Other",
         team: "NYY",
         position: "OF",
-        adp: 99,
-        tier: 3,
+        catalog_rank: 99,
+        catalog_tier: 3,
         value: 5,
       },
     ];
@@ -90,8 +90,8 @@ describe("mergeMongoWithFixtureIdentities", () => {
         name: "Other",
         team: "NYY",
         position: "OF",
-        adp: 99,
-        tier: 3,
+        catalog_rank: 99,
+        catalog_tier: 3,
         value: 5,
       },
     ];

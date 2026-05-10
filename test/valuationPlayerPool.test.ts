@@ -9,8 +9,8 @@ function p(team: string, mlbId: number): LeanPlayer {
     name: `p${mlbId}`,
     team,
     position: "OF",
-    adp: 10,
-    tier: 2,
+    catalog_rank: 10,
+    catalog_tier: 2,
     value: 5,
   };
 }

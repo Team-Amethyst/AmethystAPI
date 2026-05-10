@@ -9,8 +9,8 @@ const players: LeanPlayer[] = [
     name: "Slugger",
     team: "NYY",
     position: "OF",
-    adp: 10,
-    tier: 1,
+    catalog_rank: 10,
+    catalog_tier: 1,
     value: 30,
     projection: {
       batting: { hr: 35, rbi: 100, runs: 95, sb: 8, avg: 0.285 },
@@ -22,8 +22,8 @@ const players: LeanPlayer[] = [
     name: "Starter",
     team: "LAD",
     position: "SP",
-    adp: 20,
-    tier: 1,
+    catalog_rank: 20,
+    catalog_tier: 1,
     value: 28,
     projection: {
       pitching: { strikeouts: 210, wins: 14, saves: 0, era: 3.1, whip: 1.05 },
@@ -208,8 +208,8 @@ describe("scoringAwareBaselinePlayers", () => {
       team: "LAA",
       position: "DH",
       positions: ["SP", "DH"],
-      adp: 1,
-      tier: 1,
+      catalog_rank: 1,
+      catalog_tier: 1,
       value: 25,
       projection: {
         batting: { hr: 20, rbi: 60, runs: 70, sb: 10, avg: 0.28 },
@@ -246,8 +246,8 @@ describe("scoringAwareBaselinePlayers", () => {
       name: "Spec",
       team: "SEA",
       position: "OF",
-      adp: 90,
-      tier: 2,
+      catalog_rank: 90,
+      catalog_tier: 2,
       value: 1,
       projection: { batting: { hr: 12, rbi: 35, runs: 40, sb: 8, avg: 0.24 } },
     };
@@ -255,8 +255,8 @@ describe("scoringAwareBaselinePlayers", () => {
       ...spec,
       _id: "s2",
       mlbId: 502,
-      adp: 250,
-      tier: 2,
+      catalog_rank: 250,
+      catalog_tier: 2,
       value: 1,
       projection: { batting: { hr: 8, rbi: 32, runs: 38, sb: 6, avg: 0.22 } },
     };
@@ -279,7 +279,7 @@ describe("scoringAwareBaselinePlayers", () => {
       mlbId: 7001,
       age: 27,
       value: 25,
-      tier: 2,
+      catalog_tier: 2,
     };
     const older: LeanPlayer = {
       ...prime,
@@ -304,7 +304,7 @@ describe("scoringAwareBaselinePlayers", () => {
       _id: "inj-ok",
       mlbId: 8001,
       value: 30,
-      tier: 2,
+      catalog_tier: 2,
       age: 28,
       depthChartPosition: 1,
     };
@@ -331,7 +331,7 @@ describe("scoringAwareBaselinePlayers", () => {
       _id: "depth-1",
       mlbId: 7101,
       value: 24,
-      tier: 2,
+      catalog_tier: 2,
       depthChartPosition: 1,
       age: 28,
     };

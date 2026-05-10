@@ -10,8 +10,8 @@ export type CatalogIdentityRow = {
   team: string;
   position: string;
   positions?: string[];
-  adp: number;
-  tier: number;
+  catalog_rank: number;
+  catalog_tier: number;
   value: number;
   projection?: unknown;
 };

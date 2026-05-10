@@ -114,6 +114,14 @@ export function applyRecommendedBidPass(params: {
             : undefined,
         inflation_factor: row.inflation_factor,
         ...(meta ? pickBaselineRiskExplainFromMeta(meta) : {}),
+        ...(meta?.two_way_role_selected === "hitter" ||
+        meta?.two_way_role_selected === "pitcher"
+          ? {
+              two_way_role_selected: meta.two_way_role_selected,
+              hitter_baseline_candidate: Number(meta.hitter_baseline_candidate),
+              pitcher_baseline_candidate: Number(meta.pitcher_baseline_candidate),
+            }
+          : {}),
       };
     }
     if (!options?.debugSignals) continue;

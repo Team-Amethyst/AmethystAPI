@@ -4,7 +4,7 @@ import type { LeanPlayer } from "../src/types/brain";
 import { normalizeCatalogPlayers } from "../src/lib/playerCatalog";
 
 describe("normalizeCatalogPlayers", () => {
-  it("coerces invalid value and adp with callbacks", () => {
+  it("coerces invalid value and legacy adp/tier with callbacks", () => {
     const warn = vi.fn();
     const rows = normalizeCatalogPlayers(
       [
@@ -15,8 +15,8 @@ describe("normalizeCatalogPlayers", () => {
           team: "NYY",
           position: "OF",
           value: 10,
-          adp: 5,
-          tier: 1,
+          catalog_rank: 5,
+          catalog_tier: 1,
         },
         {
           _id: "b",
@@ -25,7 +25,7 @@ describe("normalizeCatalogPlayers", () => {
           team: "BOS",
           position: "SP",
           value: "x",
-          adp: Number.NaN,
+          catalog_rank: Number.NaN,
           tier: "nope",
         },
       ],
@@ -34,8 +34,8 @@ describe("normalizeCatalogPlayers", () => {
     expect(rows).toHaveLength(2);
     expect(rows[0]!.value).toBe(10);
     expect(rows[1]!.value).toBe(0);
-    expect(rows[1]!.adp).toBe(9999);
-    expect(rows[1]!.tier).toBe(0);
+    expect(rows[1]!.catalog_rank).toBe(9999);
+    expect(rows[1]!.catalog_tier).toBe(0);
     expect(warn.mock.calls.length).toBeGreaterThanOrEqual(3);
   });
 
@@ -49,14 +49,14 @@ describe("normalizeCatalogPlayers", () => {
           team: "LAD",
           position: "DH",
           value: 10,
-          adp: 5,
-          tier: -4,
+          catalog_rank: 5,
+          catalog_tier: -4,
         },
       ],
       () => {}
     );
     expect(rows[0]!.mlbId).toBe(660271);
-    expect(rows[0]!.tier).toBe(0);
+    expect(rows[0]!.catalog_tier).toBe(0);
   });
 
   it("skips non-objects", () => {
@@ -76,8 +76,8 @@ describe("normalizeCatalogPlayers", () => {
           position: "2B",
           positions: "SS,3B",
           value: 10,
-          adp: 5,
-          tier: 1,
+          catalog_rank: 5,
+          catalog_tier: 1,
         },
       ],
       () => {}
@@ -95,8 +95,8 @@ describe("normalizeCatalogPlayers", () => {
           team: "NYY",
           position: "OF",
           value: 10,
-          adp: 5,
-          tier: 2,
+          catalog_rank: 5,
+          catalog_tier: 2,
           injury_severity: 2,
         },
         {
@@ -106,8 +106,8 @@ describe("normalizeCatalogPlayers", () => {
           team: "BOS",
           position: "SP",
           value: 10,
-          adp: 5,
-          tier: 2,
+          catalog_rank: 5,
+          catalog_tier: 2,
           injurySeverity: 0,
         },
       ],
@@ -128,8 +128,8 @@ describe("normalizeCatalogPlayers", () => {
           position: "SP",
           positions: ["DH"],
           value: 95,
-          adp: 2,
-          tier: 1,
+          catalog_rank: 2,
+          catalog_tier: 1,
         },
       ],
       () => {}
@@ -145,8 +145,8 @@ describe("normalizeCatalogPlayers", () => {
       team: "LAD",
       position: "SP",
       positions: ["DH"],
-      adp: 2,
-      tier: 1,
+      catalog_rank: 2,
+      catalog_tier: 1,
       value: 95,
     };
     const t = playerTokensFromLean(p);
