@@ -189,7 +189,7 @@
     },
     "valuationExplainRow": {
       "type": "object",
-      "description": "Present when explain_valuation_rows was set on the request.",
+      "description": "Present when explain_valuation_rows was set on the request. Includes replacement/slot context and baseline risk echoes (age, depth, injury multipliers).",
       "properties": {
         "effective_positions": {
           "type": "array",
@@ -209,7 +209,16 @@
         "valuation_context_warnings": {
           "type": "array",
           "items": { "type": "string" }
-        }
+        },
+        "age_years": { "type": "integer" },
+        "age_multiplier": { "type": "number" },
+        "depth_chart_position_resolved": { "type": "integer" },
+        "depth_multiplier": { "type": "number" },
+        "age_depth_combined_multiplier": { "type": "number" },
+        "injury_severity": { "type": "integer", "minimum": 0, "maximum": 3 },
+        "injury_multiplier": { "type": "number" },
+        "age_component": { "type": "number" },
+        "depth_component": { "type": "number" }
       },
       "additionalProperties": true
     }

@@ -123,7 +123,7 @@
     },
     "explain_valuation_rows": {
       "type": "boolean",
-      "description": "When true, each valuations[] row may include valuation_explain."
+      "description": "When true, each valuations[] row may include valuation_explain (slot/replacement/pool plus baseline risk multipliers; informational only)."
     },
     "recommended_bid_soft_cap_ratio": {
       "type": "number",

@@ -10,6 +10,7 @@ import type {
   TeamRosterBucket,
   ValueIndicator,
 } from "./core";
+import type { BaselineRiskExplainFields } from "./baselineRiskExplain";
 
 /** Per-player catalog position overrides (Draftroom eligibility); replaces Mongo `position` / `positions` for valuation math. */
 export type PositionOverrideEntry = { player_id: string; positions: string[] };
@@ -42,7 +43,8 @@ export interface ValuationRequest {
   taxi?: TeamRosterBucket[];
   /**
    * When true, each `valuations[]` row may include `valuation_explain` with
-   * effective positions and replacement context (lighter than `debugSignals`).
+   * effective positions, replacement context, and baseline risk multipliers
+   * (age, depth, injury — informational; same fields as on `baseline_components`).
    */
   explain_valuation_rows?: boolean;
   /**
@@ -155,7 +157,7 @@ export interface ValuedPlayer {
     scarcity_component: number;
     age_depth_component?: number;
     injury_component?: number;
-  };
+  } & BaselineRiskExplainFields;
   scarcity_adjustment?: number;
   inflation_adjustment?: number;
   why?: string[];
@@ -192,7 +194,7 @@ export interface ValuedPlayer {
   };
   /**
    * Present when `explain_valuation_rows` was set on the request: slot/replacement
-   * context for this row (no full debug_v2 payload).
+   * context plus baseline risk echoes (age/depth/injury multipliers; no full debug_v2 payload).
    */
   valuation_explain?: {
     effective_positions: string[];
@@ -209,7 +211,7 @@ export interface ValuedPlayer {
     scoring_category_warnings?: string[];
     /** Echo of response `valuation_context_warnings` when non-empty (explain mode). */
     valuation_context_warnings?: string[];
-  };
+  } & Partial<BaselineRiskExplainFields>;
 }
 
 export interface ValuationResponse {

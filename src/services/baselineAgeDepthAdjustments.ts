@@ -85,6 +85,14 @@ export function depthChartMultiplier(depthPos: number | undefined): number {
   return AGE_DEPTH_TUNING.depth.reserve_mult;
 }
 
+/** Clip age×depth product to the same combined floor/cap used on baseline dollars. */
+export function clipAgeDepthCombinedProduct(raw: number): number {
+  return Math.min(
+    AGE_DEPTH_TUNING.combined.cap,
+    Math.max(AGE_DEPTH_TUNING.combined.floor, raw)
+  );
+}
+
 export function applyAgeDepthAdjustment(params: {
   player: LeanPlayer;
   baselineValue: number;
@@ -95,22 +103,33 @@ export function applyAgeDepthAdjustment(params: {
   ageMultiplier: number;
   depthMultiplier: number;
   depthChartPosition?: number;
+  ageDepthCombinedMultiplier: number;
+  ageComponent: number;
+  depthComponent: number;
 } {
   const { player, baselineValue, isPitcher } = params;
   const ageMult = ageMultiplier(player.age, isPitcher);
   const depthPos = resolveDepthChartPosition(player);
   const depthMult = depthChartMultiplier(depthPos);
   const combinedRaw = ageMult * depthMult;
-  const combined = Math.min(
-    AGE_DEPTH_TUNING.combined.cap,
-    Math.max(AGE_DEPTH_TUNING.combined.floor, combinedRaw)
-  );
+  const combined = clipAgeDepthCombinedProduct(combinedRaw);
   const adjustedValue = Math.max(1, baselineValue * combined);
+  const combinedAgeOnly = clipAgeDepthCombinedProduct(ageMult * 1);
+  const combinedDepthOnly = clipAgeDepthCombinedProduct(1 * depthMult);
+  const ageComponent = Number(
+    (Math.max(1, baselineValue * combinedAgeOnly) - baselineValue).toFixed(2)
+  );
+  const depthComponent = Number(
+    (Math.max(1, baselineValue * combinedDepthOnly) - baselineValue).toFixed(2)
+  );
   return {
     adjustedValue,
     ageDepthComponent: Number((adjustedValue - baselineValue).toFixed(2)),
     ageMultiplier: Number(ageMult.toFixed(4)),
     depthMultiplier: Number(depthMult.toFixed(4)),
     ...(depthPos != null ? { depthChartPosition: depthPos } : {}),
+    ageDepthCombinedMultiplier: Number(combined.toFixed(4)),
+    ageComponent,
+    depthComponent,
   };
 }

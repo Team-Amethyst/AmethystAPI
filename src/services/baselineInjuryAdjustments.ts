@@ -27,15 +27,27 @@ export function injuryMultiplier(severity: number): number {
 export function applyInjuryAdjustment(params: {
   player: LeanPlayer;
   baselineValue: number;
-}): { adjustedValue: number; injuryComponent: number } {
+}): {
+  adjustedValue: number;
+  injuryComponent: number;
+  injurySeverity: number;
+  injuryMultiplier: number;
+} {
   const sev = resolveInjurySeverity(params.player);
-  if (sev <= 0) {
-    return { adjustedValue: params.baselineValue, injuryComponent: 0 };
-  }
   const mult = injuryMultiplier(sev);
+  if (sev <= 0) {
+    return {
+      adjustedValue: params.baselineValue,
+      injuryComponent: 0,
+      injurySeverity: 0,
+      injuryMultiplier: mult,
+    };
+  }
   const adjustedValue = Math.max(1, params.baselineValue * mult);
   return {
     adjustedValue,
     injuryComponent: Number((adjustedValue - params.baselineValue).toFixed(2)),
+    injurySeverity: sev,
+    injuryMultiplier: mult,
   };
 }

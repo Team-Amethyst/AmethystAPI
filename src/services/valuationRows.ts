@@ -5,7 +5,10 @@ import type {
   ValueIndicator,
   ValuedPlayer,
 } from "../types/brain";
+import type { ScoringFormat } from "../types/core";
 import { getPlayerId } from "../lib/playerId";
+import type { BaselineRiskExplainFields } from "../types/baselineRiskExplain";
+import { pickBaselineRiskExplainFromMeta } from "../types/baselineRiskExplain";
 import type { ReplacementSlotsV2Result } from "./replacementSlotsV2";
 
 const STEAL_SLOPE = 1.25;
@@ -100,17 +103,7 @@ export function buildValuedRows(params: {
     }
 
     const meta = (
-      p.projection as
-        | {
-            __valuation_meta__?: {
-              scoring_format?: "5x5" | "6x6" | "points";
-              projection_component?: number;
-              scarcity_component?: number;
-              age_depth_component?: number;
-              injury_component?: number;
-            };
-          }
-        | undefined
+      p.projection as { __valuation_meta__?: Record<string, unknown> } | undefined
     )?.__valuation_meta__;
 
     let indicator: ValueIndicator = "Fair Value";
@@ -122,6 +115,22 @@ export function buildValuedRows(params: {
     }
 
     const adjustedRounded = parseFloat(adjustedValue.toFixed(2));
+    const scoringFormatFromMeta = (): ScoringFormat | "default" => {
+      const s = meta?.scoring_format;
+      if (s === "5x5" || s === "6x6" || s === "points") return s;
+      return "default";
+    };
+    const riskDefaults: BaselineRiskExplainFields = {
+      age_multiplier: 1,
+      depth_multiplier: 1,
+      age_depth_combined_multiplier: 1,
+      injury_severity: 0,
+      injury_multiplier: 1,
+    };
+    const riskExplain: BaselineRiskExplainFields = {
+      ...riskDefaults,
+      ...(meta ? pickBaselineRiskExplainFromMeta(meta as Record<string, unknown>) : {}),
+    };
     return {
       player_id: pid,
       name: p.name,
@@ -135,15 +144,16 @@ export function buildValuedRows(params: {
       indicator,
       inflation_factor: parseFloat(inflationFactor.toFixed(4)),
       baseline_components: {
-        scoring_format: meta?.scoring_format ?? "default",
-        projection_component: meta?.projection_component ?? 0,
-        scarcity_component: meta?.scarcity_component ?? 0,
+        scoring_format: scoringFormatFromMeta(),
+        projection_component: Number(meta?.projection_component ?? 0),
+        scarcity_component: Number(meta?.scarcity_component ?? 0),
         ...(meta?.age_depth_component != null
-          ? { age_depth_component: meta.age_depth_component }
+          ? { age_depth_component: Number(meta.age_depth_component) }
           : {}),
         ...(meta?.injury_component != null
-          ? { injury_component: meta.injury_component }
+          ? { injury_component: Number(meta.injury_component) }
           : {}),
+        ...riskExplain,
       },
       scarcity_adjustment: 0,
       inflation_adjustment: parseFloat((adjustedRounded - baselineValue).toFixed(2)),

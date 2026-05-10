@@ -46,6 +46,7 @@ This map documents where each pricing responsibility lives after the refactor.
 - `src/services/baselineProjectionStats.ts` — projection field reads, category weights/directions, pooled mean/stddev helpers; pitcher detection uses `playerTokensFromLean` (aligned with slot logic / two-way eligibility).
 - `src/services/baselineAgeDepthAdjustments.ts` — age-curve and depth-chart priors with explicit tuning constants and fallback depth proxy behavior.
 - `src/services/baselineInjuryAdjustments.ts` — optional catalog `injurySeverity` haircut.
+- `src/types/baselineRiskExplain.ts` — `BaselineRiskExplainFields` + `pickBaselineRiskExplainFromMeta` for `baseline_components` and `valuation_explain` (no dollar math changes).
 - `src/lib/mlbProjectionBlend.ts` — pure 5:3:2 multi-year batting/pitching projection (used by sync into Mongo `projection`).
 
 ## Request parsing (valuation calculate)

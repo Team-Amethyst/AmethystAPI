@@ -4,6 +4,7 @@ import type {
   ScoringCategory,
   ScoringFormat,
 } from "../types/brain";
+import type { BaselineRiskExplainFields } from "../types/baselineRiskExplain";
 import {
   fitsRosterSlot,
   playerTokensFromLean,
@@ -54,6 +55,7 @@ type BaselineComponents = {
   scarcityComponent: number;
   ageDepthComponent?: number;
   injuryComponent?: number;
+  riskExplain: BaselineRiskExplainFields;
 };
 
 type RotoGroupKind = "hitter" | "pitcher";
@@ -127,6 +129,7 @@ function rotoBaselineForGroup(
         scarcityComponent,
         ageDepthComponent: risk.ageDepthComponent,
         injuryComponent: risk.injuryComponent,
+        riskExplain: risk.riskExplain,
       });
     }
     return out;
@@ -194,6 +197,7 @@ function rotoBaselineForGroup(
       scarcityComponent,
       ageDepthComponent: risk.ageDepthComponent,
       injuryComponent: risk.injuryComponent,
+      riskExplain: risk.riskExplain,
     });
   }
   return out;
@@ -209,6 +213,7 @@ function rotisserieBaseline(
   scarcityComponent: number;
   ageDepthComponent?: number;
   injuryComponent?: number;
+  riskExplain: BaselineRiskExplainFields;
 } {
   const scarcityComponent =
     scarcityMultiplierForPosition(p, rosterSlots, positionOverrides) - 1;
@@ -231,6 +236,7 @@ function rotisserieBaseline(
     scarcityComponent,
     ageDepthComponent: risk.ageDepthComponent,
     injuryComponent: risk.injuryComponent,
+    riskExplain: risk.riskExplain,
   };
 }
 
@@ -245,6 +251,7 @@ function pointsBaseline(
   scarcityComponent: number;
   ageDepthComponent?: number;
   injuryComponent?: number;
+  riskExplain: BaselineRiskExplainFields;
 } {
   const batting = getProjectionSection(p, "batting");
   const pitching = getProjectionSection(p, "pitching");
@@ -280,6 +287,7 @@ function pointsBaseline(
     scarcityComponent,
     ageDepthComponent: risk.ageDepthComponent,
     injuryComponent: risk.injuryComponent,
+    riskExplain: risk.riskExplain,
   };
 }
 
@@ -333,6 +341,7 @@ export function scoringAwareBaselinePlayers(
             injury_component: Number(derived.injuryComponent.toFixed(2)),
           }
         : {}),
+      ...derived.riskExplain,
     };
     return {
       ...p,

@@ -394,7 +394,7 @@ components:
           description: team_adjusted_value minus recommended_bid; not "profit vs FMV" when recommended_bid > auction_value.
         valuation_explain:
           type: object
-          description: Present when request `explain_valuation_rows` is true — lightweight replacement/slot context.
+          description: Present when request `explain_valuation_rows` is true — replacement/slot context plus baseline risk multipliers (same values as `baseline_components`; does not change dollars).
           properties:
             effective_positions:
               type: array
@@ -425,6 +425,32 @@ components:
               type: array
               items:
                 type: string
+            age_years:
+              type: integer
+              description: Catalog age when set; omitted when unknown (age_multiplier is then 1.0).
+            age_multiplier:
+              type: number
+              description: Age curve factor before depth (prime band uses 1.04; missing age uses 1.0).
+            depth_chart_position_resolved:
+              type: integer
+              description: Resolved depth slot 1–4+ semantics (catalog, projection, or tier proxy).
+            depth_multiplier:
+              type: number
+            age_depth_combined_multiplier:
+              type: number
+              description: Clipped product of age × depth (floor 0.8, cap 1.14) applied to pre-risk baseline.
+            injury_severity:
+              type: integer
+              minimum: 0
+              maximum: 3
+            injury_multiplier:
+              type: number
+            age_component:
+              type: number
+              description: Hypothetical dollar delta vs pre-risk baseline if only age applied (depth held at 1.0 in clip rules).
+            depth_component:
+              type: number
+              description: Hypothetical dollar delta vs pre-risk baseline if only depth applied (age held at 1.0 in clip rules).
         indicator:
           type: string
           enum: [Steal, Reach, Fair Value]
@@ -438,6 +464,32 @@ components:
             projection_component:
               type: number
             scarcity_component:
+              type: number
+            age_depth_component:
+              type: number
+              description: Dollar delta from combined age × depth step (after clip); see age_component / depth_component for isolated hypotheticals.
+            injury_component:
+              type: number
+              description: Dollar delta from injury pass (applied after age/depth).
+            age_years:
+              type: integer
+            age_multiplier:
+              type: number
+            depth_chart_position_resolved:
+              type: integer
+            depth_multiplier:
+              type: number
+            age_depth_combined_multiplier:
+              type: number
+            injury_severity:
+              type: integer
+              minimum: 0
+              maximum: 3
+            injury_multiplier:
+              type: number
+            age_component:
+              type: number
+            depth_component:
               type: number
         scarcity_adjustment:
           type: number
@@ -810,7 +862,7 @@ paths:
                   description: Optional team context for team_adjusted_value (defaults to team_1).
                 explain_valuation_rows:
                   type: boolean
-                  description: When true, each valuations row may include valuation_explain (replacement + pool context).
+                  description: When true, each valuations row may include valuation_explain (replacement + pool context + baseline risk factors; informational only).
                 recommended_bid_soft_cap_ratio:
                   type: number
                   minimum: 1

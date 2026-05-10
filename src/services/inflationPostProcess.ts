@@ -1,5 +1,6 @@
 import { playerTokensFromLean } from "../lib/fantasyRosterSlots";
 import { getPlayerId } from "../lib/playerId";
+import { pickBaselineRiskExplainFromMeta } from "../types/baselineRiskExplain";
 import type {
   CalculateInflationOptions,
   DraftPhaseIndicator,
@@ -97,6 +98,9 @@ export function applyRecommendedBidPass(params: {
         rosterSlotKeysForFit
       );
       const sbEx = surplusBasisByPlayerId?.get(row.player_id);
+      const meta = (
+        lpEx?.projection as { __valuation_meta__?: Record<string, unknown> } | undefined
+      )?.__valuation_meta__;
       row.valuation_explain = {
         effective_positions: [...tokens],
         replacement_key_used: replBestEx?.key ?? null,
@@ -109,6 +113,7 @@ export function applyRecommendedBidPass(params: {
             ? Number(sbEx.toFixed(4))
             : undefined,
         inflation_factor: row.inflation_factor,
+        ...(meta ? pickBaselineRiskExplainFromMeta(meta) : {}),
       };
     }
     if (!options?.debugSignals) continue;
