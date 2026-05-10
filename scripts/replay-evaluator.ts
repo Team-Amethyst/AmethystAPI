@@ -26,8 +26,9 @@ function buildPool(size: number): LeanPlayer[] {
     name: `ReplayPlayer_${i + 1}`,
     team: "NYY",
     position: "OF",
-    adp: i + 1,
-    tier: (i % 5) + 1,
+    catalog_rank: i + 1,
+    catalog_tier: (i % 5) + 1,
+    market_adp: i + 1,
     value: Math.max(1, 90 - (i % 45)),
   }));
 }

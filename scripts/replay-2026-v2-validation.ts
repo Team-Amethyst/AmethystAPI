@@ -28,6 +28,7 @@ import {
   playerTokensFromDrafted,
   playerTokensFromLean,
 } from "../src/lib/fantasyRosterSlots";
+import { positionalNeedMultiplier } from "../src/services/teamAdjustedNeed";
 import { buildRosteredPlayersForSlotEngine } from "../src/lib/rosteredPlayersForSlots";
 import Player from "../src/models/Player";
 
@@ -710,8 +711,6 @@ function esc(s: string): string {
   return s.replace(/\t/g, " ").replace(/\n/g, " ");
 }
 
-const FLEX_SLOTS = new Set(["UTIL", "CI", "MI", "P"]);
-
 function slotPriorityScore(slot: string): number {
   const u = slot.toUpperCase();
   if (u === "C") return 10;
@@ -751,31 +750,6 @@ function buildUserOpenSlots(n: NormalizedValuationInput, userTeamId: string): Ma
     }
   }
   return open;
-}
-
-function positionalNeedMultiplierForReplay(
-  p: LeanPlayer,
-  openSlots: Map<string, number>
-): number {
-  const tokens = playerTokensFromLean(p);
-  const slots = [...openSlots.keys()];
-  const hasOpenPrimary = slots.some((slot) => {
-    const u = slot.toUpperCase();
-    return (
-      !FLEX_SLOTS.has(u) &&
-      (openSlots.get(slot) ?? 0) > 0 &&
-      fitsRosterSlot(slot, tokens)
-    );
-  });
-  if (hasOpenPrimary) return 1.25;
-  const hasOpenFlex = slots.some((slot) => {
-    const u = slot.toUpperCase();
-    return FLEX_SLOTS.has(u) && (openSlots.get(slot) ?? 0) > 0 && fitsRosterSlot(slot, tokens);
-  });
-  if (hasOpenFlex) return 1.1;
-  const fitsAnyStarting = slots.some((slot) => fitsRosterSlot(slot, tokens));
-  if (fitsAnyStarting) return 0.85;
-  return 1.0;
 }
 
 function budgetPressureMultiplierForReplay(
@@ -1349,7 +1323,7 @@ async function main(): Promise<void> {
 
       const detailed = teamRows.map((v) => {
         const lp = poolByMlb.get(v.player_id);
-        const posMult = lp ? positionalNeedMultiplierForReplay(lp, openSlots) : 1.0;
+        const posMult = lp ? positionalNeedMultiplier(lp, openSlots) : 1.0;
         const posKey = posMult.toFixed(2);
         const budKey = budgetMult.toFixed(2);
         const combinedKey = `${posKey}x${budKey}`;
