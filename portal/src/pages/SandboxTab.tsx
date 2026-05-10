@@ -615,14 +615,20 @@ export function SandboxTab() {
                   <span className="sandbox-field-label" id="sandbox-player-section-label">
                     Player
                   </span>
-                  <p className="sandbox-muted-line">{effectiveKey ? "Search the current undrafted pool" : "Choose or paste a key to load players"}</p>
+                  {effectiveKey ? (
+                    <p className="sandbox-muted-line">Search the current undrafted pool</p>
+                  ) : null}
                 </div>
               </div>
 
-              <div className={`sandbox-pool-status${poolIsCurrent ? " sandbox-pool-status--ready" : ""}`}>
-                <span>{poolSourceLabel}</span>
-                <span>{poolIsCurrent ? `${poolRows.length.toLocaleString()} players` : effectiveKey ? "Syncing" : "—"}</span>
-              </div>
+              {(effectiveKey || poolLoading || poolIsCurrent) && (
+                <div className={`sandbox-pool-status${poolIsCurrent ? " sandbox-pool-status--ready" : ""}`}>
+                  <span>{poolSourceLabel}</span>
+                  <span>
+                    {poolIsCurrent ? `${poolRows.length.toLocaleString()} players` : effectiveKey ? "Syncing" : ""}
+                  </span>
+                </div>
+              )}
 
               <div className="sandbox-player-picker">
                 <label className="sandbox-player-sub-label" htmlFor="sandboxFixturePlayerSearch">
