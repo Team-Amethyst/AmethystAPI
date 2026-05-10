@@ -10,7 +10,8 @@ export function sealNewsSignalsWebhookBearer(plaintext: string): string {
   return sealPortalApiKeySecret(plaintext);
 }
 
-function resolveBearerForStoredKey(doc: {
+/** Resolve Bearer token for outbound POSTs to this key’s `newsSignalsWebhookUrl`. */
+export function resolveBearerForStoredKey(doc: {
   key?: string | null;
   newsSignalsWebhookBearerSealed?: string | null;
 }): string | null {
@@ -47,6 +48,32 @@ async function postSignalsUpdated(url: string, bearer: string): Promise<void> {
       validateStatus: (s) => s >= 200 && s < 300,
     }
   );
+}
+
+export type PortalWebhookPostResult = {
+  status: number;
+  ok: boolean;
+};
+
+/**
+ * POST arbitrary JSON to a webhook URL (portal “send custom message”).
+ * Returns HTTP status without throwing on 4xx/5xx so the caller can surface it.
+ */
+export async function postCustomWebhookPayload(
+  url: string,
+  bearer: string,
+  payload: unknown
+): Promise<PortalWebhookPostResult> {
+  const res = await axios.post(url, payload, {
+    timeout: WEBHOOK_TIMEOUT_MS,
+    headers: {
+      Authorization: `Bearer ${bearer}`,
+      "Content-Type": "application/json",
+    },
+    validateStatus: () => true,
+  });
+  const status = res.status;
+  return { status, ok: status >= 200 && status < 300 };
 }
 
 async function notifyGlobalEnvNewsSignalsWebhook(): Promise<void> {

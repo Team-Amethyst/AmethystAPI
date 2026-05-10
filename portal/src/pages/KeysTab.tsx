@@ -1,9 +1,18 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { deleteAccountKey, fetchAccountKeys, fetchKeysStatus, issueAccountKey } from "@/api/account";
+import {
+  deleteAccountKey,
+  fetchAccountKeys,
+  fetchKeysStatus,
+  issueAccountKey,
+  patchNewsSignalsWebhook,
+  sendNewsSignalsWebhookMessage,
+  type PatchNewsSignalsWebhookBody,
+} from "@/api/account";
 import { fetchMe } from "@/api/auth";
 import { AccountKeysTable } from "@/components/AccountKeysTable";
+import { KeyNewsSignalsWebhookEditor } from "@/components/KeyNewsSignalsWebhookEditor";
 import { UsageLookupSection } from "@/components/UsageLookupSection";
 import { portalAccountKeysKey, portalMeKey, keysStatusKey } from "@/queries/keys";
 
@@ -108,6 +117,21 @@ export function KeysTab() {
     onError: (e: Error) => setKeysErr(e.message || "Could not delete key."),
   });
 
+  const webhookMut = useMutation({
+    mutationFn: ({ id, body }: { id: string; body: PatchNewsSignalsWebhookBody }) =>
+      patchNewsSignalsWebhook(id, body),
+    onSuccess: async () => {
+      setKeysErr("");
+      await queryClient.invalidateQueries({ queryKey: portalAccountKeysKey });
+    },
+    onError: (e: Error) => setKeysErr(e.message || "Could not save webhook settings."),
+  });
+
+  const webhookSendMut = useMutation({
+    mutationFn: ({ id, payload }: { id: string; payload: unknown }) =>
+      sendNewsSignalsWebhookMessage(id, payload),
+  });
+
   const issueMut = useMutation({
     mutationFn: async () => {
       const owner = keyLabel.trim();
@@ -152,6 +176,7 @@ export function KeysTab() {
 
         <div className="keys-status-panel keys-messages" id="keysMessages" aria-live="polite">
           {keysErr ? <div className="usage-error is-visible">{keysErr}</div> : null}
+          {keysInfo ? <div className="usage-info is-visible">{keysInfo}</div> : null}
         </div>
 
         <UsageLookupSection />
@@ -181,6 +206,50 @@ export function KeysTab() {
                 />
               </div>
             )}
+            {!accountKeysPending && !accountKeysError && accountKeysList.length > 0 ? (
+              <div className="keys-news-webhooks-block">
+                <h4 className="keys-news-webhooks-heading">News alerts (webhook)</h4>
+                <p className="section-desc keys-news-webhooks-desc">
+                  Register your Draft BFF URL so the Engine can notify you when injury and transaction signals change.
+                  Your browser app usually learns via Socket.IO after the Draft API polls{" "}
+                  <code className="inline-code inline-code--xs">GET /signals/news</code>.
+                </p>
+                <div className="keys-webhook-editor-stack">
+                  {accountKeysList.map((row) => {
+                    const id = row.id != null ? String(row.id) : "";
+                    if (!id) return null;
+                    const scopes = Array.isArray(row.scopes) ? row.scopes : [];
+                    const hasSignals = scopes.includes("signals");
+                    const savedUrl =
+                      typeof row.newsSignalsWebhookUrl === "string" && row.newsSignalsWebhookUrl.length > 0
+                        ? row.newsSignalsWebhookUrl
+                        : null;
+                    const usesBearer = Boolean(row.usesDedicatedWebhookBearer);
+                    return (
+                      <KeyNewsSignalsWebhookEditor
+                        key={id}
+                        keyId={id}
+                        label={String(row.label || "API key")}
+                        keyPrefix={String(row.keyPrefix || "—")}
+                        newsSignalsWebhookUrl={savedUrl}
+                        usesDedicatedWebhookBearer={usesBearer}
+                        hasSignalsScope={hasSignals}
+                        saving={webhookMut.isPending && webhookMut.variables?.id === id}
+                        sendWebhookPending={
+                          webhookSendMut.isPending && webhookSendMut.variables?.id === id
+                        }
+                        onApply={async (body) => {
+                          await webhookMut.mutateAsync({ id, body });
+                        }}
+                        onSendWebhook={async (payload) => {
+                          return webhookSendMut.mutateAsync({ id, payload });
+                        }}
+                      />
+                    );
+                  })}
+                </div>
+              </div>
+            ) : null}
           </div>
         ) : null}
 
@@ -195,12 +264,6 @@ export function KeysTab() {
           {profile?.user && statusPending && dev?.id ? (
             <div className="keys-loading" id="keysLoading">
               Checking availability…
-            </div>
-          ) : null}
-
-          {keysInfo ? (
-            <div className="usage-info is-visible" id="keysInfoBanner">
-              {keysInfo}
             </div>
           ) : null}
 

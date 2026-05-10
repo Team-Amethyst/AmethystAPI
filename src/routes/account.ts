@@ -4,10 +4,23 @@ import ApiKey from "../models/ApiKey";
 import DeveloperAccount from "../models/DeveloperAccount";
 import { ALLOWED_API_KEY_SCOPES, ALLOWED_API_KEY_TIERS, generateApiKeySecret, hashApiKey } from "../lib/apiKey";
 import { openPortalApiKeySecret, sealPortalApiKeySecret } from "../lib/portalApiKeySecret";
-import { NotFoundError, ServiceUnavailableError, ValidationError } from "../lib/appError";
+import {
+  NotFoundError,
+  ServiceUnavailableError,
+  UpstreamError,
+  ValidationError,
+} from "../lib/appError";
+import { logger } from "../lib/logger";
+import {
+  postCustomWebhookPayload,
+  resolveBearerForStoredKey,
+} from "../services/draftNewsSignalsWebhook";
 import { isAllowedNewsSignalsWebhookUrl } from "../lib/newsSignalsWebhookUrl";
 import { PortalRequest, requirePortalSession } from "../middleware/portalSession";
 import { issuanceEnabled } from "./keyIssuanceHelpers";
+
+/** Max JSON.stringify(payload).length for portal “send custom webhook” requests. */
+const MAX_PORTAL_WEBHOOK_PAYLOAD_CHARS = 16_384;
 
 const router = Router();
 
@@ -49,7 +62,7 @@ const listMyKeys: RequestHandler = async (req, res, next) => {
 
     const keys = await ApiKey.find({ developerAccountId: portalUser.developerAccountId })
       .sort({ createdAt: -1 })
-      .select("+key")
+      .select("+key +newsSignalsWebhookBearerSealed")
       .lean();
 
     res.json(
@@ -74,6 +87,8 @@ const listMyKeys: RequestHandler = async (req, res, next) => {
             doc.newsSignalsWebhookUrl.length > 0
               ? doc.newsSignalsWebhookUrl
               : null,
+          /** Whether a dedicated Bearer is stored (not the API key). Never exposes the secret. */
+          usesDedicatedWebhookBearer: Boolean(doc.newsSignalsWebhookBearerSealed),
           /** Full secret when stored for this account (newer keys); legacy rows may omit. */
           secret: secret ?? null,
         };
@@ -302,6 +317,117 @@ const patchNewsSignalsWebhook: RequestHandler = async (req, res, next) => {
   }
 };
 
+const sendNewsSignalsWebhookMessage: RequestHandler = async (req, res, next) => {
+  try {
+    const portalUser = (req as PortalRequest).portalUser;
+    if (!portalUser) {
+      throw new ValidationError("Missing portal session context.", 500, "PORTAL_CONTEXT_MISSING");
+    }
+    const rawId = typeof req.params.id === "string" ? req.params.id.trim() : "";
+    if (!rawId || !mongoose.isValidObjectId(rawId)) {
+      throw new ValidationError("Invalid key id.", 400, "KEY_ID_INVALID");
+    }
+
+    const body = req.body as Record<string, unknown>;
+    if (!Object.prototype.hasOwnProperty.call(body, "payload")) {
+      throw new ValidationError(
+        "JSON body must include a `payload` object (any JSON-serializable value).",
+        400,
+        "WEBHOOK_PAYLOAD_MISSING"
+      );
+    }
+    const payload = body.payload;
+
+    let serialized: string;
+    try {
+      serialized = JSON.stringify(payload);
+    } catch {
+      throw new ValidationError("payload must be JSON-serializable.", 400, "WEBHOOK_PAYLOAD_SERIALIZE");
+    }
+    if (serialized.length > MAX_PORTAL_WEBHOOK_PAYLOAD_CHARS) {
+      throw new ValidationError(
+        `payload JSON must be at most ${MAX_PORTAL_WEBHOOK_PAYLOAD_CHARS} characters.`,
+        400,
+        "WEBHOOK_PAYLOAD_TOO_LARGE"
+      );
+    }
+
+    const keyDoc = await ApiKey.findOne({
+      _id: new mongoose.Types.ObjectId(rawId),
+      developerAccountId: portalUser.developerAccountId,
+    }).select("+key +newsSignalsWebhookBearerSealed");
+
+    if (!keyDoc) {
+      throw new NotFoundError("API key not found.", 404, "API_KEY_NOT_FOUND");
+    }
+
+    const scopes = keyDoc.scopes ?? [];
+    if (!scopes.includes("signals")) {
+      throw new ValidationError(
+        "API key must include the signals scope.",
+        400,
+        "KEY_SCOPE_SIGNALS_REQUIRED"
+      );
+    }
+
+    const url = (keyDoc.newsSignalsWebhookUrl ?? "").trim();
+    if (!url) {
+      throw new ValidationError(
+        "Save a webhook URL for this key before sending.",
+        400,
+        "WEBHOOK_URL_REQUIRED"
+      );
+    }
+
+    const bearer = resolveBearerForStoredKey(keyDoc);
+    if (!bearer) {
+      throw new ValidationError(
+        "Cannot authenticate webhook: configure Bearer or use a portal-minted key with stored secret.",
+        400,
+        "WEBHOOK_BEARER_UNAVAILABLE"
+      );
+    }
+
+    try {
+      const result = await postCustomWebhookPayload(url, bearer, payload);
+      logger.info(
+        {
+          component: "PortalWebhookSend",
+          keyPrefix: keyDoc.keyPrefix,
+          status: result.status,
+          ok: result.ok,
+        },
+        "Portal custom webhook POST completed"
+      );
+      let webhookHost: string | null = null;
+      try {
+        webhookHost = new URL(url).host;
+      } catch {
+        webhookHost = null;
+      }
+      res.json({
+        ok: result.ok,
+        status: result.status,
+        webhookHost,
+      });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      logger.warn(
+        { err: msg, component: "PortalWebhookSend", keyPrefix: keyDoc.keyPrefix },
+        "Portal custom webhook POST failed"
+      );
+      throw new UpstreamError(
+        `Could not reach webhook: ${msg}`,
+        502,
+        "WEBHOOK_DELIVERY_FAILED",
+        { cause: msg }
+      );
+    }
+  } catch (err) {
+    next(err);
+  }
+};
+
 const deleteMyKey: RequestHandler = async (req, res, next) => {
   try {
     const portalUser = (req as PortalRequest).portalUser;
@@ -332,6 +458,11 @@ router.patch(
   "/keys/:id/news-signals-webhook",
   requirePortalSession,
   patchNewsSignalsWebhook
+);
+router.post(
+  "/keys/:id/news-signals-webhook/send",
+  requirePortalSession,
+  sendNewsSignalsWebhookMessage
 );
 router.delete("/keys/:id", requirePortalSession, deleteMyKey);
 

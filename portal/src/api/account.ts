@@ -54,3 +54,58 @@ export async function deleteAccountKey(id: string): Promise<void> {
   const data = await readResponseBody(r);
   if (!r.ok) throw new Error(portalApiMessage(data));
 }
+
+export type PatchNewsSignalsWebhookBody = {
+  newsSignalsWebhookUrl?: string | null;
+  newsSignalsWebhookBearer?: string | null;
+};
+
+export type PatchNewsSignalsWebhookResult = {
+  id: unknown;
+  newsSignalsWebhookUrl: string | null;
+  usesDedicatedWebhookBearer: boolean;
+};
+
+/** Register or update the Draft BFF URL that receives `signals_updated` when MLB news changes (per API key). */
+export async function patchNewsSignalsWebhook(
+  keyId: string,
+  body: PatchNewsSignalsWebhookBody
+): Promise<PatchNewsSignalsWebhookResult> {
+  const r = await portalFetch(
+    `/api/account/keys/${encodeURIComponent(keyId)}/news-signals-webhook`,
+    {
+      method: "PATCH",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    }
+  );
+  const data = await readResponseBody(r);
+  if (!r.ok) throw new Error(portalApiMessage(data));
+  return data as PatchNewsSignalsWebhookResult;
+}
+
+export type SendNewsSignalsWebhookResult = {
+  ok: boolean;
+  status: number;
+  webhookHost: string | null;
+};
+
+/** Deliver a custom JSON body to this key’s registered webhook (same auth as automatic pushes). */
+export async function sendNewsSignalsWebhookMessage(
+  keyId: string,
+  payload: unknown
+): Promise<SendNewsSignalsWebhookResult> {
+  const r = await portalFetch(
+    `/api/account/keys/${encodeURIComponent(keyId)}/news-signals-webhook/send`,
+    {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ payload }),
+    }
+  );
+  const data = await readResponseBody(r);
+  if (!r.ok) throw new Error(portalApiMessage(data));
+  return data as SendNewsSignalsWebhookResult;
+}
