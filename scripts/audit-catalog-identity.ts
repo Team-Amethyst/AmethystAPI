@@ -29,6 +29,29 @@ import {
 
 const ROOT = path.resolve(__dirname, "..");
 
+function numField(v: unknown): number {
+  if (typeof v === "number" && Number.isFinite(v)) return v;
+  if (typeof v === "string" && v.trim() !== "") {
+    const n = Number(v);
+    if (Number.isFinite(n)) return n;
+  }
+  return 0;
+}
+
+/** Normalize catalog_rank from current field or legacy Mongo `adp` (raw-doc fallback only). */
+function catalogRankFromDoc(doc: Record<string, unknown>): number {
+  const cr = numField(doc.catalog_rank);
+  if (cr > 0) return cr;
+  return numField(doc.adp);
+}
+
+/** Normalize catalog_tier from current field or legacy Mongo `tier` (raw-doc fallback only). */
+function catalogTierFromDoc(doc: Record<string, unknown>): number {
+  const ct = numField(doc.catalog_tier);
+  if (ct > 0) return ct;
+  return numField(doc.tier);
+}
+
 function toRow(doc: Record<string, unknown>): CatalogIdentityRow {
   return {
     _id: String(doc._id),
@@ -37,8 +60,8 @@ function toRow(doc: Record<string, unknown>): CatalogIdentityRow {
     team: String(doc.team ?? ""),
     position: String(doc.position ?? ""),
     positions: Array.isArray(doc.positions) ? (doc.positions as string[]) : undefined,
-    adp: typeof doc.adp === "number" ? doc.adp : Number(doc.adp) || 0,
-    tier: typeof doc.tier === "number" ? doc.tier : Number(doc.tier) || 0,
+    catalog_rank: catalogRankFromDoc(doc),
+    catalog_tier: catalogTierFromDoc(doc),
     value: typeof doc.value === "number" ? doc.value : Number(doc.value) || 0,
     projection: doc.projection,
   };
@@ -53,8 +76,8 @@ function pairReport(canonical: CatalogIdentityRow, shadow: CatalogIdentityRow) {
       team: canonical.team,
       position: canonical.position,
       positions: canonical.positions ?? [],
-      adp: canonical.adp,
-      tier: canonical.tier,
+      catalog_rank: canonical.catalog_rank,
+      catalog_tier: canonical.catalog_tier,
       projection_summary: projectionSummary(canonical.projection),
       value: canonical.value,
     },
@@ -65,8 +88,8 @@ function pairReport(canonical: CatalogIdentityRow, shadow: CatalogIdentityRow) {
       team: shadow.team,
       position: shadow.position,
       positions: shadow.positions ?? [],
-      adp: shadow.adp,
-      tier: shadow.tier,
+      catalog_rank: shadow.catalog_rank,
+      catalog_tier: shadow.catalog_tier,
       projection_summary: projectionSummary(shadow.projection),
       value: shadow.value,
     },
@@ -80,7 +103,9 @@ async function main(): Promise<void> {
   let rows: CatalogIdentityRow[];
   try {
     const docs = await Player.find({})
-      .select("mlbId catalogKind name team position positions adp tier value projection")
+      .select(
+        "mlbId catalogKind name team position positions catalog_rank catalog_tier adp tier value projection"
+      )
       .lean();
     rows = (docs as Record<string, unknown>[]).map(toRow);
   } finally {

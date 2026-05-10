@@ -27,6 +27,27 @@ import {
 
 const ROOT = path.resolve(__dirname, "..");
 
+function numField(v: unknown): number {
+  if (typeof v === "number" && Number.isFinite(v)) return v;
+  if (typeof v === "string" && v.trim() !== "") {
+    const n = Number(v);
+    if (Number.isFinite(n)) return n;
+  }
+  return 0;
+}
+
+function catalogRankFromDoc(doc: Record<string, unknown>): number {
+  const cr = numField(doc.catalog_rank);
+  if (cr > 0) return cr;
+  return numField(doc.adp);
+}
+
+function catalogTierFromDoc(doc: Record<string, unknown>): number {
+  const ct = numField(doc.catalog_tier);
+  if (ct > 0) return ct;
+  return numField(doc.tier);
+}
+
 function toRow(doc: Record<string, unknown>): CatalogIdentityRow {
   return {
     _id: String(doc._id),
@@ -35,8 +56,8 @@ function toRow(doc: Record<string, unknown>): CatalogIdentityRow {
     team: String(doc.team ?? ""),
     position: String(doc.position ?? ""),
     positions: Array.isArray(doc.positions) ? (doc.positions as string[]) : undefined,
-    adp: typeof doc.adp === "number" ? doc.adp : Number(doc.adp) || 0,
-    tier: typeof doc.tier === "number" ? doc.tier : Number(doc.tier) || 0,
+    catalog_rank: catalogRankFromDoc(doc),
+    catalog_tier: catalogTierFromDoc(doc),
     value: typeof doc.value === "number" ? doc.value : Number(doc.value) || 0,
     projection: doc.projection,
   };
@@ -65,7 +86,9 @@ async function main(): Promise<void> {
   let rows: CatalogIdentityRow[];
   try {
     const docs = await Player.find({})
-      .select("mlbId name team position positions adp tier value projection")
+      .select(
+        "mlbId name team position positions catalog_rank catalog_tier adp tier value projection"
+      )
       .lean();
     rows = (docs as Record<string, unknown>[]).map(toRow);
   } finally {
@@ -79,8 +102,8 @@ async function main(): Promise<void> {
   const duplicateMlbIdGroups: Record<string, unknown>[] = [];
 
   for (const { canonical, shadow, key } of shadows) {
-    const tier = classifyShadowPair({ key, canonical, shadow });
-    if (tier === "MANUAL_REVIEW_ROLE_MISMATCH") {
+    const shadowClassification = classifyShadowPair({ key, canonical, shadow });
+    if (shadowClassification === "MANUAL_REVIEW_ROLE_MISMATCH") {
       manualRoleReviewPairs.push({
         type: "MANUAL_REVIEW_ROLE_MISMATCH",
         match_key: key,
@@ -102,7 +125,7 @@ async function main(): Promise<void> {
       });
       continue;
     }
-    if (tier === "CONFLICT_REVIEW") {
+    if (shadowClassification === "CONFLICT_REVIEW") {
       conflictReviewPairs.push({
         type: "CONFLICT_REVIEW",
         match_key: key,
@@ -134,8 +157,8 @@ async function main(): Promise<void> {
         name: shadow.name,
         team: shadow.team,
         position: shadow.position,
-        adp: shadow.adp,
-        tier: shadow.tier,
+        catalog_rank: shadow.catalog_rank,
+        catalog_tier: shadow.catalog_tier,
         value: shadow.value,
         projection_summary: projectionSummary(shadow.projection, 300),
       },
@@ -143,8 +166,8 @@ async function main(): Promise<void> {
         name: canonical.name,
         team: canonical.team,
         position: canonical.position,
-        adp: canonical.adp,
-        tier: canonical.tier,
+        catalog_rank: canonical.catalog_rank,
+        catalog_tier: canonical.catalog_tier,
         value: canonical.value,
         projection_summary: projectionSummary(canonical.projection, 300),
       },

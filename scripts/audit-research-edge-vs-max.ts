@@ -27,14 +27,18 @@ function snakeTeamIndex(pickIndex: number, numTeams: number): number {
   return round % 2 === 0 ? pos : numTeams - 1 - pos;
 }
 
-function buildDraftedFromAdpOrder(
+/**
+ * Simulate picks in **catalog_rank** order (internal model sort — same role old `adp` on Mongo
+ * used before rename). Not `market_adp`.
+ */
+function buildDraftedFromCatalogRankOrder(
   pool: LeanPlayer[],
   nPicks: number,
   numTeams: number
 ): DraftedPlayer[] {
   const sorted = [...pool]
-    .filter((p) => Number.isFinite(p.adp) && p.adp > 0)
-    .sort((a, b) => a.adp - b.adp);
+    .filter((p) => Number.isFinite(p.catalog_rank) && p.catalog_rank > 0)
+    .sort((a, b) => a.catalog_rank - b.catalog_rank);
   const out: DraftedPlayer[] = [];
   for (let i = 0; i < nPicks && i < sorted.length; i++) {
     const p = sorted[i]!;
@@ -57,6 +61,7 @@ function bucketEdge(e: number): "positive" | "negative" | "neutral" {
   return "neutral";
 }
 
+/** Buckets edge by **catalog_tier** (preseason dollar bands), not auction_tier quintiles. */
 function summarizeRows(rows: ValuedPlayer[]) {
   let pos = 0;
   let neg = 0;
@@ -68,7 +73,7 @@ function summarizeRows(rows: ValuedPlayer[]) {
     if (b === "positive") pos++;
     else if (b === "negative") neg++;
     else neu++;
-    const t = r.tier;
+    const t = r.catalog_tier;
     if (!byTier.has(t)) byTier.set(t, { pos: 0, neg: 0, neu: 0 });
     const bt = byTier.get(t)!;
     if (b === "positive") bt.pos++;
@@ -144,7 +149,7 @@ async function main(): Promise<void> {
   const checkpoints: Record<string, unknown>[] = [];
 
   for (const d of depths) {
-    const drafted = buildDraftedFromAdpOrder(pool, d, base.num_teams);
+    const drafted = buildDraftedFromCatalogRankOrder(pool, d, base.num_teams);
     const res = executeValuationWorkflow(pool, { ...base, drafted_players: drafted }, {});
     if (!res.ok) {
       checkpoints.push({
@@ -173,7 +178,8 @@ async function main(): Promise<void> {
           .map((r) => ({
             player_id: r.player_id,
             name: r.name,
-            tier: r.tier,
+            catalog_tier: r.catalog_tier,
+            auction_tier: r.auction_tier,
             auction_value: r.auction_value,
             team_adjusted_value: r.team_adjusted_value,
             recommended_bid: r.recommended_bid,
@@ -185,7 +191,8 @@ async function main(): Promise<void> {
           .map((r) => ({
             player_id: r.player_id,
             name: r.name,
-            tier: r.tier,
+            catalog_tier: r.catalog_tier,
+            auction_tier: r.auction_tier,
             auction_value: r.auction_value,
             team_adjusted_value: r.team_adjusted_value,
             recommended_bid: r.recommended_bid,
@@ -204,6 +211,10 @@ async function main(): Promise<void> {
     interpretation: {
       edge_definition: "team_adjusted_value - recommended_bid",
       neutral_band: `|edge| <= ${EPS}`,
+      draft_simulation_order:
+        "Drafted players are removed in ascending catalog_rank order (internal list rank, not market_adp).",
+      tier_breakdown:
+        "edge_summary.by_tier keys are catalog_tier (Mongo preseason bands). Samples also list auction_tier (within-response auction quintile) for contrast.",
       early_negative_edge_expected:
         "When team_adjusted_value tracks auction_value and recommended_bid is an aggressive ceiling above auction_value for stars, edge is often negative — not a bug.",
     },
