@@ -17,6 +17,22 @@ export const CALIBRATION_CATS_5X5: ScoringCategory[] = [
   { name: "K", type: "pitching" },
 ];
 
+/**
+ * Same batting as 5x5; pitching omits **W** (wins) so closer/relief SV drives more of the
+ * pitching baseline — "saves-focused" / saves-only style leagues (not identical to standard).
+ */
+export const CALIBRATION_CATS_SAVES_ONLY: ScoringCategory[] = [
+  { name: "R", type: "batting" },
+  { name: "HR", type: "batting" },
+  { name: "RBI", type: "batting" },
+  { name: "SB", type: "batting" },
+  { name: "AVG", type: "batting" },
+  { name: "SV", type: "pitching" },
+  { name: "ERA", type: "pitching" },
+  { name: "WHIP", type: "pitching" },
+  { name: "K", type: "pitching" },
+];
+
 /** Draftroom web/mobile UI default roster — no generic `P`; 2 RP; 3 BN. */
 export function draftroomUiDefaultRoster(): RosterSlot[] {
   return [

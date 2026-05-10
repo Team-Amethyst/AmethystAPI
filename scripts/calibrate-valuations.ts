@@ -7,6 +7,8 @@
  *   pnpm calibrate-valuations              # synthetic catalog (no Mongo)
  *   pnpm calibrate-valuations -- --mongo   # full Mongo catalog (requires MONGO_URI)
  *   pnpm calibrate-valuations -- --json-out=tmp/calibration-report.json
+ *
+ * Shallow/deep team counts (10 / 15) align with `scripts/real-world-valuation-walkthrough.ts`.
  */
 import "dotenv/config";
 import { mkdirSync, writeFileSync } from "fs";
@@ -17,6 +19,7 @@ import {
   buildDraftroomStandardValuationInput,
   buildSyntheticCalibrationDraftroomPool,
   CALIBRATION_CATS_5X5,
+  CALIBRATION_CATS_SAVES_ONLY,
   draftroomUiDefaultRoster,
   legacyEngineCalibrationRoster,
 } from "../src/lib/calibrationDraftroomFixture";
@@ -172,8 +175,15 @@ function buildScenarios(): Scenario[] {
       },
     },
     {
-      id: "catcher_1v2",
-      description: "1 C-slot vs 2 C-slots (rest identical)",
+      id: "pitching_saves_only",
+      description:
+        "Saves-focused pitching categories (SV, ERA, WHIP, K — no W); batting unchanged — compare to standard_12_mixed",
+      input: { ...b, scoring_categories: CALIBRATION_CATS_SAVES_ONLY },
+    },
+    {
+      id: "catcher_2c",
+      description:
+        "2 C slots (same universe as standard_12_mixed — JSON report `catcher_comparison` pairs top C vs standard_12_mixed)",
       input: {
         ...b,
         roster_slots: draftroomUiDefaultRoster().map((s) =>
@@ -192,14 +202,14 @@ function buildScenarios(): Scenario[] {
       input: { ...b, league_scope: "NL" },
     },
     {
-      id: "shallow_8",
-      description: "Shallow: 8 teams",
-      input: { ...b, num_teams: 8 },
+      id: "shallow_10",
+      description: "Shallow: 10 teams (aligned with valuation-walkthrough shallow mixed)",
+      input: { ...b, num_teams: 10 },
     },
     {
-      id: "deep_16",
-      description: "Deep: 16 teams",
-      input: { ...b, num_teams: 16 },
+      id: "deep_15",
+      description: "Deep: 15 teams (aligned with valuation-walkthrough deep mixed)",
+      input: { ...b, num_teams: 15 },
     },
     {
       id: "multi_pos_override",
@@ -360,6 +370,11 @@ function printScenarioReport(
     ratioTopDraftableToBudget: ratioDraftable,
     remaining_slots: response.remaining_slots,
     draftable_pool_size: response.draftable_pool_size,
+    valuation_context: response.valuation_context ?? null,
+    valuation_context_warnings: response.valuation_context_warnings ?? null,
+    scoring_categories_summary: scenario.input.scoring_categories
+      .map((c) => `${c.name}:${c.type}`)
+      .join("|"),
     counts: { ge50: ge(50), ge40: ge(40), ge30: ge(30), ge20: ge(20), ge10: ge(10), nearOne },
     hitterShare: hp > 0 ? hitSum / hp : null,
     pitcherShare: hp > 0 ? pitSum / hp : null,
@@ -444,7 +459,73 @@ async function main(): Promise<void> {
     const abs = path.isAbsolute(jsonOut) ? jsonOut : path.join(ROOT, jsonOut);
     const dir = path.dirname(abs);
     mkdirSync(dir, { recursive: true });
-    writeFileSync(abs, JSON.stringify({ generatedAt: new Date().toISOString(), scenarios: report }, null, 2));
+    const c1 = report.find(
+      (r) => typeof r === "object" && r !== null && (r as { scenario?: string }).scenario === "standard_12_mixed"
+    ) as { topByPosition?: Record<string, { player_id?: string; auction_value?: number }> } | undefined;
+    const c2 = report.find(
+      (r) => typeof r === "object" && r !== null && (r as { scenario?: string }).scenario === "catcher_2c"
+    ) as { topByPosition?: Record<string, { player_id?: string; auction_value?: number }> } | undefined;
+    const catcher_comparison =
+      c1?.topByPosition?.C != null && c2?.topByPosition?.C != null
+        ? {
+            note: "1C baseline is standard_12_mixed (Draftroom default 1× C); 2C is catcher_2c.",
+            top_catcher_1c_standard: c1.topByPosition.C,
+            top_catcher_2c: c2.topByPosition.C,
+          }
+        : null;
+    const stdPitch = report.find(
+      (r) => typeof r === "object" && r !== null && (r as { scenario?: string }).scenario === "standard_12_mixed"
+    ) as {
+      scoring_categories_summary?: string;
+      pitcherShare?: number | null;
+      topByPosition?: Record<string, { auction_value?: number }>;
+    } | undefined;
+    const savesPitch = report.find(
+      (r) => typeof r === "object" && r !== null && (r as { scenario?: string }).scenario === "pitching_saves_only"
+    ) as {
+      scoring_categories_summary?: string;
+      pitcherShare?: number | null;
+      topByPosition?: Record<string, { auction_value?: number }>;
+    } | undefined;
+    const topRpAuction = (
+      block: { topByPosition?: Record<string, { auction_value?: number }> } | undefined
+    ): number | null => {
+      const v = block?.topByPosition?.RP?.auction_value;
+      return typeof v === "number" ? v : null;
+    };
+    const rpStd = topRpAuction(stdPitch);
+    const rpSaves = topRpAuction(savesPitch);
+    const shareDiff =
+      typeof stdPitch?.pitcherShare === "number" &&
+      typeof savesPitch?.pitcherShare === "number" &&
+      Math.abs(stdPitch.pitcherShare - savesPitch.pitcherShare) > 1e-5;
+    const rpDiff =
+      rpStd != null && rpSaves != null && Math.abs(rpStd - rpSaves) > 0.001;
+    const calibration_checks = {
+      saves_only_scoring_categories_differ_from_standard:
+        stdPitch?.scoring_categories_summary != null &&
+        savesPitch?.scoring_categories_summary != null &&
+        stdPitch.scoring_categories_summary !== savesPitch.scoring_categories_summary,
+      saves_only_pitcher_share_differs_from_standard: shareDiff,
+      saves_only_top_rp_differs_from_standard: rpDiff,
+      saves_only_pitching_distribution_differs_from_standard: shareDiff || rpDiff,
+      saves_only_top_rp_pair: { standard: rpStd, saves_only: rpSaves },
+    };
+    writeFileSync(
+      abs,
+      JSON.stringify(
+        {
+          generatedAt: new Date().toISOString(),
+          calibration_alignment_note:
+            "shallow_10 / deep_15 match scripts/real-world-valuation-walkthrough.ts (10- and 15-team). Legacy ids shallow_8 / deep_16 / catcher_1v2 removed; 1C vs 2C uses standard_12_mixed + catcher_2c (see catcher_comparison).",
+          catcher_comparison,
+          calibration_checks,
+          scenarios: report,
+        },
+        null,
+        2
+      )
+    );
     console.log(`\nWrote JSON report: ${abs}`);
   }
 }

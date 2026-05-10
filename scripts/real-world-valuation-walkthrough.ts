@@ -10,6 +10,7 @@ import type { LeanPlayer, NormalizedValuationInput, ValuedPlayer, ValuationRespo
 import {
   buildDraftroomStandardValuationInput,
   CALIBRATION_CATS_5X5,
+  CALIBRATION_CATS_SAVES_ONLY,
   draftroomUiDefaultRoster,
   legacyEngineCalibrationRoster,
 } from "../src/lib/calibrationDraftroomFixture";
@@ -21,6 +22,50 @@ import { loadMongoCatalogForEngine } from "../src/lib/mongoCatalogPipeline";
 import { computeRemainingLeagueRosterSlots } from "../src/lib/remainingLeagueRosterSlots";
 
 const ROOT = path.resolve(__dirname, "..");
+
+/**
+ * Twelve teams; first four teams each keep three low-ADP players at equal cost.
+ * Budgets net of keeper spend; no single-team monopoly.
+ */
+function buildKeeperSpreadRealistic(
+  pool: LeanPlayer[],
+  base: NormalizedValuationInput
+): NormalizedValuationInput {
+  const sorted = [...pool]
+    .filter((p) => p.mlbId != null && Number.isFinite(p.adp) && p.adp > 0)
+    .sort((a, b) => a.adp - b.adp);
+  const teams = ["team_1", "team_2", "team_3", "team_4"] as const;
+  const perTeam = 3;
+  const keeperCost = 10;
+  const pre: Record<string, Array<Record<string, unknown>>> = {};
+  for (const t of teams) pre[t] = [];
+  for (let i = 0; i < teams.length * perTeam; i++) {
+    const teamIdx = Math.floor(i / perTeam);
+    const tid = teams[teamIdx]!;
+    const p = sorted[i]!;
+    pre[tid]!.push({
+      player_id: String(p.mlbId),
+      name: p.name,
+      position: p.position,
+      team: p.team ?? "",
+      team_id: tid,
+      paid: keeperCost,
+      is_keeper: true,
+      keeper_cost: keeperCost,
+    });
+  }
+  const budget_by_team_id: Record<string, number> = {};
+  for (let ti = 1; ti <= base.num_teams; ti++) {
+    const id = `team_${ti}`;
+    budget_by_team_id[id] = ti <= 4 ? 260 - perTeam * keeperCost : 260;
+  }
+  return {
+    ...base,
+    pre_draft_rosters: pre,
+    budget_by_team_id,
+    user_team_id: "team_1",
+  };
+}
 
 function sumAuction(rows: ValuedPlayer[]): number {
   return rows.reduce((s, r) => s + (r.auction_value ?? 0), 0);
@@ -148,6 +193,11 @@ function metricsForScenario(
     },
     hitterPitcherSplit: hp > 0 ? { hitterShare: hit / hp, pitcherShare: pit / hp } : null,
     scoring_category_warnings: response.scoring_category_warnings ?? null,
+    valuation_context: response.valuation_context ?? null,
+    valuation_context_warnings: response.valuation_context_warnings ?? null,
+    scoring_categories_summary: input.scoring_categories
+      .map((c) => `${c.name}:${c.type}`)
+      .join("|"),
     validation: { market_notes: response.market_notes ?? [] },
     top25,
     top15Hitters: top15h,
@@ -399,8 +449,9 @@ async function main(): Promise<void> {
     },
     {
       id: "09_saves_only",
-      description: "Saves-only (SV kept; no HLD category)",
-      input: { ...b() },
+      description:
+        "Saves-focused pitching categories (SV, ERA, WHIP, K — no W); batting unchanged vs 5x5",
+      input: { ...b(), scoring_categories: CALIBRATION_CATS_SAVES_ONLY },
     },
     {
       id: "10_sv_hld_label",
@@ -415,8 +466,9 @@ async function main(): Promise<void> {
     { id: "11_al_only", description: "AL-only league_scope", input: { ...b(), league_scope: "AL" } },
     { id: "12_nl_only", description: "NL-only league_scope", input: { ...b(), league_scope: "NL" } },
     {
-      id: "13_keeper_heavy",
-      description: "Keeper-heavy (36 keepers on team_1, reduced budget)",
+      id: "13_keeper_pathological_stress",
+      description:
+        "Pathological stress: 36 keepers + spend concentrated on team_1 with collapsed team_1 budget (not a realistic league)",
       input: {
         ...b(),
         user_team_id: "team_1",
@@ -425,7 +477,13 @@ async function main(): Promise<void> {
       },
     },
     {
-      id: "14_eligible_subset",
+      id: "14_keeper_spread_realistic",
+      description:
+        "Realistic keeper spread: 3 keepers × 4 teams (low ADP players), budgets net of keeper cost, user_team_id team_1",
+      input: buildKeeperSpreadRealistic(pool, b()),
+    },
+    {
+      id: "15_eligible_subset",
       description: "eligible_player_ids ~120 players from catalog head",
       input: {
         ...b(),
@@ -436,7 +494,7 @@ async function main(): Promise<void> {
       },
     },
     {
-      id: "15_excluded_elite",
+      id: "16_excluded_elite",
       description: "Exclude top 6 auction values from standard",
       input: {
         ...b(),
@@ -534,6 +592,60 @@ async function main(): Promise<void> {
     }
   }
 
+  const blockById = (id: string) =>
+    blocks.find((x) => (x as { id?: string }).id === id) as
+      | Record<string, unknown>
+      | undefined;
+
+  const stdBlock = blockById("01_standard_12_mixed");
+  const savesBlock = blockById("09_saves_only");
+  const svHldBlock = blockById("10_sv_hld_label");
+  const keeperSpreadBlock = blockById("14_keeper_spread_realistic");
+
+  const rpTop = (block: Record<string, unknown> | undefined): number | null => {
+    const tb = block?.topByPosition as
+      | Record<string, { auction_value?: number }>
+      | undefined;
+    const v = tb?.RP?.auction_value;
+    return typeof v === "number" ? v : null;
+  };
+
+  const pitchShare = (block: Record<string, unknown> | undefined): number | null => {
+    const h = block?.hitterPitcherSplit as { pitcherShare?: number } | undefined;
+    return typeof h?.pitcherShare === "number" ? h.pitcherShare : null;
+  };
+
+  const walkthrough_checks: Record<string, unknown> = {
+    saves_only_scoring_categories_differ_from_standard: (() => {
+      const a = stdBlock?.scoring_categories_summary;
+      const b = savesBlock?.scoring_categories_summary;
+      return typeof a === "string" && typeof b === "string" && a !== b;
+    })(),
+    saves_only_pitching_differs_from_standard: (() => {
+      const p0 = pitchShare(stdBlock);
+      const p1 = pitchShare(savesBlock);
+      const r0 = rpTop(stdBlock);
+      const r1 = rpTop(savesBlock);
+      const shareDiff =
+        p0 != null && p1 != null && Math.abs(p0 - p1) > 1e-5;
+      const rpDiff =
+        r0 != null && r1 != null && Math.abs(r0 - r1) > 0.001;
+      return shareDiff || rpDiff;
+    })(),
+    saves_only_vs_sv_hld_rp_top: (() => ({
+      saves_only: rpTop(savesBlock),
+      sv_hld_label: rpTop(svHldBlock),
+    }))(),
+    keeper_spread_realistic: keeperSpreadBlock
+      ? {
+          ok: keeperSpreadBlock.ok === true,
+          valuation_context_warnings: keeperSpreadBlock.valuation_context_warnings ?? null,
+          sum_all_auction_vs_league_budget: keeperSpreadBlock.ratioSumAllToBudget,
+          hitter_pitcher_share: keeperSpreadBlock.hitterPitcherSplit,
+        }
+      : null,
+  };
+
   const out = {
     generatedAt: new Date().toISOString(),
     scenarios: blocks,
@@ -547,6 +659,9 @@ async function main(): Promise<void> {
         }
       : null,
     trust_engine_report: runTrustEngineReport(pool, () => buildDraftroomStandardValuationInput()),
+    walkthrough_alignment_note:
+      "Shallow/deep team counts (10 / 15) match scripts/calibrate-valuations.ts after alignment.",
+    walkthrough_checks,
   };
 
   const abs = path.join(ROOT, "tmp", "real-walkthrough-scenarios.json");
