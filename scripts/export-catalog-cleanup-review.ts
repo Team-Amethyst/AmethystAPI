@@ -13,6 +13,7 @@ import mongoose from "mongoose";
 import Player from "../src/models/Player";
 import type { CatalogIdentityRow } from "../src/lib/catalogIdentityHelpers";
 import {
+  countSameNameDistinctMlbIdGroups,
   findShadowPairs,
   groupKeyName,
   hasCanonicalMlbId,
@@ -229,8 +230,8 @@ async function main(): Promise<void> {
     shadow_projection: claseShadow?.projection ?? null,
     canonical_projection_summary: claseCanon ? projectionSummary(claseCanon.projection) : "",
     shadow_projection_summary: claseShadow ? projectionSummary(claseShadow.projection) : "",
-    duplicate_name_group_size: claseGroup.length,
-    duplicate_rows_snapshot: claseGroup.map(rowSnapshot),
+    same_name_normalized_name_row_count: claseGroup.length,
+    same_name_row_group_snapshot: claseGroup.map(rowSnapshot),
     position_mismatch_P_vs_RP: clasePositionMismatch,
     classification: "position_code_duplicate_mismatch_oid_vs_canonical",
     recommended_action:
@@ -248,7 +249,7 @@ async function main(): Promise<void> {
         mongo_shell_commented:
           claseShadow != null
             ? `// db.players.updateOne({ _id: ObjectId("${claseShadow._id}") }, { $set: { position: "P" } }); // or set canonical to RP — pick one standard`
-            : "// (no shadow row resolved — inspect duplicate_rows_snapshot)",
+            : "// (no shadow row resolved — inspect same_name_row_group_snapshot)",
       },
       {
         description: "After alignment + merge, delete ObjectId shadow",
@@ -320,8 +321,11 @@ async function main(): Promise<void> {
       rows_with_mlbId: withMlb,
       rows_without_mlbId: withoutMlb,
       objectId_style_valuation_player_id_rows: oidPlayerIds,
-      duplicate_normalized_name_groups: dupNameGroups,
-      suspected_shadow_pairs_count: findShadowPairs(rows).length,
+      same_name_groups_total: dupNameGroups,
+      same_name_distinct_mlb_ids: countSameNameDistinctMlbIdGroups(rows),
+      likely_shadow_pairs_count: findShadowPairs(rows).length,
+      same_name_groups_note:
+        "same_name_groups_total is raw normalized-name clusters, not duplicate counts — see same_name_distinct_mlb_ids vs likely_shadow_pairs_count.",
     },
     high_risk_players: highRiskPlayers,
   };

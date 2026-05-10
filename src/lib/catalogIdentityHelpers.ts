@@ -130,46 +130,132 @@ function teamsMatchLoose(a: string, b: string): boolean {
   return false;
 }
 
+const PITCHER_PRIMARY_TOKENS = new Set(["P", "SP", "RP"]);
+
 /**
- * ObjectId-key row (no mlbId) that appears to duplicate a canonical MLB-id row.
- * Match: same normalized name + loose team (`--` matches any) + same primary position token.
- * Prefers canonical = same concrete team as shadow when possible, else higher `value`, lower ADP.
+ * Primary position tokens match, or both are pitcher-family roles (P / SP / RP) so P↔RP is explainable.
+ * Does not treat SS vs 2B as compatible — only pitcher bucket.
+ */
+export function positionsRolesCompatible(a: string, b: string): boolean {
+  const pa = normalizePrimaryPosition(a);
+  const pb = normalizePrimaryPosition(b);
+  if (pa === pb) return true;
+  return PITCHER_PRIMARY_TOKENS.has(pa) && PITCHER_PRIMARY_TOKENS.has(pb);
+}
+
+/**
+ * Pitcher primary token differs (e.g. P vs RP) while still in the compatible family — needs manual review
+ * before treating as a safe dedupe, even when projections align.
+ */
+export function isPitcherPrimaryTokenMismatch(canonicalPos: string, shadowPos: string): boolean {
+  const a = normalizePrimaryPosition(canonicalPos);
+  const b = normalizePrimaryPosition(shadowPos);
+  if (a === b) return false;
+  return PITCHER_PRIMARY_TOKENS.has(a) && PITCHER_PRIMARY_TOKENS.has(b);
+}
+
+/**
+ * Canonical rows that could match an ObjectId-only shadow (same normalized name, loose team, compatible role).
+ * Returns [] when ambiguous (multiple distinct mlbIds with no safe disambiguation).
+ */
+export function canonicalCandidatesForShadowOid(
+  shadow: CatalogIdentityRow,
+  withId: CatalogIdentityRow[]
+): CatalogIdentityRow[] {
+  const nk = normalizePlayerName(shadow.name);
+  const cands = withId.filter(
+    (c) =>
+      normalizePlayerName(c.name) === nk &&
+      teamsMatchLoose(c.team, shadow.team) &&
+      positionsRolesCompatible(c.position, shadow.position)
+  );
+  if (cands.length === 0) return [];
+  if (cands.length === 1) return cands;
+
+  const st = normalizeTeamAbbrev(shadow.team);
+  if (st !== "--") {
+    const sameTeam = cands.filter((c) => normalizeTeamAbbrev(c.team) === st);
+    if (sameTeam.length === 1) return sameTeam;
+    if (sameTeam.length >= 2) {
+      const ids = new Set(sameTeam.map((c) => Number(c.mlbId)));
+      if (ids.size >= 2) return [];
+      return sameTeam;
+    }
+    const unknownTeam = cands.filter((c) => normalizeTeamAbbrev(c.team) === "--");
+    if (unknownTeam.length === 1) return unknownTeam;
+    return [];
+  }
+
+  const ids = new Set(cands.map((c) => Number(c.mlbId)));
+  if (ids.size > 1) return [];
+  return cands;
+}
+
+export type ShadowPairClassification =
+  | "SAFE_EXACT_DUPLICATE"
+  | "CONFLICT_REVIEW"
+  | "MANUAL_REVIEW_ROLE_MISMATCH";
+
+export function classifyShadowPair(pair: ShadowPair): ShadowPairClassification {
+  if (isPitcherPrimaryTokenMismatch(pair.canonical.position, pair.shadow.position)) {
+    return "MANUAL_REVIEW_ROLE_MISMATCH";
+  }
+  const fc = fingerprintConflict(
+    projectionFingerprint(pair.canonical.projection),
+    projectionFingerprint(pair.shadow.projection)
+  );
+  if (fc) return "CONFLICT_REVIEW";
+  return "SAFE_EXACT_DUPLICATE";
+}
+
+/** Same normalized name, ≥2 rows, each with a distinct positive mlbId (different people; not OID shadows). */
+export function countSameNameDistinctMlbIdGroups(rows: CatalogIdentityRow[]): number {
+  let n = 0;
+  for (const [, arr] of groupKeyName(rows)) {
+    if (arr.length < 2) continue;
+    const ids = new Set(
+      arr.filter(hasCanonicalMlbId).map((r) => Number(r.mlbId))
+    );
+    if (ids.size >= 2) n++;
+  }
+  return n;
+}
+
+/** Same mlbId on multiple Mongo docs (true duplicate identity, not name-only). */
+export function findDuplicateMlbIdGroups(rows: CatalogIdentityRow[]): Map<number, CatalogIdentityRow[]> {
+  const m = new Map<number, CatalogIdentityRow[]>();
+  for (const r of rows) {
+    if (!hasCanonicalMlbId(r)) continue;
+    const id = Number(r.mlbId);
+    if (!m.has(id)) m.set(id, []);
+    m.get(id)!.push(r);
+  }
+  return new Map([...m.entries()].filter(([, arr]) => arr.length > 1));
+}
+
+/**
+ * Likely shadow duplicate: ObjectId-only catalog row + one unambiguous canonical mlbId row,
+ * same normalized name, team-compatible (`--` is unknown, not a conflict with a concrete team),
+ * role-compatible (includes P↔RP pitcher family).
+ *
+ * Never pairs two different non-null mlbIds as shadow/shadow or canonical/canonical.
+ * Name alone is never sufficient — mlbId presence + disambiguation rules above are required.
  */
 export function findShadowPairs(rows: CatalogIdentityRow[]): ShadowPair[] {
   const withId = rows.filter(hasCanonicalMlbId);
-  const byNamePos = new Map<string, CatalogIdentityRow[]>();
-  for (const r of withId) {
-    const k = `${normalizePlayerName(r.name)}\t${normalizePrimaryPosition(r.position)}`;
-    if (!byNamePos.has(k)) byNamePos.set(k, []);
-    byNamePos.get(k)!.push(r);
-  }
-
-  const pickCanonical = (shadow: CatalogIdentityRow, candidates: CatalogIdentityRow[]): CatalogIdentityRow => {
-    const st = normalizeTeamAbbrev(shadow.team);
-    const sameTeam = candidates.filter((c) => normalizeTeamAbbrev(c.team) === st && st !== "--");
-    const pool = sameTeam.length > 0 ? sameTeam : candidates;
-    return [...pool].sort((a, b) => {
-      if (b.value !== a.value) return b.value - a.value;
-      const adpA = Number.isFinite(a.adp) && a.adp > 0 ? a.adp : 9999;
-      const adpB = Number.isFinite(b.adp) && b.adp > 0 ? b.adp : 9999;
-      if (adpA !== adpB) return adpA - adpB;
-      return a._id.localeCompare(b._id);
-    })[0]!;
-  };
-
   const out: ShadowPair[] = [];
   const seen = new Set<string>();
   for (const r of rows) {
     if (hasCanonicalMlbId(r)) continue;
     if (!rowUsesObjectIdPlayerId(r)) continue;
-    const k = `${normalizePlayerName(r.name)}\t${normalizePrimaryPosition(r.position)}`;
-    const cands = (byNamePos.get(k) ?? []).filter((c) => teamsMatchLoose(c.team, r.team));
-    if (cands.length === 0) continue;
-    const canonical = pickCanonical(r, cands);
+    const cands = canonicalCandidatesForShadowOid(r, withId);
+    if (cands.length !== 1) continue;
+    const canonical = cands[0]!;
     const dedup = `${canonical._id}|${r._id}`;
     if (seen.has(dedup)) continue;
     seen.add(dedup);
-    out.push({ key: k, canonical, shadow: r });
+    const key = `${normalizePlayerName(r.name)}\t${normalizePrimaryPosition(r.position)}\t${normalizePrimaryPosition(canonical.position)}`;
+    out.push({ key, canonical, shadow: r });
   }
   return out;
 }

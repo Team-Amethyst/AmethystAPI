@@ -1,9 +1,10 @@
 /**
  * Conservative catalog identity repair plan (dry-run by default).
  *
- *   pnpm repair:catalog-identities
+ *   pnpm repair:catalog-identities          # default: dry-run only
  *   pnpm repair:catalog-identities -- --dry-run
  *
+ * Default is always dry-run. --apply is not implemented.
  * Does NOT delete or update Mongo rows in this implementation.
  * Writes tmp/catalog-identity-repair-plan.json
  */
@@ -14,10 +15,11 @@ import mongoose from "mongoose";
 import Player from "../src/models/Player";
 import type { CatalogIdentityRow } from "../src/lib/catalogIdentityHelpers";
 import {
+  classifyShadowPair,
+  countSameNameDistinctMlbIdGroups,
+  findDuplicateMlbIdGroups,
   findShadowPairs,
-  fingerprintConflict,
   hasCanonicalMlbId,
-  projectionFingerprint,
   projectionSummary,
   rowUsesObjectIdPlayerId,
   valuationPlayerIdFromRow,
@@ -72,19 +74,48 @@ async function main(): Promise<void> {
 
   const shadows = findShadowPairs(rows);
   const proposed: Record<string, unknown>[] = [];
-  const conflicts: Record<string, unknown>[] = [];
+  const conflictReviewPairs: Record<string, unknown>[] = [];
+  const manualRoleReviewPairs: Record<string, unknown>[] = [];
+  const duplicateMlbIdGroups: Record<string, unknown>[] = [];
 
   for (const { canonical, shadow, key } of shadows) {
-    const fc = projectionFingerprint(canonical.projection);
-    const fs = projectionFingerprint(shadow.projection);
-    const conflict = fingerprintConflict(fc, fs);
-    if (conflict) {
-      conflicts.push({
+    const tier = classifyShadowPair({ key, canonical, shadow });
+    if (tier === "MANUAL_REVIEW_ROLE_MISMATCH") {
+      manualRoleReviewPairs.push({
+        type: "MANUAL_REVIEW_ROLE_MISMATCH",
+        match_key: key,
+        reason:
+          "Pitcher primary token differs (e.g. P vs RP) while name/team suggest the same player — normalize role codes, then re-run audit before delete.",
+        canonical: {
+          mongo_id: canonical._id,
+          mlbId: canonical.mlbId,
+          position: canonical.position,
+          projection_summary: projectionSummary(canonical.projection, 220),
+        },
+        shadow: {
+          mongo_id: shadow._id,
+          position: shadow.position,
+          projection_summary: projectionSummary(shadow.projection, 220),
+        },
+        recommendation:
+          "Manual: choose canonical primary position (P vs RP), merge projection, then dedupe — not an orphan greenfield row.",
+      });
+      continue;
+    }
+    if (tier === "CONFLICT_REVIEW") {
+      conflictReviewPairs.push({
         type: "CONFLICT_REVIEW",
         match_key: key,
         reason: "Projection fingerprint differs materially between canonical and ObjectId row",
-        canonical: { mongo_id: canonical._id, mlbId: canonical.mlbId, fingerprint: fc },
-        shadow: { mongo_id: shadow._id, fingerprint: fs },
+        canonical: {
+          mongo_id: canonical._id,
+          mlbId: canonical.mlbId,
+          projection_summary: projectionSummary(canonical.projection, 220),
+        },
+        shadow: {
+          mongo_id: shadow._id,
+          projection_summary: projectionSummary(shadow.projection, 220),
+        },
         recommendation: "Manual merge: pick authoritative projection source, then delete or backfill shadow row.",
       });
       continue;
@@ -93,7 +124,7 @@ async function main(): Promise<void> {
       type: "PROPOSE_DELETE_SHADOW_DUPLICATE",
       match_key: key,
       rationale:
-        "ObjectId-key row duplicates canonical MLB-id row (same normalized name + team); projections align within tolerance.",
+        "Strong identity match: ObjectId row without mlbId pairs one unambiguous canonical mlbId row; same name; team- and role-compatible; projections align within tolerance.",
       delete_mongo_id: shadow._id,
       delete_valuation_player_id: valuationPlayerIdFromRow(shadow),
       keep_mongo_id: canonical._id,
@@ -131,20 +162,14 @@ async function main(): Promise<void> {
       valuation_player_id: valuationPlayerIdFromRow(o),
       name: o.name,
       team: o.team,
-      note: "No canonical same name+team row with mlbId; needs MLB Stats API id backfill or delete if junk.",
+      note: "No unambiguous canonical mlbId match for this ObjectId row (same-name clusters are not assumed duplicates). Backfill mlbId, merge manually, or delete if junk.",
     });
   }
 
-  const dupMlb = new Map<number, CatalogIdentityRow[]>();
-  for (const r of rows) {
-    if (!hasCanonicalMlbId(r)) continue;
-    const id = Number(r.mlbId);
-    if (!dupMlb.has(id)) dupMlb.set(id, []);
-    dupMlb.get(id)!.push(r);
-  }
-  const dupMlbGroups = [...dupMlb.entries()].filter(([, arr]) => arr.length > 1);
+  const dupMlbGroups = findDuplicateMlbIdGroups(rows);
+  const sameNameDistinctMlbIds = countSameNameDistinctMlbIdGroups(rows);
   for (const [mlbId, arr] of dupMlbGroups) {
-    conflicts.push({
+    duplicateMlbIdGroups.push({
       type: "DUPLICATE_MLBID",
       mlbId,
       mongo_ids: arr.map((x) => x._id),
@@ -152,19 +177,58 @@ async function main(): Promise<void> {
     });
   }
 
+  let conflictReviewPairCount = 0;
+  let safeExactDuplicatePairCount = 0;
+  let manualRoleMismatchPairs = 0;
+  for (const s of shadows) {
+    const t = classifyShadowPair(s);
+    if (t === "CONFLICT_REVIEW") conflictReviewPairCount++;
+    else if (t === "MANUAL_REVIEW_ROLE_MISMATCH") manualRoleMismatchPairs++;
+    else safeExactDuplicatePairCount++;
+  }
+
+  const safeExactDuplicatePlanItems = proposed.filter((p) => p.type === "PROPOSE_DELETE_SHADOW_DUPLICATE");
+  const orphanOidReviewPairs = proposed.filter((p) => p.type === "PROPOSE_MANUAL_REVIEW_ORPHAN_NO_MLBID");
+
+  const likelyShadowPairRecords = shadows.map((s) => ({
+    match_key: s.key,
+    classification: classifyShadowPair(s),
+    canonical_mongo_id: s.canonical._id,
+    shadow_mongo_id: s.shadow._id,
+    canonical_mlbId: s.canonical.mlbId ?? null,
+  }));
+
   const out = {
     generatedAt: new Date().toISOString(),
     dry_run: true,
     policy:
-      "Conservative: prefer rows with positive MLB Stats API mlbId. Never auto-delete in this script — export plan only.",
+      "Conservative: OID↔mlbId shadow pairs require unambiguous canonical match (name + team rules + role compatibility). Same-name-only groups are not duplicates. Never auto-delete in this script — export plan only.",
     counts: {
-      shadow_pairs: shadows.length,
+      likely_shadow_pairs: shadows.length,
+      conflict_review_pairs: conflictReviewPairCount,
+      manual_role_review_pairs: manualRoleMismatchPairs,
+      safe_exact_duplicate_pairs: safeExactDuplicatePairCount,
+      same_name_distinct_mlb_ids: sameNameDistinctMlbIds,
+      duplicate_mlb_id_groups: dupMlbGroups.size,
       proposed_operations: proposed.length,
-      conflicts: conflicts.length,
+      conflicts_total: conflictReviewPairs.length + duplicateMlbIdGroups.length,
+      manual_reviews_total: manualRoleReviewPairs.length,
       orphan_oid_without_shadow_match: orphans.length,
+      shadow_pairs: shadows.length,
     },
+    likely_shadow_pairs: likelyShadowPairRecords,
+    conflict_review_pairs: conflictReviewPairs,
+    manual_role_review_pairs: manualRoleReviewPairs,
+    duplicate_mlb_id_groups: duplicateMlbIdGroups,
+    same_name_distinct_mlb_ids: {
+      group_count: sameNameDistinctMlbIds,
+      samples_note: "See tmp/catalog-identity-audit.json → same_name_distinct_mlb_ids_samples",
+    },
+    safe_exact_duplicate_pairs: safeExactDuplicatePlanItems,
+    orphan_oid_without_shadow_match: orphanOidReviewPairs,
     proposed_operations: proposed,
-    conflicts,
+    conflicts: [...conflictReviewPairs, ...duplicateMlbIdGroups],
+    manual_reviews: manualRoleReviewPairs,
   };
 
   const abs = path.join(ROOT, "tmp", "catalog-identity-repair-plan.json");
@@ -175,9 +239,15 @@ async function main(): Promise<void> {
     JSON.stringify(
       {
         dry_run: true,
+        likely_shadow_pairs: shadows.length,
+        conflict_review_pairs: conflictReviewPairCount,
+        manual_role_review_pairs: manualRoleMismatchPairs,
+        safe_exact_duplicate_pairs: safeExactDuplicatePairCount,
+        same_name_distinct_mlb_ids: sameNameDistinctMlbIds,
+        duplicate_mlb_id_groups: dupMlbGroups.size,
         proposed_operations: proposed.length,
-        conflicts: conflicts.length,
-        shadow_pairs: shadows.length,
+        conflicts_total: conflictReviewPairs.length + duplicateMlbIdGroups.length,
+        manual_reviews_total: manualRoleReviewPairs.length,
         orphans_no_match: orphans.length,
         wrote: abs,
       },
