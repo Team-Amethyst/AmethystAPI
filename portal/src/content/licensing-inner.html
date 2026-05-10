@@ -41,6 +41,38 @@
       </div>
     </div>
 
+    <!-- API access (portal key model — details live on API keys tab) -->
+    <div class="section">
+      <h3>API access &amp; keys</h3>
+      <p class="section-desc">
+        Licensed Engine routes require an <code class="inline-code inline-code--xs">x-api-key</code> header on every request.
+        Keys are issued through this portal, stored hashed in our database, and tied to your developer account for usage reporting.
+      </p>
+      <div class="card" style="padding:20px 24px">
+        <ul style="margin:0;padding-left:1.25rem;font-size:14px;color:var(--text-secondary);line-height:1.75">
+          <li>
+            <strong style="color:var(--text)">Sign in, then mint keys</strong> — After
+            <a href="#/login" class="link-inline-accent">sign in</a>, use the
+            <a href="#/keys" class="link-inline-accent">API keys</a> tab to create and revoke keys for your developer account.
+            The full secret is shown <strong style="color:var(--text)">once</strong> at creation; only a prefix remains in the list afterward.
+          </li>
+          <li>
+            <strong style="color:var(--text)">Tier &amp; scope</strong> — Each key has a tier (<span class="tier-badge tier-free">free</span>,
+            <span class="tier-badge tier-standard">standard</span>, or <span class="tier-badge tier-premium">premium</span>) that controls rate limits,
+            plus scopes that match which Engine surfaces the key may call (valuation, catalog, scarcity, simulation, signals).
+          </li>
+          <li>
+            <strong style="color:var(--text)">Usage</strong> — Requests are counted per key for royalty reporting and the usage tools on the API keys page
+            (you can paste any key there to refresh counts without signing in).
+          </li>
+        </ul>
+        <p style="margin:16px 0 0;font-size:13px;color:var(--muted);line-height:1.7">
+          Operators may turn issuance off or require an operator token for scripted <code class="inline-code inline-code--xs">POST /api/keys/issue</code> flows;
+          the API keys tab reflects live issuance status from the API.
+        </p>
+      </div>
+    </div>
+
     <!-- Revenue share model -->
     <div class="section">
       <h3>Revenue Share Model</h3>
@@ -66,7 +98,7 @@
           Under the Reuse Clause of the Amethyst Engine license agreement, founding customers
           receive a <strong style="color:var(--text)">5% royalty on net licensing revenue</strong> for a period of
           five years following the first commercial sale. This royalty is calculated and reported quarterly
-          based on cumulative API key usage tracked per licensee.
+          based on cumulative API key usage tracked per licensee developer account (each issued key contributes to reporting).
         </div>
       </div>
     </div>
@@ -79,7 +111,7 @@
           <thead><tr><th>Component</th><th>Stack</th><th>Notes</th></tr></thead>
           <tbody>
             <tr><td>API Runtime</td><td>Node.js 20 + Express 5 on AWS App Runner</td><td>Managed container, auto-scaling</td></tr>
-            <tr><td>Database</td><td>MongoDB Atlas</td><td>Document-based player &amp; key schemas</td></tr>
+            <tr><td>Database</td><td>MongoDB Atlas</td><td>Players plus API keys (hashed secrets, tiers, scopes, usage counters)</td></tr>
             <tr><td>Cache</td><td>Redis</td><td>Low-latency live-draft response caching</td></tr>
             <tr><td>Player Data</td><td>MLB Stats API sync</td><td>Daily refresh during season (Mar–Oct)</td></tr>
             <tr><td>Monitoring</td><td>AWS App Runner health checks</td><td>Automatic restart on failure</td></tr>
