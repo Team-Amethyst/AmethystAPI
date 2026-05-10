@@ -1,0 +1,17 @@
+{
+  "$comment": "Copy to tmp/ or repo-root and fill operations after human review. Never commit real allowlists with production ids.",
+  "version": 1,
+  "approvedBy": "your-name",
+  "approvedAt": "2026-05-10T00:00:00.000Z",
+  "source_plan": "tmp/catalog-identity-repair-plan.json",
+  "notes": "Only shadow-row deleteOne operations are supported by apply-catalog-cleanup-allowlist.ts",
+  "operations": [
+    {
+      "op": "deleteOne",
+      "mongo_id": "69ac5be91f05b394067e8caa",
+      "match_key": "trea turner\tSS\tSS",
+      "shadow_valuation_player_id": "69ac5be91f05b394067e8caa",
+      "reason": "Example only — do not run until canonical projection merged per ops review"
+    }
+  ]
+}

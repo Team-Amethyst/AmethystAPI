@@ -29,6 +29,8 @@
     "audit:catalog-identity": "ts-node --project tsconfig.scripts.json scripts/audit-catalog-identity.ts",
     "repair:catalog-identities": "ts-node --project tsconfig.scripts.json scripts/repair-catalog-identities.ts",
     "export:catalog-cleanup-review": "ts-node --project tsconfig.scripts.json scripts/export-catalog-cleanup-review.ts",
+    "generate:catalog-cleanup-plan": "ts-node --project tsconfig.scripts.json scripts/generate-catalog-cleanup-plan.ts",
+    "apply:catalog-cleanup-allowlist": "ts-node --project tsconfig.scripts.json scripts/apply-catalog-cleanup-allowlist.ts",
     "audit:valuation-factor-influence": "ts-node --project tsconfig.scripts.json scripts/valuation-factor-influence-audit.ts",
     "replay-four-values": "ts-node --project tsconfig.scripts.json scripts/replay-four-values-eval.ts",
     "replay-per-team-pick": "ts-node --project tsconfig.scripts.json scripts/replay-per-team-pick.ts",
