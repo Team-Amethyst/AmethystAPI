@@ -7,6 +7,30 @@ export type MlbStatRecord = Record<string, string | number | undefined>;
 
 const W = [5, 3, 2] as const;
 
+/**
+ * MLB Stats API `stats=season&group=pitching` splits omit `qualityStarts` on many feeds.
+ * When missing/zero, derive a conservative season-level QS count from GS / IP / ER so
+ * catalog rows persist `projection.pitching.qualityStarts` for QS scoring modes.
+ */
+export function estimateQualityStartsFromSeasonAggregate(stat: MlbStatRecord): number {
+  const direct = num(stat.qualityStarts);
+  if (direct > 0) return Math.round(direct);
+  const gs = num(stat.gamesStarted);
+  if (gs <= 0) return 0;
+  const ip = num(stat.inningsPitched);
+  const er = num(stat.earnedRuns);
+  const ipPerStart = ip / gs;
+  const erPerStart = er / gs;
+  /** Rough QS rate from average outing shape (QS = 6+ IP, ≤3 ER per start). */
+  let rate = 0;
+  if (ipPerStart >= 6 && erPerStart <= 3) rate = 0.72;
+  else if (ipPerStart >= 5.5 && erPerStart <= 3.5) rate = 0.5;
+  else if (ipPerStart >= 5 && erPerStart <= 4.5) rate = 0.32;
+  else if (ipPerStart >= 4.5 && erPerStart <= 5) rate = 0.15;
+  else if (ipPerStart >= 4) rate = 0.06;
+  return Math.max(0, Math.min(gs, Math.round(gs * rate)));
+}
+
 function num(v: unknown): number {
   if (typeof v === "number" && Number.isFinite(v)) return v;
   if (typeof v === "string" && v.trim() !== "") {
@@ -170,7 +194,11 @@ export function projectPitching(
     wSV += sv * w;
     wK += num(s.strikeOuts) * w;
     wHolds += num(s.holds) * w;
-    wQS += num(s.qualityStarts) * w;
+    const qsY =
+      num(s.qualityStarts) > 0
+        ? num(s.qualityStarts)
+        : estimateQualityStartsFromSeasonAggregate(s);
+    wQS += qsY * w;
   }
 
   if (wTotal <= 0 || wIP <= 0) return null;
@@ -187,4 +215,70 @@ export function projectPitching(
     holds: Math.round(wHolds / wTotal),
     qualityStarts: Math.round(wQS / wTotal),
   };
+}
+
+/**
+ * Fills missing expanded scoring fields on `projection` from the anchor season stat line
+ * (sync uses the most recent blended year for tie-break). Does not overwrite non-empty
+ * blended strings/numbers — only sets keys that are `undefined` or `""`.
+ */
+export function applyAnchorYearProjectionEnrichment(
+  projection: Record<string, unknown>,
+  anchorBat?: Record<string, string | number> | null,
+  anchorPit?: Record<string, string | number> | null
+): void {
+  if (projection.batting && anchorBat) {
+    fillBattingGapsFromRawStat(
+      projection.batting as Record<string, unknown>,
+      anchorBat
+    );
+  }
+  if (projection.pitching && anchorPit) {
+    fillPitchingGapsFromRawStat(
+      projection.pitching as Record<string, unknown>,
+      anchorPit
+    );
+  }
+}
+
+function fillBattingGapsFromRawStat(
+  b: Record<string, unknown>,
+  stat: Record<string, string | number>
+): void {
+  const ab = num(stat.atBats);
+  const tb = num(stat.totalBases);
+  const slgDirect = parseRateStat(stat.slg);
+  const slgNum =
+    slgDirect != null && slgDirect > 0 ? slgDirect : ab > 0 ? tb / ab : 0;
+  const obpStr = String(stat.obp ?? ".000");
+  const obpNum = parseFloat(obpStr);
+  const opsDirect = parseRateStat(stat.ops);
+  const opsNum =
+    opsDirect != null && opsDirect > 0
+      ? opsDirect
+      : Number.isFinite(obpNum) && Number.isFinite(slgNum)
+        ? obpNum + slgNum
+        : 0;
+
+  if (b.slg === undefined || b.slg === "") {
+    b.slg = Number.isFinite(slgNum) ? slgNum.toFixed(3) : ".000";
+  }
+  if (b.ops === undefined || b.ops === "") {
+    b.ops = Number.isFinite(opsNum) ? opsNum.toFixed(3) : ".000";
+  }
+  if (b.totalBases === undefined) {
+    b.totalBases = Math.max(0, Math.round(tb));
+  }
+}
+
+function fillPitchingGapsFromRawStat(
+  p: Record<string, unknown>,
+  stat: Record<string, string | number>
+): void {
+  if (p.holds === undefined) {
+    p.holds = num(stat.holds);
+  }
+  if (p.qualityStarts === undefined) {
+    p.qualityStarts = estimateQualityStartsFromSeasonAggregate(stat as MlbStatRecord);
+  }
 }

@@ -20,7 +20,12 @@ import {
   calcBatterValue,
   calcPitcherValue,
 } from "../src/lib/mlbSyncFormulas";
-import { projectBatting, projectPitching } from "../src/lib/mlbProjectionBlend";
+import {
+  applyAnchorYearProjectionEnrichment,
+  estimateQualityStartsFromSeasonAggregate,
+  projectBatting,
+  projectPitching,
+} from "../src/lib/mlbProjectionBlend";
 import { resolveMlbTeamAbbrev } from "../src/lib/mlbTeamResolve";
 import Player from "../src/models/Player";
 import { classifyCatalogDoc } from "../src/lib/catalogRowClassification";
@@ -255,8 +260,16 @@ function buildPlayerDocFromAgg(
       strikeouts: Number(stat.strikeOuts ?? 0),
       innings: String(stat.inningsPitched ?? "0"),
       holds: Number(stat.holds ?? 0),
-      qualityStarts: Number(stat.qualityStarts ?? 0),
+      qualityStarts: estimateQualityStartsFromSeasonAggregate(stat),
     };
+  }
+
+  if (Object.keys(projection).length > 0) {
+    applyAnchorYearProjectionEnrichment(
+      projection,
+      agg.bat?.stat,
+      agg.pit?.stat
+    );
   }
 
   const doc: PlayerSyncDoc = {

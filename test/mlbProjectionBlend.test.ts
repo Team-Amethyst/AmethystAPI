@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { projectBatting, projectPitching } from "../src/lib/mlbProjectionBlend";
+import {
+  estimateQualityStartsFromSeasonAggregate,
+  projectBatting,
+  projectPitching,
+} from "../src/lib/mlbProjectionBlend";
 
 describe("mlbProjectionBlend extended stat outputs", () => {
   const batY1 = {
@@ -42,6 +46,27 @@ describe("mlbProjectionBlend extended stat outputs", () => {
     if (!p) return;
     expect(p.holds).toBeGreaterThanOrEqual(0);
     expect(p.qualityStarts).toBeGreaterThanOrEqual(0);
+  });
+
+  it("estimateQualityStartsFromSeasonAggregate fills when API omits qualityStarts", () => {
+    const est = estimateQualityStartsFromSeasonAggregate({
+      gamesStarted: 32,
+      inningsPitched: 198,
+      earnedRuns: 78,
+    });
+    expect(est).toBeGreaterThan(5);
+    expect(est).toBeLessThanOrEqual(32);
+  });
+
+  it("estimateQualityStarts prefers API qualityStarts when present", () => {
+    expect(
+      estimateQualityStartsFromSeasonAggregate({
+        qualityStarts: 22,
+        gamesStarted: 30,
+        inningsPitched: 180,
+        earnedRuns: 70,
+      })
+    ).toBe(22);
   });
 });
 
