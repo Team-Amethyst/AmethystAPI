@@ -15,20 +15,23 @@ function normPos(p: string): string {
   return p.trim().toUpperCase();
 }
 
+function splitPosTokens(raw: string): string[] {
+  return normPos(raw)
+    .split(/[,/]/)
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
+
 function positionCompatible(catalogPos: string, vendorPos: string): boolean {
   const c = normPos(catalogPos);
   const v = normPos(vendorPos);
   if (c === v) return true;
   if (v === "P" && (c === "SP" || c === "RP")) return true;
+  if (c === "P" && (v === "SP" || v === "RP")) return true;
   if (v === "DH" && c === "UTIL") return false;
-  const dual = c.includes("/") || c.includes(",");
-  if (dual) {
-    const parts = c
-      .split(/[,/]/)
-      .map((s) => s.trim())
-      .filter(Boolean);
-    if (parts.some((x) => x === v)) return true;
-  }
+  const cParts = splitPosTokens(catalogPos);
+  const vParts = splitPosTokens(vendorPos);
+  if (vParts.some((t) => cParts.includes(t))) return true;
   return false;
 }
 

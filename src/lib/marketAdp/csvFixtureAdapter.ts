@@ -1,5 +1,6 @@
 import { readFileSync } from "fs";
 import type { MarketAdpAdapter, MarketAdpAdapterContext, MarketAdpVendorRow } from "./types";
+import { parseCsvMatrix } from "./csvParse";
 
 function parseNumberCell(raw: string): number | undefined {
   const t = raw.trim();
@@ -9,13 +10,10 @@ function parseNumberCell(raw: string): number | undefined {
 }
 
 function parseCsv(content: string): MarketAdpVendorRow[] {
-  const lines = content
-    .split(/\r?\n/)
-    .map((l) => l.trim())
-    .filter((l) => l.length > 0);
-  if (lines.length < 2) return [];
+  const matrix = parseCsvMatrix(content);
+  if (matrix.length < 2) return [];
 
-  const header = lines[0]!.split(",").map((h) => h.trim().toLowerCase());
+  const header = matrix[0]!.map((h) => h.trim().toLowerCase());
   const col = (names: string[]): number => {
     for (const n of names) {
       const i = header.indexOf(n);
@@ -25,18 +23,18 @@ function parseCsv(content: string): MarketAdpVendorRow[] {
   };
 
   const iMlb = col(["mlb_id", "mlbid"]);
-  const iName = col(["name"]);
+  const iName = col(["name", "player"]);
   const iTeam = col(["team"]);
-  const iPos = col(["position", "pos"]);
-  const iAdp = col(["adp"]);
+  const iPos = col(["position", "pos", "position(s)"]);
+  const iAdp = col(["adp", "adp / aav", "adp/aav"]);
   const iMin = col(["adp_min", "min"]);
   const iMax = col(["adp_max", "max"]);
-  const iPick = col(["pick_count", "sample_size", "n"]);
+  const iPick = col(["pick_count", "sample_size", "# picks", "picks"]);
 
   const rows: MarketAdpVendorRow[] = [];
 
-  for (let li = 1; li < lines.length; li++) {
-    const cols = lines[li]!.split(",").map((c) => c.trim());
+  for (let li = 1; li < matrix.length; li++) {
+    const cols = matrix[li]!;
     const cell = (idx: number) => (idx >= 0 && cols[idx] !== undefined ? cols[idx]! : "");
 
     const mlbRaw = cell(iMlb);

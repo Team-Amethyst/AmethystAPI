@@ -2,16 +2,20 @@
  * Dry-run market ADP ingestion: load vendor CSV + catalog (Mongo or JSON), match, emit preview JSON.
  * Never writes Mongo.
  *
- * Usage:
- *   pnpm exec ts-node --project tsconfig.scripts.json scripts/market-adp-ingest-preview.ts \
- *     --csv test-fixtures/market-adp/sample-adp.csv \
- *     --catalog-json test-fixtures/market-adp/catalog-sample.json \
- *     --out tmp/market-adp-ingest-preview.json
+ * Usage (fixture profile is default; CSV defaults to sample fixture when omitted):
+ *   pnpm market-adp-preview
+ *   pnpm market-adp-preview -- --catalog-json path/to/catalog.json --out tmp/preview.json
+ *
+ * NFBC-style export (requires explicit --csv; never writes Mongo):
+ *   pnpm market-adp-preview -- --source nfbc --csv path/to/nfbc-export.csv
  *
  * Mongo catalog (optional):
  *   MONGO_URI=... pnpm exec ts-node ... --mongo --csv path/to.csv
  *
- * Feature flag (informational): AMETHYST_MARKET_ADP_ADAPTER=csv_fixture
+ * NFBC-style CSV:
+ *   pnpm market-adp-preview -- --source nfbc --csv path/to/nfbc-export.csv
+ *
+ * Feature flag (informational): AMETHYST_MARKET_ADP_ADAPTER=csv_fixture | nfbc_csv
  */
 import dotenv from "dotenv";
 import { mkdirSync, readFileSync, writeFileSync } from "fs";
@@ -19,8 +23,10 @@ import path from "path";
 import mongoose from "mongoose";
 import {
   createCsvFixtureAdapter,
+  createNfbcCsvAdapter,
   dryRunMatchMarketAdp,
   type DryRunMatch,
+  type MarketAdpAdapter,
 } from "../src/lib/marketAdp";
 import { normalizeCatalogPlayers } from "../src/lib/playerCatalog";
 import { loadMongoCatalogForEngine } from "../src/lib/mongoCatalogPipeline";
@@ -30,20 +36,31 @@ dotenv.config();
 
 const ROOT = path.resolve(__dirname, "..");
 
+type MarketAdpSourceCli = "csv_fixture" | "nfbc";
+
 function parseArgs(argv: string[]): {
+  source: MarketAdpSourceCli;
   csv: string;
   catalogJson?: string;
   mongo: boolean;
   out: string;
 } {
   const a = argv.slice(2);
+  let source: MarketAdpSourceCli = "csv_fixture";
   let csv = "";
+  let csvExplicit = false;
   let catalogJson: string | undefined;
   let mongo = false;
   let out = path.join(ROOT, "tmp/market-adp-ingest-preview.json");
   for (let i = 0; i < a.length; i++) {
-    if (a[i] === "--csv" && a[i + 1]) {
+    if (a[i] === "--source" && a[i + 1]) {
+      const s = a[++i]!.trim().toLowerCase();
+      if (s === "nfbc" || s === "nfc") source = "nfbc";
+      else if (s === "csv_fixture" || s === "fixture" || s === "csv") source = "csv_fixture";
+      else throw new Error(`Unknown --source "${s}" (use nfbc or csv_fixture)`);
+    } else if (a[i] === "--csv" && a[i + 1]) {
       csv = a[++i]!;
+      csvExplicit = true;
     } else if (a[i] === "--catalog-json" && a[i + 1]) {
       catalogJson = a[++i]!;
     } else if (a[i] === "--mongo") {
@@ -53,9 +70,13 @@ function parseArgs(argv: string[]): {
     }
   }
   if (!csv) {
-    throw new Error("Required: --csv <path-to-adp.csv>");
+    csv = path.join(ROOT, "test-fixtures/market-adp/sample-adp.csv");
+  }
+  if (source === "nfbc" && !csvExplicit) {
+    throw new Error('NFBC profile requires an explicit file: --csv <path-to-export.csv>');
   }
   return {
+    source,
     csv: path.isAbsolute(csv) ? csv : path.join(ROOT, csv),
     catalogJson: catalogJson
       ? path.isAbsolute(catalogJson)
@@ -107,10 +128,15 @@ async function loadCatalog(params: {
   return normalizeCatalogPlayers(raw, () => undefined);
 }
 
+function createAdapter(source: MarketAdpSourceCli, csvPath: string): MarketAdpAdapter {
+  if (source === "nfbc") return createNfbcCsvAdapter(csvPath);
+  return createCsvFixtureAdapter(csvPath);
+}
+
 async function main(): Promise<void> {
-  const adapterEnv = process.env.AMETHYST_MARKET_ADP_ADAPTER ?? "csv_fixture";
   const args = parseArgs(process.argv);
-  const adapter = createCsvFixtureAdapter(args.csv);
+  const adapter = createAdapter(args.source, args.csv);
+  const adapterEnv = process.env.AMETHYST_MARKET_ADP_ADAPTER ?? adapter.id;
   const fetchedAt = new Date().toISOString();
   const vendorRows = await adapter.fetchRows({
     sourceName: adapter.displayName,
@@ -129,6 +155,7 @@ async function main(): Promise<void> {
   );
 
   const stats = {
+    source_cli: args.source,
     adapter_env: adapterEnv,
     vendor_rows: vendorRows.length,
     catalog_players: catalog.length,

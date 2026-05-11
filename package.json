@@ -40,7 +40,7 @@
     "replay-draft-json-analysis:mongo-report": "ts-node --project tsconfig.scripts.json scripts/replay-draft-json-per-pick-analysis.ts --mongo --out tmp/draft-json-after_pick_130-mongo-analysis.json",
     "dedupe-fixtures": "ts-node --project tsconfig.scripts.json scripts/dedupe-fixture-auction-picks.ts",
     "check-fixture-catalog": "ts-node --project tsconfig.scripts.json scripts/check-fixture-catalog-ids.ts",
-    "market-adp-preview": "ts-node --project tsconfig.scripts.json scripts/market-adp-ingest-preview.ts --csv test-fixtures/market-adp/sample-adp.csv --catalog-json test-fixtures/market-adp/catalog-sample.json --out tmp/market-adp-ingest-preview.json"
+    "market-adp-preview": "ts-node --project tsconfig.scripts.json scripts/market-adp-ingest-preview.ts"
   },
   "keywords": [
     "api",
