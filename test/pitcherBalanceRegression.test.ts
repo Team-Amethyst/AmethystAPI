@@ -4,6 +4,15 @@
  * on Draftroom default Mongo calibration (see `baselineValueEngine`, `baselineRotoZConfig`,
  * `baselineProjectionStats.categoryWeight`).
  * Synthetic checks run in CI; Mongo-backed checks validate canonical catalog when MONGO_URI is set.
+ *
+ * **Mongo pool size:** After roster-universe catalog upserts, `loadMongoCatalogForEngine` yields a larger
+ * valuation-eligible set (~900 rows vs the earlier ~536). Star auction ceilings rise slightly; bands below
+ * are widened for top hitter and total auction mass vs league budget (sum of `auction_value` / league budget
+ * rises with pool size) — hitter share, top pitcher, and slot directionality checks stay meaningful.
+ *
+ * **5× OF (Mongo):** With a deep roster-universe pool, the sum of the top five raw `position` OF auction tags
+ * can fall vs 3× OF while inflation reallocates; we instead assert **primary outfield cohort** auction dollars
+ * rise (same predicate as `valuationRowIsPrimaryOutfield` in OF collapse diagnostics).
  */
 import mongoose from "mongoose";
 import { describe, expect, it } from "vitest";
@@ -12,6 +21,7 @@ import {
   buildSyntheticCalibrationDraftroomPool,
   draftroomUiDefaultRoster,
 } from "../src/lib/calibrationDraftroomFixture";
+import { isObjectIdStylePlayerId } from "../src/lib/catalogIdentityHelpers";
 import { loadMongoCatalogForEngine } from "../src/lib/mongoCatalogPipeline";
 import { positionOverridesFromRequest } from "../src/lib/fantasyRosterSlots";
 import { getPlayerId } from "../src/lib/playerId";
@@ -83,6 +93,20 @@ function topCatcherAuction(rows: { position: string; auction_value: number }[]):
   const cs = rows.filter((v) => (v.position ?? "").toUpperCase().trim() === "C");
   if (cs.length === 0) return 0;
   return Math.max(...cs.map((v) => v.auction_value));
+}
+
+/** Mirrors `valuationRowIsPrimaryOutfield` (kept local so this test stays self-contained). */
+function isPrimaryOutfieldValuationRow(v: {
+  position?: string;
+  valuation_explain?: { effective_positions?: string[] };
+}): boolean {
+  const pos = (v.position ?? "").toUpperCase().trim();
+  if (pos === "LF" || pos === "CF" || pos === "RF" || pos === "OF") return true;
+  const eff = v.valuation_explain?.effective_positions ?? [];
+  return eff.some((p) => {
+    const u = p.toUpperCase().trim();
+    return u === "LF" || u === "CF" || u === "RF" || u === "OF";
+  });
 }
 
 function topFiveOfSum(
@@ -163,6 +187,9 @@ describe.skipIf(!process.env.MONGO_URI)("pitcher balance regression (Mongo canon
 
       const ov = positionOverridesFromRequest(input.position_overrides);
       const rows = wf.response.valuations;
+      expect(pool.map((p) => getPlayerId(p)).filter(isObjectIdStylePlayerId)).toEqual([]);
+      expect(rows.map((r) => r.player_id).filter(isObjectIdStylePlayerId)).toEqual([]);
+
       const { hitter$, pitcher$ } = classifyRows(rows, pool, ov);
       const total = hitter$ + pitcher$;
       const hitterShare = hitter$ / total;
@@ -177,13 +204,15 @@ describe.skipIf(!process.env.MONGO_URI)("pitcher balance regression (Mongo canon
       expect(topPitcher).toBeGreaterThanOrEqual(22);
       expect(topPitcher).toBeLessThanOrEqual(48);
       expect(topHitter).toBeGreaterThanOrEqual(18);
-      expect(topHitter).toBeLessThanOrEqual(52);
+      // Expanded roster-universe catalog: top hitter ~$55 (e.g. Soto) vs ~$52 cap on legacy 536-row seed.
+      expect(topHitter).toBeLessThanOrEqual(58);
 
       const leagueBudget = input.total_budget * input.num_teams;
       const sumAll = rows.reduce((s, r) => s + r.auction_value, 0);
       const ratio = sumAll / leagueBudget;
-      expect(ratio).toBeGreaterThanOrEqual(1.07);
-      expect(ratio).toBeLessThanOrEqual(1.11);
+      // Legacy ~536-row seed ~1.08–1.11; expanded roster-universe pool ~1.20 (more valued rows before roster fit).
+      expect(ratio).toBeGreaterThanOrEqual(1.12);
+      expect(ratio).toBeLessThanOrEqual(1.26);
 
       const base = wf;
       const twoC: NormalizedValuationInput = {
@@ -208,8 +237,10 @@ describe.skipIf(!process.env.MONGO_URI)("pitcher balance regression (Mongo canon
       const wf5 = executeValuationWorkflow(pool, fiveOf, {});
       expect(wf5.ok).toBe(true);
       if (!wf5.ok) return;
-      expect(topFiveOfSum(wf5.response.valuations)).toBeGreaterThan(
-        topFiveOfSum(base.response.valuations) - 0.01
+      const primaryOfCohort$ = (vals: typeof rows) =>
+        vals.filter((v) => isPrimaryOutfieldValuationRow(v)).reduce((s, v) => s + v.auction_value, 0);
+      expect(primaryOfCohort$(wf5.response.valuations)).toBeGreaterThan(
+        primaryOfCohort$(base.response.valuations) - 0.01
       );
 
       const skenes = rows.find((r) => r.player_id === "694973");
