@@ -13,6 +13,9 @@
  *   pnpm sync-players -- --roster-universe-v1 --dry-run
  *   pnpm sync-players -- --roster-universe-v1 --universe-nfbc-preview tmp/nfbc-data-mongo-preview.json --dry-run
  *   pnpm sync-players -- --roster-universe-v1 --confirm-universe-write   # writes Mongo (requires non-dry-run)
+ *
+ * Roster-universe stat maps mirror legacy capped sync for anchor-capped MLB IDs (paginated fill only
+ * where appropriate); see `runRosterCatalogUniverseBuild` in `src/lib/mlbCatalogUniverse/`.
  */
 
 import mongoose from "mongoose";

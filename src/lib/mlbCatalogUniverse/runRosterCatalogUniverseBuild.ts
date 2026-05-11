@@ -150,8 +150,22 @@ function buildMinimalTierDoc(args: {
 
 /**
  * Roster + NFBC candidate universe: merge roster and optional NFBC MLB IDs, attach bios, classify
- * valuation tiers, and build `PlayerSyncDoc` rows via `buildPlayerDocFromAgg` (capped + paginated
- * season stats). Does not write Mongo.
+ * valuation tiers, and build `PlayerSyncDoc` rows via `buildPlayerDocFromAgg`.
+ *
+ * **Season stats / projection parity with legacy `sync-players`:**
+ * - For each of the three blend seasons, the builder loads **capped** first-page stats (same limits
+ *   as sync) **and** **paginated** season splits so players missing from the global leaderboard still
+ *   appear in the roster-expanded universe.
+ * - Per-season batting/pitching maps are **`buildYearStatIndexCappedWithOptionalFullFallback`**: start
+ *   from capped indexes; paginated rows fill a season **only** for candidate MLB IDs **not** listed in
+ *   `skipFullFallbackForIds` (the set of keys from anchor-year capped `aggregatePositiveSplits`).
+ *   Anchor-capped players therefore keep **capped-first** behavior: if capped has no row for a prior
+ *   year, that year stays absent — matching legacy `projectBatting` / `projectPitching` (year skipped).
+ * - Anchor split aggregation prefers capped when the player has positive capped stats
+ *   (`anchorSplitAggPreferCapped`).
+ *
+ * **Mongo:** this function does not write. CLI upserts remain gated by
+ * `sync-players --roster-universe-v1 --confirm-universe-write` (no `--dry-run`).
  */
 export async function runRosterCatalogUniverseBuild(
   options: RunRosterCatalogUniverseBuildOptions

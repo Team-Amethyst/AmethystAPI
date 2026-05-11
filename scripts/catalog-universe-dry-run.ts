@@ -1,6 +1,7 @@
 /**
- * Dry-run catalog universe: roster IDs ∪ NFBC preview MLB IDs via `runRosterCatalogUniverseBuild`.
- * **Never connects to Mongo.**
+ * Dry-run catalog universe builder: roster IDs ∪ NFBC preview MLB IDs, then `runRosterCatalogUniverseBuild`.
+ * Season stats load paginated splits for coverage, but anchor-capped players use capped-first maps
+ * matching legacy sync (`skipFullFallbackForIds`); see that function’s docblock. **Never connects to Mongo.**
  *
  * Usage:
  *   pnpm catalog-universe:dry-run -- --preview tmp/nfbc-data-mongo-preview.json
