@@ -3,4 +3,6 @@ export * from "./matchDryRun";
 export * from "./csvFixtureAdapter";
 export * from "./csvParse";
 export * from "./nfbcCsvAdapter";
+export * from "./nfbcRemoteCsv";
+export * from "./nfbcDataPhp";
 export * from "./wire";

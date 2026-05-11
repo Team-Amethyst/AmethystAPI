@@ -20,13 +20,14 @@ const OBJECT_ID_HEX = /^[a-f0-9]{24}$/i;
 
 /** Lowercase, collapse spaces, strip accents, drop periods for Jr./Sr. noise. */
 export function normalizePlayerName(name: string): string {
-  return name
+  let s = name
     .normalize("NFKD")
     .replace(/\p{M}/gu, "")
     .toLowerCase()
-    .replace(/\./g, "")
-    .replace(/\s+/g, " ")
-    .trim();
+    .replace(/\./g, "");
+  // Drop trailing generational roman numerals (II / III / IV) after word boundaries.
+  s = s.replace(/\b(ii|iii|iv)\b\s*$/i, "").trim();
+  return s.replace(/\s+/g, " ").trim();
 }
 
 /** Uppercase team; placeholder teams normalize to `--`. */
@@ -34,6 +35,38 @@ export function normalizeTeamAbbrev(team: string): string {
   const t = team.trim().toUpperCase();
   if (t === "" || t === "--" || t === "FA" || t === "N/A" || t === "UNK") return "--";
   return t;
+}
+
+/**
+ * Single canonical bucket per MLB franchise for **identity matching** (vendor ADP ↔ catalog).
+ * Does not assert real-time roster validity; keeps KCR/KC, TBR/TB, etc. aligned.
+ */
+export function canonicalMlbTeamAbbrevForMatch(team: string): string {
+  const t = normalizeTeamAbbrev(team);
+  if (t === "--") return t;
+  const bucket: Record<string, string> = {
+    WAS: "WSH",
+    WSN: "WSH",
+    WSH: "WSH",
+    AZ: "ARI",
+    ARI: "ARI",
+    ARZ: "ARI",
+    CHW: "CHW",
+    CWS: "CHW",
+    KC: "KC",
+    KCR: "KC",
+    TB: "TB",
+    TBR: "TB",
+    SF: "SF",
+    SFG: "SF",
+    SD: "SD",
+    SDP: "SD",
+    ATH: "OAK",
+    OAK: "OAK",
+    MLW: "MIL",
+    MIL: "MIL",
+  };
+  return bucket[t] ?? t;
 }
 
 export function normalizePrimaryPosition(position: string): string {

@@ -2,6 +2,7 @@ import { z } from "zod";
 
 /** External vendor row after normalization (before catalog match). */
 export const marketAdpVendorRowZod = z.object({
+  vendor_rank: z.number().int().nonnegative().optional(),
   mlb_id: z.union([z.number().int().positive(), z.null()]).optional(),
   name: z.string().min(1),
   team: z.string(),
