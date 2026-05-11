@@ -1,4 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+
+/** Bump when server-backed fields for this row change so local drafts reset without setState-in-effect. */
+function webhookResetEpoch(keyId: string, newsSignalsWebhookUrl: string | null): string {
+  return `${keyId}|${newsSignalsWebhookUrl ?? ""}`;
+}
 import type { PatchNewsSignalsWebhookBody, SendNewsSignalsWebhookResult } from "@/api/account";
 
 const DEFAULT_TEST_MESSAGE = "Hello from the developer portal";
@@ -87,22 +92,21 @@ export function KeyNewsSignalsWebhookEditor({
     };
   }, []);
 
-  useEffect(() => {
+  const resetEpoch = webhookResetEpoch(keyId, newsSignalsWebhookUrl);
+  const [syncedEpoch, setSyncedEpoch] = useState(resetEpoch);
+  if (syncedEpoch !== resetEpoch) {
+    setSyncedEpoch(resetEpoch);
     setUrl(newsSignalsWebhookUrl ?? "");
     setBearerDraft("");
     setLocalErr("");
     setTestMessage(DEFAULT_TEST_MESSAGE);
     setSendErr("");
     setSendResult(null);
-  }, [newsSignalsWebhookUrl, keyId]);
+  }
 
   /** Saved on the server — URL (and Bearer) are read-only until removed. */
   const registeredUrl = (newsSignalsWebhookUrl ?? "").trim();
   const urlLocked = registeredUrl.length > 0;
-
-  useEffect(() => {
-    clearSavedNotice();
-  }, [keyId, clearSavedNotice]);
 
   if (!hasSignalsScope) {
     return (
