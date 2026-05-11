@@ -1,12 +1,15 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import type { PatchNewsSignalsWebhookBody, SendNewsSignalsWebhookResult } from "@/api/account";
 
 /** Bump when server-backed fields for this row change so local drafts reset without setState-in-effect. */
 function webhookResetEpoch(keyId: string, newsSignalsWebhookUrl: string | null): string {
   return `${keyId}|${newsSignalsWebhookUrl ?? ""}`;
 }
-import type { PatchNewsSignalsWebhookBody, SendNewsSignalsWebhookResult } from "@/api/account";
 
 const DEFAULT_TEST_MESSAGE = "Hello from the developer portal";
+
+/** How long the “Test webhook” HTTP result (and send errors) stay visible before auto-clearing. */
+const SEND_FEEDBACK_DISMISS_MS = 6500;
 
 function savedNoticeFor(body: PatchNewsSignalsWebhookBody): string {
   if (body.newsSignalsWebhookUrl === null) {
@@ -65,6 +68,27 @@ export function KeyNewsSignalsWebhookEditor({
   const [sendErr, setSendErr] = useState("");
   const [sendResult, setSendResult] = useState<SendNewsSignalsWebhookResult | null>(null);
   const savedNoticeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const sendFeedbackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const clearSendFeedback = useCallback(() => {
+    if (sendFeedbackTimerRef.current != null) {
+      window.clearTimeout(sendFeedbackTimerRef.current);
+      sendFeedbackTimerRef.current = null;
+    }
+    setSendErr("");
+    setSendResult(null);
+  }, []);
+
+  const scheduleSendFeedbackDismiss = useCallback(() => {
+    if (sendFeedbackTimerRef.current != null) {
+      window.clearTimeout(sendFeedbackTimerRef.current);
+    }
+    sendFeedbackTimerRef.current = window.setTimeout(() => {
+      setSendErr("");
+      setSendResult(null);
+      sendFeedbackTimerRef.current = null;
+    }, SEND_FEEDBACK_DISMISS_MS);
+  }, []);
 
   const clearSavedNotice = useCallback(() => {
     if (savedNoticeTimerRef.current != null) {
@@ -89,6 +113,7 @@ export function KeyNewsSignalsWebhookEditor({
   useEffect(() => {
     return () => {
       if (savedNoticeTimerRef.current != null) window.clearTimeout(savedNoticeTimerRef.current);
+      if (sendFeedbackTimerRef.current != null) window.clearTimeout(sendFeedbackTimerRef.current);
     };
   }, []);
 
@@ -103,6 +128,13 @@ export function KeyNewsSignalsWebhookEditor({
     setSendErr("");
     setSendResult(null);
   }
+
+  useLayoutEffect(() => {
+    if (sendFeedbackTimerRef.current != null) {
+      window.clearTimeout(sendFeedbackTimerRef.current);
+      sendFeedbackTimerRef.current = null;
+    }
+  }, [resetEpoch]);
 
   /** Saved on the server — URL (and Bearer) are read-only until removed. */
   const registeredUrl = (newsSignalsWebhookUrl ?? "").trim();
@@ -124,6 +156,7 @@ export function KeyNewsSignalsWebhookEditor({
     try {
       await onApply(body);
       setBearerDraft("");
+      clearSendFeedback();
       flashSaved(
         savedNoticeFor(body),
         body.newsSignalsWebhookUrl === null ? "muted" : "success"
@@ -162,22 +195,27 @@ export function KeyNewsSignalsWebhookEditor({
 
   const handleSendCustomWebhook = async () => {
     if (!onSendWebhook || !urlLocked) return;
-    setSendErr("");
-    setSendResult(null);
+    clearSendFeedback();
     const trimmed = testMessage.trim();
     if (!trimmed) {
       setSendErr("Enter a message to send.");
+      scheduleSendFeedbackDismiss();
       return;
     }
     const payload = {
       event: "custom",
       message: trimmed,
+      /** Lets Draft/BFF show a toast instead of treating this like a durable room alert. */
+      source: "portal_test",
+      ephemeral: true,
     };
     try {
       const r = await onSendWebhook(payload);
       setSendResult(r);
+      scheduleSendFeedbackDismiss();
     } catch (e) {
       setSendErr(e instanceof Error ? e.message : "Could not reach your webhook.");
+      scheduleSendFeedbackDismiss();
     }
   };
 
@@ -216,6 +254,7 @@ export function KeyNewsSignalsWebhookEditor({
           disabled={saving || urlLocked}
           onChange={(e) => {
             clearSavedNotice();
+            clearSendFeedback();
             setUrl(e.target.value);
           }}
         />
@@ -246,6 +285,7 @@ export function KeyNewsSignalsWebhookEditor({
           disabled={saving || urlLocked}
           onChange={(e) => {
             clearSavedNotice();
+            clearSendFeedback();
             setBearerDraft(e.target.value);
           }}
         />
@@ -312,9 +352,11 @@ export function KeyNewsSignalsWebhookEditor({
           <h4 className="keys-news-webhooks-heading">Test webhook</h4>
           <p className="section-desc keys-webhook-send-intro">
             Sends one request to your saved URL with the same Bearer as live{" "}
-            <code className="inline-code inline-code--xs">signals_updated</code> notifications. The body is{" "}
-            <code className="inline-code inline-code--xs">{`{ "event": "custom", "message": "…" }`}</code> — your Draft
-            handler can treat it like any other webhook payload.
+            <code className="inline-code inline-code--xs">signals_updated</code> notifications. The body includes{" "}
+            <code className="inline-code inline-code--xs">event</code>, <code className="inline-code inline-code--xs">message</code>, plus{" "}
+            <code className="inline-code inline-code--xs">source: &quot;portal_test&quot;</code> and{" "}
+            <code className="inline-code inline-code--xs">ephemeral: true</code> so your BFF can show a short-lived toast
+            instead of a persistent alert. The HTTP status line below clears after a few seconds.
           </p>
           <div className="portal-field keys-webhook-message-field">
             <label className="portal-label" htmlFor={`news-webhook-message-${keyId}`}>
@@ -329,8 +371,7 @@ export function KeyNewsSignalsWebhookEditor({
               disabled={sendWebhookPending}
               value={testMessage}
               onChange={(e) => {
-                setSendErr("");
-                setSendResult(null);
+                clearSendFeedback();
                 setTestMessage(e.target.value);
               }}
             />

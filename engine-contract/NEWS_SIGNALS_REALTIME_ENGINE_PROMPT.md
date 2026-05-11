@@ -57,6 +57,29 @@ Payload for every POST:
 
 Failures are logged only; they do not fail the signals response.
 
+**Portal “Test webhook” (manual POST via `POST /api/account/keys/:id/news-signals-webhook/send`):**
+
+Body is developer-supplied JSON; the portal sends:
+
+```json
+{
+  "event": "custom",
+  "message": "<text>",
+  "source": "portal_test",
+  "ephemeral": true
+}
+```
+
+- **`source` / `ephemeral`:** Convention so Draft can render a **short-lived toast** (or ignore in analytics) instead of treating the payload like a durable in-room alert. Existing hooks that only read `event` + `message` remain valid.
+- **Future draft-domain events (recommended plan, not shipped on Engine yet):** Push scarcity/monopoly-style signals only when the Draft host can correlate them to a **league + draft** (Engine valuation already computes `context_v2.position_alerts` and monopoly-style concentration in `analyzeScarcity`; exposing that over HTTP on every pick is heavy). A practical sequence:
+  1. **Phase 1 — Draft-led:** Keep scarcity/monopoly UX driven by Draft’s existing valuation calls and Socket.IO; no new Engine webhook events until product agrees on frequency and payload size.
+  2. **Phase 2 — Optional webhook fan-out:** Add Engine-originated events only if Draft registers interest (e.g. flag on key or separate URL), with throttling (e.g. at most one POST per league per N seconds per event family). Candidate shapes:
+     - `{ "event": "draft_scarcity_shift", "league_id": "...", "occurred_at": "...", "positions": [ { "position": "SS", "urgency_score": 72, "severity": "high" } ] }` — subset of `context_v2.position_alerts`.
+     - `{ "event": "draft_monopoly_shift", "league_id": "...", "occurred_at": "...", "warnings": [ { "category": "HR", "team_id": "...", "share_percentage": 42.1 } ] }` — mirrors monopoly warnings from scarcity analysis when Draft sends full `drafted_players` + scoring categories in valuation requests (Engine does not see live picks without that context).
+  3. **Phase 3 — Idempotency:** Include `event_id` or content hash so Draft can dedupe if Engine retries.
+
+Until Phase 2 exists, **`signals_updated`** remains the only automatic Engine→Draft webhook; scarcity/monopoly belong in **valuation responses** (`context_v2`) and Draft UI.
+
 ### 4. Engine env (global fallback only)
 
 | Variable | Purpose |
