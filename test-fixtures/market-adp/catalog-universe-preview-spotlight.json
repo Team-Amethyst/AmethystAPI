@@ -1,0 +1,65 @@
+{
+  "adapter_display_name": "NFBC_fixture_spotlight",
+  "matches": [
+    {
+      "kind": "unmatched_vendor",
+      "vendor": {
+        "name": "George Kirby",
+        "team": "SEA",
+        "position": "P",
+        "adp": 1,
+        "mlb_id": 669923
+      }
+    },
+    {
+      "kind": "unmatched_vendor",
+      "vendor": {
+        "name": "Cole Ragans",
+        "team": "KC",
+        "position": "P",
+        "adp": 2,
+        "mlb_id": 666142
+      }
+    },
+    {
+      "kind": "unmatched_vendor",
+      "vendor": {
+        "name": "Devin Williams",
+        "team": "NYM",
+        "position": "P",
+        "adp": 3,
+        "mlb_id": 642207
+      }
+    },
+    {
+      "kind": "unmatched_vendor",
+      "vendor": {
+        "name": "Dylan Cease",
+        "team": "TOR",
+        "position": "P",
+        "adp": 4,
+        "mlb_id": 656302
+      }
+    },
+    {
+      "kind": "unmatched_vendor",
+      "vendor": {
+        "name": "Spencer Strider",
+        "team": "ATL",
+        "position": "P",
+        "adp": 5,
+        "mlb_id": 675911
+      }
+    },
+    {
+      "kind": "unmatched_vendor",
+      "vendor": {
+        "name": "Oneil Cruz",
+        "team": "PIT",
+        "position": "SS",
+        "adp": 6,
+        "mlb_id": 665833
+      }
+    }
+  ]
+}

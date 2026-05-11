@@ -39,6 +39,9 @@ export interface TeamRosterBucket {
 
 export type ScoringFormat = "5x5" | "6x6" | "points";
 
+/** Gates auction / inflation pools vs research-only catalog rows (roster universe v1). */
+export type CatalogValuationTier = "valuation_eligible" | "market_only" | "roster_context";
+
 export interface LeanPlayer {
   _id: unknown;
   mlbId?: number;
@@ -67,6 +70,8 @@ export interface LeanPlayer {
   outlook?: string;
   stats?: Record<string, unknown>;
   projection?: Record<string, unknown>;
+  /** When absent, legacy rows are treated as `valuation_eligible` if `isValuationEligibleCatalogRow` passes. */
+  catalogValuationTier?: CatalogValuationTier;
 }
 
 export type InflationModel =

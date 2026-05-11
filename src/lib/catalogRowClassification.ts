@@ -3,7 +3,7 @@
  */
 
 import { getPlayerId } from "./playerId";
-import type { LeanPlayer } from "../types/brain";
+import type { CatalogValuationTier, LeanPlayer } from "../types/brain";
 
 export type CatalogRowClass =
   | "canonical_mlb_player"
@@ -43,8 +43,19 @@ export function classifyLeanPlayer(p: LeanPlayer & { catalogKind?: CatalogKind }
   return classifyCatalogDoc(p as unknown as Record<string, unknown>);
 }
 
+function coerceCatalogValuationTier(raw: unknown): CatalogValuationTier | undefined {
+  if (raw === "valuation_eligible" || raw === "market_only" || raw === "roster_context") {
+    return raw;
+  }
+  return undefined;
+}
+
 /** Rows allowed into valuation / inflation / baseline pools. */
 export function isValuationEligibleCatalogRow(p: LeanPlayer & { catalogKind?: CatalogKind }): boolean {
+  const tier =
+    p.catalogValuationTier ??
+    coerceCatalogValuationTier((p as unknown as Record<string, unknown>).catalogValuationTier);
+  if (tier === "market_only" || tier === "roster_context") return false;
   const c = classifyLeanPlayer(p);
   return c === "canonical_mlb_player" || c === "custom_player";
 }

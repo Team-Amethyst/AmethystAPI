@@ -8,25 +8,29 @@
  *   pnpm sync-players -- --dry-run --rebuild-catalog
  *   pnpm sync-players -- --rebuild-catalog --confirm-destructive   # dedupe + remove invalid
  *   pnpm sync-players -- --skip-sync --rebuild-catalog --dry-run
+ *
+ * Roster + NFBC catalog universe (v1, dry-run by default for writes):
+ *   pnpm sync-players -- --roster-universe-v1 --dry-run
+ *   pnpm sync-players -- --roster-universe-v1 --universe-nfbc-preview tmp/nfbc-data-mongo-preview.json --dry-run
+ *   pnpm sync-players -- --roster-universe-v1 --confirm-universe-write   # writes Mongo (requires non-dry-run)
  */
 
 import mongoose from "mongoose";
 import dotenv from "dotenv";
-import { mkdirSync, writeFileSync } from "fs";
+import { mkdirSync, readFileSync, writeFileSync } from "fs";
 import path from "path";
+import type { MlbPlayer, PlayerSyncDoc } from "../src/lib/mlbPlayerSyncFromSplits";
+import { fetchCappedSeasonSplitsLikeSync } from "../src/lib/mlbSyncCappedSeasonSplits";
 import {
-  assignTier,
-  calcAge,
-  calcBatterValue,
-  calcPitcherValue,
-} from "../src/lib/mlbSyncFormulas";
-import {
-  applyAnchorYearProjectionEnrichment,
-  estimateQualityStartsFromSeasonAggregate,
-  projectBatting,
-  projectPitching,
-} from "../src/lib/mlbProjectionBlend";
-import { resolveMlbTeamAbbrev } from "../src/lib/mlbTeamResolve";
+  aggregatePositiveSplits,
+  assignCatalogRankByValue,
+  buildPlayerDocFromAgg,
+  indexBattingByPlayer,
+  indexPitchingByPlayer,
+} from "../src/lib/mlbPlayerSyncFromSplits";
+import type { ExistingPlayerMarketFields } from "../src/lib/mlbCatalogUniverse/runRosterCatalogUniverseBuild";
+import { runRosterCatalogUniverseBuild } from "../src/lib/mlbCatalogUniverse/runRosterCatalogUniverseBuild";
+import type { RosterTypeParam } from "../src/lib/mlbCatalogUniverse/types";
 import Player from "../src/models/Player";
 import { classifyCatalogDoc } from "../src/lib/catalogRowClassification";
 import type { CatalogIdentityRow } from "../src/lib/catalogIdentityHelpers";
@@ -52,40 +56,6 @@ if (!MONGO_URI) {
   process.exit(1);
 }
 
-interface MlbPlayer {
-  id: number;
-  fullName: string;
-  currentTeam?: { id?: number; abbreviation?: string };
-  primaryPosition?: { abbreviation: string };
-  birthDate?: string;
-}
-
-type SplitAgg = {
-  bat?: MlbStatSplit;
-  pit?: MlbStatSplit;
-};
-
-type PlayerSyncDoc = {
-  mlbId: number;
-  catalogKind: "mlb";
-  name: string;
-  team: string;
-  position: string;
-  positions?: string[];
-  age: number;
-  depthChartPosition?: number;
-  value: number;
-  catalog_tier: number;
-  stats: Record<string, unknown>;
-  projection: Record<string, unknown>;
-  outlook: string;
-  catalog_rank?: number;
-  catalogMeta?: {
-    stats_season: number;
-    projection_blend_seasons: number[];
-  };
-};
-
 type SyncCli = {
   dryRun: boolean;
   rebuildCatalog: boolean;
@@ -93,10 +63,21 @@ type SyncCli = {
   skipSync: boolean;
   failOnGate: boolean;
   archiveInvalid: boolean;
+  rosterUniverseV1: boolean;
+  confirmUniverseWrite: boolean;
+  universeNfbcPreviewPath?: string;
 };
 
 function parseArgs(argv: string[]): SyncCli {
   const a = new Set(argv.filter((x) => x !== "--"));
+  let universeNfbcPreviewPath: string | undefined;
+  for (let i = 0; i < argv.length; i++) {
+    if (argv[i] === "--universe-nfbc-preview" && argv[i + 1]) {
+      const raw = argv[i + 1]!;
+      universeNfbcPreviewPath = path.isAbsolute(raw) ? raw : path.join(ROOT, raw);
+      i++;
+    }
+  }
   return {
     dryRun: a.has("--dry-run") || a.has("--dryRun"),
     rebuildCatalog: a.has("--rebuild-catalog") || a.has("--rebuildCatalog"),
@@ -104,281 +85,16 @@ function parseArgs(argv: string[]): SyncCli {
     skipSync: a.has("--skip-sync") || a.has("--skipSync"),
     failOnGate: !a.has("--no-fail-gates"),
     archiveInvalid: a.has("--archive-invalid"),
+    rosterUniverseV1: a.has("--roster-universe-v1") || a.has("--rosterUniverseV1"),
+    confirmUniverseWrite: a.has("--confirm-universe-write") || a.has("--confirmUniverseWrite"),
+    universeNfbcPreviewPath,
   };
-}
-
-function addMlbPositionAbbrev(set: Set<string>, abbrev?: string): void {
-  if (!abbrev) return;
-  const u = abbrev.trim().toUpperCase();
-  if (u === "TWP") {
-    set.add("DH");
-    set.add("SP");
-  } else if (u.length > 0) {
-    set.add(u);
-  }
-}
-
-function buildPlayerDocFromAgg(
-  mlbId: number,
-  agg: SplitAgg,
-  bio: MlbPlayer | undefined,
-  teamIdToAbbr: Map<number, string>,
-  yearBat: Map<number, Map<number, Record<string, string | number>>>,
-  yearPit: Map<number, Map<number, Record<string, string | number>>>,
-  lastSeason: number
-): PlayerSyncDoc | null {
-  const batVal = agg.bat ? calcBatterValue(agg.bat.stat) : 0;
-  const pitVal = agg.pit ? calcPitcherValue(agg.pit.stat) : 0;
-  if (batVal <= 0 && pitVal <= 0) return null;
-
-  const value = Math.max(batVal, pitVal);
-  const team = resolveMlbTeamAbbrev(
-    agg.bat?.team ?? agg.pit?.team,
-    bio?.currentTeam,
-    teamIdToAbbr
-  );
-
-  const posSet = new Set<string>();
-  addMlbPositionAbbrev(posSet, agg.bat?.position?.abbreviation);
-  addMlbPositionAbbrev(posSet, agg.pit?.position?.abbreviation);
-  addMlbPositionAbbrev(posSet, bio?.primaryPosition?.abbreviation);
-
-  const primaryBio = bio?.primaryPosition?.abbreviation?.trim().toUpperCase();
-  let position: string;
-  if (primaryBio === "TWP") {
-    position = batVal >= pitVal ? "DH" : "SP";
-  } else if (agg.bat && !agg.pit) {
-    position =
-      agg.bat.position?.abbreviation ??
-      bio?.primaryPosition?.abbreviation ??
-      "OF";
-  } else if (agg.pit && !agg.bat) {
-    position =
-      agg.pit.position?.abbreviation ??
-      bio?.primaryPosition?.abbreviation ??
-      "SP";
-  } else if (agg.bat && agg.pit) {
-    position =
-      batVal >= pitVal
-        ? agg.bat.position?.abbreviation ?? "DH"
-        : agg.pit.position?.abbreviation ?? "SP";
-  } else {
-    position = bio?.primaryPosition?.abbreviation ?? "OF";
-  }
-
-  const positions = [...posSet].filter((p) => p !== position);
-
-  const stats: Record<string, unknown> = {};
-  if (agg.bat) {
-    const stat = agg.bat.stat;
-    stats.batting = {
-      avg: String(stat.avg ?? ".000"),
-      hr: Number(stat.homeRuns ?? 0),
-      rbi: Number(stat.rbi ?? 0),
-      runs: Number(stat.runs ?? 0),
-      sb: Number(stat.stolenBases ?? 0),
-      obp: String(stat.obp ?? ".000"),
-      slg: String(stat.slg ?? ".000"),
-    };
-  }
-  if (agg.pit) {
-    const stat = agg.pit.stat;
-    stats.pitching = {
-      era: String(stat.era ?? "0.00"),
-      whip: String(stat.whip ?? "0.00"),
-      wins: Number(stat.wins ?? 0),
-      saves: Number(stat.saves ?? 0),
-      strikeouts: Number(stat.strikeOuts ?? 0),
-      innings: String(stat.inningsPitched ?? "0"),
-    };
-  }
-
-  const y2 = lastSeason - 1;
-  const y3 = lastSeason - 2;
-  const bat1 = yearBat.get(lastSeason)?.get(mlbId);
-  const bat2 = yearBat.get(y2)?.get(mlbId);
-  const bat3 = yearBat.get(y3)?.get(mlbId);
-  const pit1 = yearPit.get(lastSeason)?.get(mlbId);
-  const pit2 = yearPit.get(y2)?.get(mlbId);
-  const pit3 = yearPit.get(y3)?.get(mlbId);
-
-  const blendedBat = projectBatting(bat1, bat2, bat3);
-  const blendedPit = projectPitching(pit1, pit2, pit3);
-
-  const projection: Record<string, unknown> = {};
-  if (blendedBat) {
-    projection.batting = blendedBat;
-  } else if (agg.bat) {
-    const stat = agg.bat.stat;
-    const ab = Number(stat.atBats ?? 0);
-    const bb = Number(stat.baseOnBalls ?? 0);
-    const pa =
-      Number(stat.plateAppearances ?? 0) > 0
-        ? Number(stat.plateAppearances)
-        : ab + bb;
-    const obpStr = String(stat.obp ?? ".000");
-    const obpNum = parseFloat(obpStr);
-    const tb = Number(stat.totalBases ?? 0);
-    const slgNum =
-      parseFloat(String(stat.slg ?? "").trim()) ||
-      (ab > 0 ? tb / ab : 0);
-    const opsNum =
-      parseFloat(String(stat.ops ?? "").trim()) ||
-      (Number.isFinite(obpNum) ? obpNum + slgNum : 0);
-    projection.batting = {
-      avg: String(stat.avg ?? ".000"),
-      hr: Number(stat.homeRuns ?? 0),
-      rbi: Number(stat.rbi ?? 0),
-      runs: Number(stat.runs ?? 0),
-      sb: Number(stat.stolenBases ?? 0),
-      atBats: ab,
-      obp: Number.isFinite(obpNum) ? obpStr : ".000",
-      plateAppearances: Math.max(0, Math.round(pa)),
-      totalBases: tb,
-      slg: Number.isFinite(slgNum) ? slgNum.toFixed(3) : ".000",
-      ops: Number.isFinite(opsNum) ? opsNum.toFixed(3) : ".000",
-    };
-  }
-  if (blendedPit) {
-    projection.pitching = {
-      era: blendedPit.era,
-      whip: blendedPit.whip,
-      wins: blendedPit.wins,
-      saves: blendedPit.saves,
-      strikeouts: blendedPit.strikeouts,
-      innings: blendedPit.innings,
-      holds: blendedPit.holds,
-      qualityStarts: blendedPit.qualityStarts,
-    };
-  } else if (agg.pit) {
-    const stat = agg.pit.stat;
-    projection.pitching = {
-      era: String(stat.era ?? "0.00"),
-      whip: String(stat.whip ?? "0.00"),
-      wins: Number(stat.wins ?? 0),
-      saves: Number(stat.saves ?? 0),
-      strikeouts: Number(stat.strikeOuts ?? 0),
-      innings: String(stat.inningsPitched ?? "0"),
-      holds: Number(stat.holds ?? 0),
-      qualityStarts: estimateQualityStartsFromSeasonAggregate(stat),
-    };
-  }
-
-  if (Object.keys(projection).length > 0) {
-    applyAnchorYearProjectionEnrichment(
-      projection,
-      agg.bat?.stat,
-      agg.pit?.stat
-    );
-  }
-
-  const doc: PlayerSyncDoc = {
-    mlbId,
-    catalogKind: "mlb",
-    name: agg.bat?.player.fullName ?? agg.pit?.player.fullName ?? bio?.fullName ?? "Unknown",
-    team,
-    position,
-    age: calcAge(bio?.birthDate),
-    depthChartPosition: deriveDepthChartPosition(agg),
-    value,
-    catalog_tier: assignTier(value),
-    stats,
-    projection,
-    outlook: "",
-    catalogMeta: {
-      stats_season: lastSeason,
-      projection_blend_seasons: [lastSeason, y2, y3],
-    },
-  };
-  if (positions.length > 0) {
-    doc.positions = positions;
-  }
-  return doc;
-}
-
-function deriveDepthChartPosition(agg: SplitAgg): number | undefined {
-  const asNum = (v: unknown): number | undefined => {
-    if (typeof v === "number" && Number.isFinite(v)) return v;
-    if (typeof v === "string" && v.trim().length > 0) {
-      const n = Number(v);
-      if (Number.isFinite(n)) return n;
-    }
-    return undefined;
-  };
-  const batStat = agg.bat?.stat ?? {};
-  const pitStat = agg.pit?.stat ?? {};
-  const pa = asNum((batStat as Record<string, unknown>).plateAppearances);
-  const ab = asNum((batStat as Record<string, unknown>).atBats);
-  const hitterVolume = pa ?? ab ?? 0;
-
-  const gs = asNum((pitStat as Record<string, unknown>).gamesStarted);
-  const sv = asNum((pitStat as Record<string, unknown>).saves);
-  const ip = asNum((pitStat as Record<string, unknown>).inningsPitched);
-
-  const hitterDepth =
-    hitterVolume >= 420 ? 1 : hitterVolume >= 180 ? 2 : hitterVolume > 0 ? 3 : undefined;
-  const pitcherDepth =
-    (gs ?? 0) >= 20 || (ip ?? 0) >= 120
-      ? 1
-      : (gs ?? 0) >= 8 || (sv ?? 0) >= 15 || (ip ?? 0) >= 45
-        ? 2
-        : (gs ?? 0) > 0 || (sv ?? 0) > 0 || (ip ?? 0) > 0
-          ? 3
-          : undefined;
-
-  if (hitterDepth == null) return pitcherDepth;
-  if (pitcherDepth == null) return hitterDepth;
-  return Math.min(hitterDepth, pitcherDepth);
-}
-
-interface MlbStatSplit {
-  player: { id: number; fullName: string };
-  team?: { id?: number; abbreviation?: string };
-  position?: { abbreviation: string };
-  stat: Record<string, string | number>;
 }
 
 async function fetchJson<T>(url: string): Promise<T> {
   const res = await fetch(url);
   if (!res.ok) throw new Error(`HTTP ${res.status} fetching ${url}`);
   return res.json() as Promise<T>;
-}
-
-async function fetchSeasonSplitsForYear(season: number): Promise<{
-  batSplits: MlbStatSplit[];
-  pitSplits: MlbStatSplit[];
-}> {
-  const [batJson, pitJson] = await Promise.all([
-    fetchJson<{ stats: { splits: MlbStatSplit[] }[] }>(
-      `${MLB_API}/stats?stats=season&group=hitting&season=${season}&playerPool=ALL&limit=400&sportId=1`
-    ),
-    fetchJson<{ stats: { splits: MlbStatSplit[] }[] }>(
-      `${MLB_API}/stats?stats=season&group=pitching&season=${season}&playerPool=ALL&limit=300&sportId=1`
-    ),
-  ]);
-  const batSplits = batJson.stats?.[0]?.splits ?? [];
-  const pitSplits = pitJson.stats?.[0]?.splits ?? [];
-  return { batSplits, pitSplits };
-}
-
-function indexBattingByPlayer(
-  splits: MlbStatSplit[]
-): Map<number, Record<string, string | number>> {
-  const m = new Map<number, Record<string, string | number>>();
-  for (const s of splits) {
-    m.set(s.player.id, s.stat as Record<string, string | number>);
-  }
-  return m;
-}
-
-function indexPitchingByPlayer(
-  splits: MlbStatSplit[]
-): Map<number, Record<string, string | number>> {
-  const m = new Map<number, Record<string, string | number>>();
-  for (const s of splits) {
-    m.set(s.player.id, s.stat as Record<string, string | number>);
-  }
-  return m;
 }
 
 async function fetchTeamAbbrevMap(): Promise<Map<number, string>> {
@@ -404,34 +120,6 @@ async function fetchBioMap(playerIds: number[]): Promise<Map<number, MlbPlayer>>
     console.warn("[MLB API] Bio fetch failed (non-fatal):", (err as Error).message);
   }
   return bioMap;
-}
-
-function aggregatePositiveSplits(
-  batSplits: MlbStatSplit[],
-  pitSplits: MlbStatSplit[]
-): Map<number, SplitAgg> {
-  const aggMap = new Map<number, SplitAgg>();
-  for (const s of batSplits) {
-    if (calcBatterValue(s.stat) <= 0) continue;
-    const row = aggMap.get(s.player.id) ?? {};
-    row.bat = s;
-    aggMap.set(s.player.id, row);
-  }
-  for (const s of pitSplits) {
-    if (calcPitcherValue(s.stat) <= 0) continue;
-    const row = aggMap.get(s.player.id) ?? {};
-    row.pit = s;
-    aggMap.set(s.player.id, row);
-  }
-  return aggMap;
-}
-
-function assignCatalogRankByValue(players: PlayerSyncDoc[]): PlayerSyncDoc[] {
-  const sorted = [...players].sort((a, b) => b.value - a.value);
-  sorted.forEach((p, i) => {
-    p.catalog_rank = i + 1;
-  });
-  return sorted;
 }
 
 function docToIdentityRow(doc: Record<string, unknown>): CatalogIdentityRow {
@@ -481,7 +169,9 @@ async function fetchMlbPlayerDocs(): Promise<PlayerSyncDoc[]> {
     `[MongoDB] Syncing stats ${last}, projection blend ${seasons.join("/")}`
   );
 
-  const perYear = await Promise.all(seasons.map((se) => fetchSeasonSplitsForYear(se)));
+  const perYear = await Promise.all(
+    seasons.map((se) => fetchCappedSeasonSplitsLikeSync({ mlbApiBase: MLB_API, season: se, fetchJson }))
+  );
   const yearBat = new Map<number, Map<number, Record<string, string | number>>>();
   const yearPit = new Map<number, Map<number, Record<string, string | number>>>();
   for (let i = 0; i < seasons.length; i++) {
@@ -528,6 +218,7 @@ async function fetchMlbPlayerDocs(): Promise<PlayerSyncDoc[]> {
       rejectedProjectionQuarantine.push({ mlbId, reason: "invalid_mlb_id_key" });
       continue;
     }
+    doc.catalogValuationTier = "valuation_eligible";
     playerMap.set(mlbId, doc);
   }
 
@@ -707,6 +398,109 @@ async function runPostSyncGates(cli: SyncCli): Promise<void> {
   }
 }
 
+const DEFAULT_ROSTER_TYPES: RosterTypeParam[] = ["40Man", "active", "fullSeason"];
+
+async function loadNfbcMlbIdSetFromMongo(): Promise<Set<number>> {
+  const rows = await Player.find({
+    mlbId: { $gt: 0 },
+    market_adp: { $exists: true, $ne: null },
+  })
+    .select({ mlbId: 1 })
+    .lean();
+  return new Set(
+    rows
+      .map((r) => r.mlbId as number)
+      .filter((n): n is number => typeof n === "number" && n > 0)
+  );
+}
+
+async function loadExistingMarketFieldsByMlbId(): Promise<Map<number, ExistingPlayerMarketFields>> {
+  const rows = await Player.find({
+    mlbId: { $gt: 0 },
+    $or: [
+      { market_adp: { $exists: true, $ne: null } },
+      { market_adp_source: { $exists: true, $nin: [null, ""] } },
+    ],
+  })
+    .select({
+      mlbId: 1,
+      market_adp: 1,
+      market_adp_source: 1,
+      market_adp_updated_at: 1,
+      market_adp_min: 1,
+      market_adp_max: 1,
+      market_pick_count: 1,
+    })
+    .lean();
+  const m = new Map<number, ExistingPlayerMarketFields>();
+  for (const r of rows) {
+    const id = r.mlbId as number;
+    if (typeof id !== "number" || id <= 0) continue;
+    m.set(id, {
+      market_adp: r.market_adp as number | undefined,
+      market_adp_source: r.market_adp_source as string | undefined,
+      market_adp_updated_at: r.market_adp_updated_at as string | undefined,
+      market_adp_min: r.market_adp_min as number | undefined,
+      market_adp_max: r.market_adp_max as number | undefined,
+      market_pick_count: r.market_pick_count as number | undefined,
+    });
+  }
+  return m;
+}
+
+async function runRosterUniverseSync(cli: SyncCli): Promise<void> {
+  let preview: unknown | undefined;
+  if (cli.universeNfbcPreviewPath) {
+    preview = JSON.parse(readFileSync(cli.universeNfbcPreviewPath, "utf8"));
+  }
+  const nfbcFromMongo = await loadNfbcMlbIdSetFromMongo();
+  const existingMarket = await loadExistingMarketFieldsByMlbId();
+  const { report, players } = await runRosterCatalogUniverseBuild({
+    mlbApiBase: MLB_API,
+    lastCompletedSeason: LAST_COMPLETED_SEASON,
+    fetchJson,
+    statsPageSize: 500,
+    rosterTypes: DEFAULT_ROSTER_TYPES,
+    nfbcPreviewJson: preview,
+    nfbcMlbIdsFromMongo: nfbcFromMongo,
+    existingMarketByMlbId: existingMarket,
+  });
+  const reportPath = path.join(ROOT, "tmp/catalog-universe-report.json");
+  mkdirSync(path.dirname(reportPath), { recursive: true });
+  writeFileSync(reportPath, JSON.stringify(report, null, 2));
+
+  console.log(
+    JSON.stringify(
+      {
+        catalog_universe_v1_report: report,
+        wrote_report: reportPath,
+      },
+      null,
+      2
+    )
+  );
+
+  const shouldWrite = !cli.dryRun && cli.confirmUniverseWrite;
+  if (!shouldWrite) {
+    console.log(
+      "[Sync] Roster universe v1: skipping Mongo writes (use --confirm-universe-write without --dry-run to upsert)."
+    );
+    return;
+  }
+
+  const ops = players.map((p) => ({
+    updateOne: {
+      filter: { mlbId: p.mlbId },
+      update: { $set: p as Record<string, unknown> },
+      upsert: true,
+    },
+  }));
+  const result = await Player.bulkWrite(ops);
+  console.log(
+    `[Sync] Roster universe upsert — ${result.upsertedCount} inserted, ${result.modifiedCount} modified, ${players.length} total`
+  );
+}
+
 async function main(): Promise<void> {
   const cli = parseArgs(process.argv.slice(2));
   await mongoose.connect(MONGO_URI as string);
@@ -733,52 +527,54 @@ async function main(): Promise<void> {
       );
     }
 
-    if (!cli.skipSync) {
-      const players = await fetchMlbPlayerDocs();
+    if (cli.rosterUniverseV1) {
+      await runRosterUniverseSync(cli);
+    } else if (!cli.skipSync) {
+        const players = await fetchMlbPlayerDocs();
 
-      const existing = await Player.find({ mlbId: { $gt: 0 } })
-        .select("mlbId")
-        .lean();
-      const existingIds = new Set(
-        existing.map((e) => e.mlbId as number).filter((n) => typeof n === "number")
-      );
-
-      let wouldInsert = 0;
-      let wouldUpdate = 0;
-      for (const p of players) {
-        if (existingIds.has(p.mlbId)) wouldUpdate++;
-        else wouldInsert++;
-      }
-
-      const ops = players.map((p) => ({
-        updateOne: {
-          filter: { mlbId: p.mlbId },
-          update: { $set: p },
-          upsert: true,
-        },
-      }));
-
-      if (cli.dryRun) {
-        console.log(
-          JSON.stringify(
-            {
-              dry_run: true,
-              would_upsert_total: players.length,
-              would_insert_approx: wouldInsert,
-              would_update_approx: wouldUpdate,
-              projection_resolution_failures: 0,
-              note: "Approximate insert vs update based on existing mlbIds in Mongo.",
-            },
-            null,
-            2
-          )
+        const existing = await Player.find({ mlbId: { $gt: 0 } })
+          .select("mlbId")
+          .lean();
+        const existingIds = new Set(
+          existing.map((e) => e.mlbId as number).filter((n) => typeof n === "number")
         );
-      } else {
-        const result = await Player.bulkWrite(ops);
-        console.log(
-          `[Sync] Done — ${result.upsertedCount} inserted, ${result.modifiedCount} modified, ${players.length} upserts`
-        );
-      }
+
+        let wouldInsert = 0;
+        let wouldUpdate = 0;
+        for (const p of players) {
+          if (existingIds.has(p.mlbId)) wouldUpdate++;
+          else wouldInsert++;
+        }
+
+        const ops = players.map((p) => ({
+          updateOne: {
+            filter: { mlbId: p.mlbId },
+            update: { $set: p },
+            upsert: true,
+          },
+        }));
+
+        if (cli.dryRun) {
+          console.log(
+            JSON.stringify(
+              {
+                dry_run: true,
+                would_upsert_total: players.length,
+                would_insert_approx: wouldInsert,
+                would_update_approx: wouldUpdate,
+                projection_resolution_failures: 0,
+                note: "Approximate insert vs update based on existing mlbIds in Mongo.",
+              },
+              null,
+              2
+            )
+          );
+        } else {
+          const result = await Player.bulkWrite(ops);
+          console.log(
+            `[Sync] Done — ${result.upsertedCount} inserted, ${result.modifiedCount} modified, ${players.length} upserts`
+          );
+        }
     }
 
     await runPostSyncGates(cli);

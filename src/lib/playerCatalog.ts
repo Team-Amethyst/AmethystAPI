@@ -1,4 +1,4 @@
-import type { LeanPlayer } from "../types/brain";
+import type { CatalogValuationTier, LeanPlayer } from "../types/brain";
 import type { CatalogKind } from "./catalogRowClassification";
 
 const DEFAULT_NUMERIC = {
@@ -36,6 +36,13 @@ function coerceInjurySeverity(raw: unknown): number | undefined {
 
 function coerceCatalogKind(raw: unknown): CatalogKind | undefined {
   if (raw === "mlb" || raw === "custom") return raw;
+  return undefined;
+}
+
+function coerceCatalogValuationTier(raw: unknown): CatalogValuationTier | undefined {
+  if (raw === "valuation_eligible" || raw === "market_only" || raw === "roster_context") {
+    return raw;
+  }
   return undefined;
 }
 
@@ -167,6 +174,9 @@ export function normalizeCatalogPlayers(
     const injurySeverity = coerceInjurySeverity(
       d.injurySeverity ?? d.injury_severity
     );
+    const catalogValuationTier = coerceCatalogValuationTier(
+      d.catalogValuationTier ?? d.catalog_valuation_tier
+    );
 
     rows.push({
       _id: d._id,
@@ -192,6 +202,7 @@ export function normalizeCatalogPlayers(
         d.projection != null && typeof d.projection === "object"
           ? (d.projection as Record<string, unknown>)
           : undefined,
+      ...(catalogValuationTier ? { catalogValuationTier } : {}),
     });
   }
 

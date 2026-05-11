@@ -76,6 +76,8 @@ export interface IPlayer extends Document {
   market_adp_min?: number;
   market_adp_max?: number;
   market_pick_count?: number;
+  /** Roster universe v1: gates `/valuation/*` and `loadMongoCatalogForEngine` pools. */
+  catalogValuationTier?: "valuation_eligible" | "market_only" | "roster_context";
   value: number;
   outlook: string;
   stats?: IPlayerStats;
@@ -105,6 +107,10 @@ const playerSchema = new Schema<IPlayer>(
     market_adp_min: { type: Number },
     market_adp_max: { type: Number },
     market_pick_count: { type: Number },
+    catalogValuationTier: {
+      type: String,
+      enum: ["valuation_eligible", "market_only", "roster_context"],
+    },
     value: { type: Number, default: 0 },
     outlook: { type: String, default: "" },
     stats: { type: Schema.Types.Mixed, default: {} },
