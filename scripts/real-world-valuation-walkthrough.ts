@@ -18,8 +18,9 @@ import { buildPitcherHarnessSplits } from "../src/lib/valuationHarnessPitcherSpl
 import { executeValuationWorkflow } from "../src/services/valuationWorkflow";
 import { filterValuationUniverse } from "../src/lib/valuationPlayerPool";
 import { positionOverridesFromRequest } from "../src/lib/fantasyRosterSlots";
-import { isPitcherForBaseline } from "../src/services/baselineProjectionStats";
+import { valuationHitterPitcherBucket } from "../src/lib/valuationHitterPitcherBucket";
 import { loadMongoCatalogForEngine } from "../src/lib/mongoCatalogPipeline";
+import { isPitcherForBaseline } from "../src/services/baselineProjectionStats";
 import { computeRemainingLeagueRosterSlots } from "../src/lib/remainingLeagueRosterSlots";
 
 const ROOT = path.resolve(__dirname, "..");
@@ -107,10 +108,7 @@ function classifyRow(
   ov: ReturnType<typeof positionOverridesFromRequest> | undefined
 ): "hitter" | "pitcher" {
   const lp = byId.get(row.player_id);
-  if (lp) return isPitcherForBaseline(lp, ov ?? undefined) ? "pitcher" : "hitter";
-  const pos = (row.position ?? "").toUpperCase();
-  if (pos.includes("SP") || pos.includes("RP") || pos === "P") return "pitcher";
-  return "hitter";
+  return valuationHitterPitcherBucket(row, lp, ov ?? undefined);
 }
 
 function ge(rows: ValuedPlayer[], t: number): number {

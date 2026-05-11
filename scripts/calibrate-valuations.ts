@@ -27,8 +27,8 @@ import {
 } from "../src/lib/calibrationDraftroomFixture";
 import { buildPitcherHarnessSplits } from "../src/lib/valuationHarnessPitcherSplits";
 import { executeValuationWorkflow } from "../src/services/valuationWorkflow";
-import { isPitcherForBaseline } from "../src/services/baselineProjectionStats";
 import { positionOverridesFromRequest } from "../src/lib/fantasyRosterSlots";
+import { valuationHitterPitcherBucket } from "../src/lib/valuationHitterPitcherBucket";
 import { ROTO_Z_HITTER, ROTO_Z_PITCHER } from "../src/services/baselineRotoZConfig";
 import { ROTO_INTRINSIC_BASE_PITCHER_REF } from "../src/services/baselineValueEngine";
 import { loadMongoCatalogForEngine } from "../src/lib/mongoCatalogPipeline";
@@ -72,12 +72,7 @@ function classifyRow(
   ov?: ReturnType<typeof positionOverridesFromRequest>
 ): "hitter" | "pitcher" {
   const lp = byId.get(row.player_id);
-  if (lp) {
-    return isPitcherForBaseline(lp, ov ?? undefined) ? "pitcher" : "hitter";
-  }
-  const pos = (row.position ?? "").toUpperCase();
-  if (pos.includes("SP") || pos.includes("RP") || pos === "P") return "pitcher";
-  return "hitter";
+  return valuationHitterPitcherBucket(row, lp, ov ?? undefined);
 }
 
 function sumAuction(rows: ValuedPlayer[]): number {
