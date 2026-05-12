@@ -51,6 +51,23 @@ function emptyExclusive(): ExclusiveBuckets {
   };
 }
 
+function top25ByAuction(rows: ValuedPlayer[]): {
+  player_id: string;
+  name: string;
+  position: string;
+  auction_value: number;
+}[] {
+  return [...rows]
+    .sort((a, b) => av(b) - av(a))
+    .slice(0, 25)
+    .map((r) => ({
+      player_id: r.player_id,
+      name: r.name,
+      position: r.position,
+      auction_value: parseFloat(av(r).toFixed(2)),
+    }));
+}
+
 function accumulate(rows: ValuedPlayer[]): {
   exclusive: ExclusiveBuckets;
   near105Share: number;
@@ -85,6 +102,30 @@ function accumulate(rows: ValuedPlayer[]): {
     eq1Share: eq1 / n,
     count_le_105: le105,
     count_eq_1: eq1,
+  };
+}
+
+/** Readable bucket counts aligned with triage asks (intervals are half-open on the left where noted). */
+function bucketSummary(ex: ExclusiveBuckets): {
+  exactly_1: number;
+  /** (1, 3] */
+  gt1_through_3: number;
+  /** (3, 5] */
+  gt3_through_5: number;
+  /** (5, 10] */
+  gt5_through_10: number;
+  /** (10, 20] */
+  gt10_through_20: number;
+  /** > 20 */
+  gt20: number;
+} {
+  return {
+    exactly_1: ex.exactly_1,
+    gt1_through_3: ex.gt1_through_105 + ex.gt105_through_3,
+    gt3_through_5: ex.gt3_through_5,
+    gt5_through_10: ex.gt5_through_10,
+    gt10_through_20: ex.gt10_through_20,
+    gt20: ex.gt20,
   };
 }
 
@@ -157,6 +198,10 @@ async function main(): Promise<void> {
   const poolById = new Map(pool.map((p) => [getPlayerId(p), p]));
   const ov = positionOverridesFromRequest(input.position_overrides);
 
+  const accAll = accumulate(rows);
+  const accDraft = accumulate(draftableRows);
+  const accOut = accumulate(outsideRows);
+
   const report = {
     generated_at: new Date().toISOString(),
     scenario: "standard_12_mixed (buildDraftroomStandardValuationInput)",
@@ -167,28 +212,42 @@ async function main(): Promise<void> {
     groups: {
       all_rows: {
         count: rows.length,
-        ...accumulate(rows),
+        ...accAll,
+        bucket_counts_display: bucketSummary(accAll.exclusive),
+        top_25_auction_value: top25ByAuction(rows),
         hitter_pitcher: hpSplit(rows, poolById, ov),
         position_split: posSplit(rows),
       },
       draftable_greedy_fill: {
         count: draftableRows.length,
-        ...accumulate(draftableRows),
+        ...accDraft,
+        bucket_counts_display: bucketSummary(accDraft.exclusive),
+        top_25_auction_value: top25ByAuction(draftableRows),
         hitter_pitcher: hpSplit(draftableRows, poolById, ov),
         position_split: posSplit(draftableRows),
       },
       outside_draftable_set: {
         count: outsideRows.length,
-        ...accumulate(outsideRows),
+        ...accOut,
+        bucket_counts_display: bucketSummary(accOut.exclusive),
+        top_25_auction_value: top25ByAuction(outsideRows),
         hitter_pitcher: hpSplit(outsideRows, poolById, ov),
         position_split: posSplit(outsideRows),
       },
+    },
+    compare_near_1: {
+      pct_le_105_draftable: accDraft.near105Share,
+      pct_le_105_outside: accOut.near105Share,
+      pct_eq_1_draftable: accDraft.eq1Share,
+      pct_eq_1_outside: accOut.eq1Share,
+      interpretation_hint:
+        "If near-$1 concentrates outside the greedy draftable set, the global 77% tail is largely non-draftable replacement depth, not broken star pricing.",
     },
     notes: {
       draftable_definition:
         "Player IDs that reduced remaining league slot demand in replacement_slots_v2 greedy undrafted pass (engine internal; not top-N by auction_value).",
       buckets:
-        "exclusive: exactly_1; (1,1.05]; (1.05,3]; (3,5]; (5,10]; (10,20]; >20. near105Share = fraction with AV<=1.05.",
+        "exclusive: exactly_1; (1,1.05]; (1.05,3]; (3,5]; (5,10]; (10,20]; >20. near105Share = fraction with AV<=1.05. bucket_counts_display merges (1,1.05]+(1.05,3] as gt1_through_3.",
     },
   };
 
