@@ -38,6 +38,8 @@ export default defineConfig({
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "src"),
+      /** Shared valuation UI helpers (no Node-only deps). */
+      "@engine/lib": path.resolve(__dirname, "../src/lib"),
     },
   },
   server: {

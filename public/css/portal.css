@@ -1542,6 +1542,68 @@
       border: 1px solid var(--border);
       background: rgba(255, 255, 255, 0.03);
     }
+    .sandbox-player-result-main {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      flex: 1;
+      min-width: 0;
+      align-items: flex-start;
+    }
+    .sandbox-player-result-side {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-shrink: 0;
+    }
+    .sandbox-player-result-av {
+      font-size: 11px;
+      font-weight: 600;
+      font-variant-numeric: tabular-nums;
+      color: var(--text-secondary);
+      white-space: nowrap;
+    }
+    .sandbox-player-result--replacement-depth {
+      border-left: 3px solid rgba(148, 163, 184, 0.45);
+      padding-left: 7px;
+    }
+    .sandbox-pool-scope-fieldset {
+      margin-top: var(--space-2);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-sm);
+      padding: 8px 10px 10px;
+    }
+    .sandbox-pool-scope-fieldset:disabled {
+      opacity: 0.72;
+    }
+    .sandbox-pool-scope-options {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px 14px;
+    }
+    .sandbox-pool-scope-label {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      color: var(--text-secondary);
+      cursor: pointer;
+    }
+    .sandbox-pool-scope-unavailable {
+      margin: 6px 0 0;
+    }
+    .sandbox-selected-player-extra {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+      margin-top: 6px;
+    }
+    .sandbox-selected-player-av {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-secondary);
+    }
     .sandbox-player-resolve-line {
       margin: var(--space-2) 0 0;
       font-size: 12px;
@@ -4411,13 +4473,28 @@
 
     #tab-sandbox .sandbox-player-result-meta {
       flex-shrink: 0;
-      max-width: 46%;
+      max-width: 100%;
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
       color: var(--muted);
       font-size: 11px;
-      text-align: right;
+      text-align: left;
+    }
+
+    #tab-sandbox .sandbox-player-result-main {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      flex: 1;
+      min-width: 0;
+    }
+
+    #tab-sandbox .sandbox-player-result-side {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-shrink: 0;
     }
 
     #tab-sandbox .sandbox-player-result--active {

@@ -1,6 +1,13 @@
 import { useQuery } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
+import type { DraftablePoolMeta } from "@engine/lib/draftablePoolSemantics";
+import {
+  TOOLTIP_OUTSIDE_DRAFTABLE_MIN_BID,
+  isPlayerInDraftablePool,
+  normalizeDraftablePoolMeta,
+  shouldShowOutsideDraftableMinBidTooltip,
+} from "@engine/lib/draftablePoolSemantics";
 import { fetchAccountKeys } from "@/api/account";
 import { fetchMe } from "@/api/auth";
 import { portalFetch, portalUrl } from "@/api/client";
@@ -64,18 +71,25 @@ type PlayerLookupRow = {
   label: string;
   name: string;
   subtitle: string;
+  /** Present when the valuation row carried a finite auction_value. */
+  auction_value?: number;
+  /** Greedy draftable fill (replacement_slots_v2); null = engine did not return a usable draftable set. */
+  draftable: boolean | null;
 };
 
 type PoolMeta = {
   playersRemaining: number | null;
   poolValueRemaining: number | null;
   calculatedAt: string | null;
+  draftableMeta: DraftablePoolMeta;
 };
 
 type PoolResponse = {
   rows: PlayerLookupRow[];
   meta: PoolMeta;
 };
+
+type PoolScopeFilter = "all" | "draftable" | "depth";
 
 /** Full secret returned by `GET /api/account/keys` when stored server-side; absent for legacy rows. */
 function accountRowSecret(row: Record<string, unknown>): string {
@@ -119,10 +133,23 @@ function poolSubtitle(row: ValuationPoolRow): string {
 }
 
 function poolRowsFromResponse(data: unknown): PoolResponse {
+  const emptyMeta = normalizeDraftablePoolMeta({});
   if (!data || typeof data !== "object") {
-    return { rows: [], meta: { playersRemaining: null, poolValueRemaining: null, calculatedAt: null } };
+    return {
+      rows: [],
+      meta: {
+        playersRemaining: null,
+        poolValueRemaining: null,
+        calculatedAt: null,
+        draftableMeta: emptyMeta,
+      },
+    };
   }
   const o = data as Record<string, unknown>;
+  const draftableMeta = normalizeDraftablePoolMeta({
+    draftable_player_ids: o.draftable_player_ids,
+    draftable_pool_size: o.draftable_pool_size,
+  });
   const valuations = Array.isArray(o.valuations) ? (o.valuations as ValuationPoolRow[]) : [];
   const rows = valuations
     .map((row): PlayerLookupRow | null => {
@@ -130,11 +157,15 @@ function poolRowsFromResponse(data: unknown): PoolResponse {
       if (!id) return null;
       const name = poolName(row);
       const subtitle = poolSubtitle(row);
+      const av = finiteNumber(row.auction_value);
+      const draftable = isPlayerInDraftablePool(draftableMeta, id);
       return {
         id,
         name,
         subtitle,
         label: [name, subtitle === name ? "" : subtitle].filter(Boolean).join(" · "),
+        ...(av !== undefined ? { auction_value: av } : {}),
+        draftable,
       };
     })
     .filter((row): row is PlayerLookupRow => row !== null);
@@ -145,6 +176,7 @@ function poolRowsFromResponse(data: unknown): PoolResponse {
       playersRemaining: finiteNumber(o.players_remaining) ?? rows.length,
       poolValueRemaining: finiteNumber(o.pool_value_remaining) ?? null,
       calculatedAt: typeof o.calculated_at === "string" ? o.calculated_at : null,
+      draftableMeta,
     },
   };
 }
@@ -214,6 +246,7 @@ export function SandboxTab() {
   const [fixtureCopied, setFixtureCopied] = useState(false);
   const [responseCopied, setResponseCopied] = useState(false);
   const [fixturePlayerSearch, setFixturePlayerSearch] = useState("");
+  const [poolScopeFilter, setPoolScopeFilter] = useState<PoolScopeFilter>("all");
   const [selectedAccountKeyId, setSelectedAccountKeyId] = useState<string | null>(null);
   const prevCheckpointForPlayer = useRef<FixtureFile | null>(null);
 
@@ -291,7 +324,12 @@ export function SandboxTab() {
   const filteredFixturePickRows = useMemo(() => {
     const rawQ = fixturePlayerSearch.trim();
     const q = rawQ.toLowerCase();
-    const sourceRows = poolRows.filter((p) => p.id !== selectedPlayerId);
+    let sourceRows = poolRows.filter((p) => p.id !== selectedPlayerId);
+    const dm = poolData?.meta.draftableMeta;
+    if (dm?.kind === "resolved") {
+      if (poolScopeFilter === "draftable") sourceRows = sourceRows.filter((p) => p.draftable === true);
+      else if (poolScopeFilter === "depth") sourceRows = sourceRows.filter((p) => p.draftable === false);
+    }
     if (!rawQ) return [];
     return sourceRows
       .filter((p) => {
@@ -299,7 +337,7 @@ export function SandboxTab() {
         return rawQ.length >= 2 && p.id.includes(rawQ);
       })
       .slice(0, 80);
-  }, [fixturePlayerSearch, poolRows, selectedPlayerId]);
+  }, [fixturePlayerSearch, poolRows, poolData?.meta.draftableMeta, poolScopeFilter, selectedPlayerId]);
 
   const resolvedPick = useMemo(
     () => poolRows.find((p) => p.id === selectedPlayerId) ?? null,
@@ -416,7 +454,15 @@ export function SandboxTab() {
     httpStatus === null ? "neutral" : httpStatus >= 200 && httpStatus < 300 ? "success" : httpStatus >= 400 ? "error" : "warn";
 
   const poolSourceLabel = poolLoading ? "Loading pool" : poolIsCurrent ? "Live valuation pool" : "—";
-  const poolCountLabel = poolIsCurrent ? `${poolRows.length.toLocaleString()} selectable` : effectiveKey ? "Loading" : "Not loaded";
+  const draftableMetaForLabel = poolData?.meta.draftableMeta;
+  const poolCountLabel =
+    poolIsCurrent && draftableMetaForLabel?.kind === "resolved"
+      ? `${poolRows.length.toLocaleString()} rows · ${draftableMetaForLabel.draftable_pool_size} draftable`
+      : poolIsCurrent
+        ? `${poolRows.length.toLocaleString()} selectable`
+        : effectiveKey
+          ? "Loading"
+          : "Not loaded";
   const poolErrorMessage = poolIsError ? (poolError instanceof Error ? poolError.message : "Could not load player pool.") : "";
 
   return (
@@ -489,6 +535,7 @@ export function SandboxTab() {
                       className={`sandbox-checkpoint-card${selected ? " sandbox-checkpoint-card--selected" : ""}${lockedOut ? " sandbox-checkpoint-card--disabled" : ""}`}
                       onClick={() => {
                         if (lockedOut) return;
+                        setPoolScopeFilter("all");
                         setActiveFile(f);
                       }}
                     >
@@ -645,6 +692,49 @@ export function SandboxTab() {
                   autoComplete="off"
                   spellCheck={false}
                 />
+                {poolIsCurrent ? (
+                  <fieldset
+                    className="sandbox-pool-scope-fieldset"
+                    disabled={poolData?.meta.draftableMeta.kind !== "resolved"}
+                    aria-describedby={poolData?.meta.draftableMeta.kind !== "resolved" ? "sandbox-pool-scope-unavailable" : undefined}
+                  >
+                    <legend className="sandbox-player-sub-label">Research-style pool filter</legend>
+                    <div className="sandbox-pool-scope-options" role="radiogroup" aria-label="Pool filter">
+                      <label className="sandbox-pool-scope-label">
+                        <input
+                          type="radio"
+                          name="sandboxPoolScope"
+                          checked={poolScopeFilter === "all"}
+                          onChange={() => setPoolScopeFilter("all")}
+                        />
+                        All players
+                      </label>
+                      <label className="sandbox-pool-scope-label">
+                        <input
+                          type="radio"
+                          name="sandboxPoolScope"
+                          checked={poolScopeFilter === "draftable"}
+                          onChange={() => setPoolScopeFilter("draftable")}
+                        />
+                        Draftable pool
+                      </label>
+                      <label className="sandbox-pool-scope-label">
+                        <input
+                          type="radio"
+                          name="sandboxPoolScope"
+                          checked={poolScopeFilter === "depth"}
+                          onChange={() => setPoolScopeFilter("depth")}
+                        />
+                        Replacement / depth
+                      </label>
+                    </div>
+                    {poolData?.meta.draftableMeta.kind !== "resolved" ? (
+                      <p id="sandbox-pool-scope-unavailable" className="portal-hint sandbox-pool-scope-unavailable">
+                        Draftable metadata not in this response — filters unavailable (safe default: show all).
+                      </p>
+                    ) : null}
+                  </fieldset>
+                ) : null}
                 <div className="sandbox-player-results-panel" role="region" aria-label="Players matching search">
                   {!poolIsCurrent && !poolLoading && !effectiveKey ? (
                     <p className="portal-hint sandbox-player-results-msg">Players appear here after a key is selected.</p>
@@ -657,23 +747,52 @@ export function SandboxTab() {
                   ) : null}
                   {filteredFixturePickRows.length > 0 ? (
                     <ul className="sandbox-player-results">
-                      {filteredFixturePickRows.map((p) => (
+                      {filteredFixturePickRows.map((p) => {
+                        const dm = poolData?.meta.draftableMeta;
+                        const avTitle =
+                          dm &&
+                          shouldShowOutsideDraftableMinBidTooltip({
+                            meta: dm,
+                            playerId: p.id,
+                            auctionValue: p.auction_value,
+                          })
+                            ? TOOLTIP_OUTSIDE_DRAFTABLE_MIN_BID
+                            : undefined;
+                        return (
                         <li key={p.id}>
                           <button
                             type="button"
-                            className={`sandbox-player-result${selectedPlayerId === p.id ? " sandbox-player-result--active" : ""}`}
+                            className={`sandbox-player-result${selectedPlayerId === p.id ? " sandbox-player-result--active" : ""}${p.draftable === false ? " sandbox-player-result--replacement-depth" : ""}`}
                             onClick={() => {
                               setPlayerId(p.id);
                               setFixturePlayerSearch("");
                             }}
                           >
-                            <span className="sandbox-player-result-text">{p.name}</span>
-                            {p.subtitle && p.subtitle !== p.name ? (
-                              <span className="sandbox-player-result-meta">{p.subtitle}</span>
-                            ) : null}
+                            <span className="sandbox-player-result-main">
+                              <span className="sandbox-player-result-text">{p.name}</span>
+                              {p.subtitle && p.subtitle !== p.name ? (
+                                <span className="sandbox-player-result-meta">{p.subtitle}</span>
+                              ) : null}
+                            </span>
+                            <span className="sandbox-player-result-side">
+                              {typeof p.auction_value === "number" ? (
+                                <span className="sandbox-player-result-av" title={avTitle}>
+                                  ${p.auction_value.toFixed(2)}
+                                </span>
+                              ) : null}
+                              {p.draftable === false ? (
+                                <span
+                                  className="sandbox-player-result-tag"
+                                  title="Outside greedy draftable fill (replacement / depth)"
+                                >
+                                  Depth
+                                </span>
+                              ) : null}
+                            </span>
                           </button>
                         </li>
-                      ))}
+                        );
+                      })}
                     </ul>
                   ) : null}
                 </div>
@@ -689,6 +808,30 @@ export function SandboxTab() {
                     {resolvedPick.subtitle && resolvedPick.subtitle !== resolvedPick.name ? (
                       <span className="sandbox-selected-player-meta">{resolvedPick.subtitle}</span>
                     ) : null}
+                    <div className="sandbox-selected-player-extra">
+                      {typeof resolvedPick.auction_value === "number" ? (
+                        <span
+                          className="sandbox-selected-player-av"
+                          title={
+                            poolData?.meta.draftableMeta &&
+                            shouldShowOutsideDraftableMinBidTooltip({
+                              meta: poolData.meta.draftableMeta,
+                              playerId: resolvedPick.id,
+                              auctionValue: resolvedPick.auction_value,
+                            })
+                              ? TOOLTIP_OUTSIDE_DRAFTABLE_MIN_BID
+                              : undefined
+                          }
+                        >
+                          Auction ${resolvedPick.auction_value.toFixed(2)}
+                        </span>
+                      ) : null}
+                      {resolvedPick.draftable === false ? (
+                        <span className="sandbox-player-result-tag" title="Replacement / depth (outside draftable pool)">
+                          Replacement / depth
+                        </span>
+                      ) : null}
+                    </div>
                   </div>
                 ) : null}
               </div>
