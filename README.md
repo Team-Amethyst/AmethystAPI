@@ -161,7 +161,7 @@ If `player_id` is not in the current valuation pool, returns `404` with `{ error
 `valuations[]` rows include optional explainability metadata:
 - `baseline_components` (`scoring_format`, `projection_component`, `scarcity_component`)
 - `scarcity_adjustment` — always `0` (roster scarcity is already in `baseline_value`)
-- `inflation_adjustment` — full delta `adjusted_value - baseline_value` from the league-wide inflation factor
+- `inflation_adjustment` — `adjusted_value - baseline_value` (full list→auction delta). For default **`replacement_slots_v2`**, this is the **surplus allocation** move vs list strength (`min_bid + surplus allocation factor × surplus_basis`), not a separate “penalty” line item.
 
 Deploy label **`valuation_model_version`**: env `VALUATION_MODEL_VERSION`, or Docker `BUILD_GIT_SHA` (CI sets this), else `package.json` `name@version`. Set **`VALUATION_AGGREGATE_LOG=1`** for structured per-request pool/inflation logs.
 

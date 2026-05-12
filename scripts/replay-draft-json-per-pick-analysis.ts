@@ -513,7 +513,7 @@ async function main(): Promise<void> {
       ? {
           how_useful: [
             "MAE vs `paid` (below) reflects **real** list $ from Mongo — use this run to judge recommended vs adjusted vs team_adjusted calibration.",
-            "League inflation / index rows are comparable to production `POST /valuation/calculate` for the same checkpoint shape.",
+            "Response `inflation_factor` / `inflation_index_vs_opening_auction` rows match production `POST /valuation/calculate` for the same checkpoint shape (for default v2, treat `inflation_factor` as surplus allocation, not a simple CPI-style index).",
             "`team_adjusted_spread_across_teams` still shows roster-lens dispersion for the focal player.",
           ],
           caveats: [
@@ -527,7 +527,7 @@ async function main(): Promise<void> {
           proxy_catalog_note:
             "Synthetic list $ from fixtures — MAE vs `paid` is **not** a quality signal; use for inflation trajectory + roster spread shape only.",
           how_useful: [
-            "League-wide `inflation_factor` / `inflation_index_vs_opening_auction` track the same board state for every team before the pick; useful as a **shared temperature** gauge.",
+            "League-wide `inflation_factor` (surplus allocator under replacement_slots_v2) and `inflation_index_vs_opening_auction` track the same board state for every team before the pick; useful as a **shared temperature** gauge.",
             "`team_adjusted_value` differs by `user_team_id`; `team_adjusted_spread_across_teams` shows roster-lens dispersion for the focal player.",
             "Re-run with `--mongo` and `MONGO_URI` for meaningful `recommended_bid` vs `paid` error.",
           ],

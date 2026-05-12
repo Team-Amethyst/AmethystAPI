@@ -114,15 +114,17 @@ export function getOrBuildExplainabilityContext(params: {
     position_alerts: sortedAlerts,
     assumptions: [
       response.inflation_model === "replacement_slots_v2"
-        ? `Auction inflation used replacement_slots_v2: greedy league-wide slot fill yields per-slot replacement baselines; surplus cash maps to value above replacement (see docs/valuation-inflation-semantics.md).${
+        ? `Surplus allocation (replacement_slots_v2): greedy league-wide slot fill sets per-slot replacement_value floors; remaining auction dollars (surplus_cash after min_bid per open slot) are spread over surplus_basis (baseline pre-auction list strength above replacement). This path does not treat inflation_factor as a simple “market index” starting at 1 — it is the surplus allocation factor in auction_value = min_bid + inflation_factor × surplus_basis (see docs/valuation-inflation-semantics.md).${
             idx != null && Number.isFinite(idx)
-              ? ` inflation_percent_vs_auction_open and inflation_index_vs_opening_auction (${idx.toFixed(2)}×) describe change vs a replayed auction-open state; inflation_percent_vs_neutral is always (inflation_factor−1)×100 (allocator vs 1.0, not "list neutral").`
+              ? ` inflation_percent_vs_auction_open and inflation_index_vs_opening_auction (${idx.toFixed(2)}×) compare allocator tightness vs a replayed auction-open board; inflation_percent_vs_neutral is (inflation_factor−1)×100 (allocator vs 1.0, not “list neutral”).`
               : ""
           }`
         : response.inflation_model === "surplus_slots_v1"
-          ? "Auction inflation used surplus_slots_v1: $1 per remaining empty roster slot is reserved; surplus cash is mapped through value above replacement in a top draftable slice (see docs/valuation-inflation-semantics.md)."
-          : "Auction inflation used global_v1: remaining budget is divided by the full undrafted pool baseline list dollars.",
-      "The inflation factor may be clamped to a workflow floor/cap when list dollars versus remaining cash are extreme.",
+          ? "Auction dollars used surplus_slots_v1: $1 per remaining empty roster slot is reserved; surplus cash is mapped through value above replacement in a top draftable slice (see docs/valuation-inflation-semantics.md)."
+          : "Auction dollars used global_v1: remaining budget is divided by the full undrafted pool baseline list dollars (list rescale).",
+      response.inflation_model === "replacement_slots_v2"
+        ? "The surplus allocation factor (response field `inflation_factor`) may be clamped to a workflow floor/cap when total_surplus_mass vs remaining cash is extreme."
+        : "The inflation factor may be clamped to a workflow floor/cap when list dollars versus remaining cash are extreme.",
       ...(response.inflation_bounded_by !== "none"
         ? [
             `This response used inflation_raw=${response.inflation_raw.toFixed(4)} before clamp; applied factor is ${response.inflation_factor.toFixed(4)} (${response.inflation_bounded_by}).`,

@@ -251,7 +251,10 @@
         "replacement_key_used": { "type": ["string", "null"] },
         "replacement_value_used": { "type": ["number", "null"] },
         "surplus_basis": { "type": "number" },
-        "inflation_factor": { "type": "number" },
+        "inflation_factor": {
+          "type": "number",
+          "description": "Echo of response inflation_factor. For replacement_slots_v2 responses, prefer the label surplus allocation factor (auction_value = min_bid + factor × surplus_basis), not generic market inflation."
+        },
         "pool_size": { "type": "integer", "minimum": 0 },
         "roster_demand_slots": { "type": "integer", "minimum": 0 },
         "pool_to_slot_ratio": { "type": ["number", "null"] },

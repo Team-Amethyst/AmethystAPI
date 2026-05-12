@@ -23,7 +23,7 @@ This document tracks **code-path semantics** plus **`pnpm run audit:valuation-re
 |-------|-------------------|----------------------|
 | **`engine_contract_version`** | Wire format / drift detector for Draft | **Reliable** — constant from `ENGINE_CONTRACT_VERSION`. |
 | **`inflation_model`** | `global_v1`, `surplus_slots_v1`, or `replacement_slots_v2` | Echoes what math ran; v2 never falls back to global (uses `fallback_reason` instead). See [valuation-inflation-semantics.md](valuation-inflation-semantics.md). |
-| **`inflation_factor`** | Applied multiplier after workflow cap/floor | Interpret with **`inflation_raw`** / **`inflation_bounded_by`** and **`inflation_model`**. On surplus, it scales **marginal list $** above replacement, not whole-list list $. |
+| **`inflation_factor`** | Applied multiplier after workflow cap/floor | Interpret with **`inflation_raw`** / **`inflation_bounded_by`** and **`inflation_model`**. On **`replacement_slots_v2`**, it is the **surplus allocation factor** (`min_bid + factor × surplus_basis`), not a list-price index. On **`surplus_slots_v1`**, it scales marginal list $ above replacement. |
 | **`inflation_raw`** | Pre-clamp ratio (meaning depends on **`inflation_model`**) | **`global_v1`:** budget ÷ full undrafted pool $. **`surplus_slots_v1`:** surplus cash ÷ draftable surplus $. **`replacement_slots_v2`:** surplus cash ÷ `total_surplus_mass` (or `0` / `1` on terminal paths). |
 | **`inflation_bounded_by`** | `none` / `cap` / `floor` | Which bound affected **`inflation_factor`** relative to **`inflation_raw`**. |
 | **`total_budget_remaining`** | League dollars left | **Reliable** given request semantics: either **`budget_by_team_id`** sum or `total_budget * num_teams - Σ paid` (+ keeper spend rules from workflow). |
@@ -53,16 +53,16 @@ This document tracks **code-path semantics** plus **`pnpm run audit:valuation-re
 | **`inflation_factor` (row)** | Copy of league factor | **Redundant** with top-level; same value every row. |
 | **`baseline_components`** | `projection_component`, `scarcity_component`, `scoring_format` | **Reliable** when `__valuation_meta__` is populated by baseline engine. With **empty projections** (common in tests / thin sync), **`projection_component` is often ~0** and scarcity still moves **`value`** — users may think “projection is broken” when it is “no stats row”. |
 | **`scarcity_adjustment`** | Reserved wire field | **Always `0`**. Roster scarcity is **embedded in `baseline_value`**; use **`baseline_components.scarcity_component`** for the multiplier story. **`scarcity_adjustment + inflation_adjustment === adjusted_value - baseline_value`**. |
-| **`inflation_adjustment`** | Full auction delta | **`adjusted_value - baseline_value`** (entire move from list to auction target from the league-wide factor). |
-| **`why[]`** | Human bullets | Uses **`baseline_components`** for scarcity copy; inflation sentence stays accurate. |
-| **`explain_v2`** | Structured drivers / confidence | **`adjustments`** reconcile to **`auction_target - list_value`**; drivers describe league factor vs embedded scarcity context. |
+| **`inflation_adjustment`** | Full auction delta | **`adjusted_value - baseline_value`**. On **`replacement_slots_v2`**, this is the **surplus allocation** move vs list strength (drivers label **Surplus allocation** in `explain_v2`), not “money removed” as a separate penalty. |
+| **`why[]`** | Human bullets | Uses **`baseline_components`** for scarcity copy; v2 auction line spells out **min_bid + surplus allocation factor × surplus_basis**. |
+| **`explain_v2`** | Structured drivers / confidence | **`adjustments`** reconcile to **`auction_target - list_value`**; for **`replacement_slots_v2`**, the large-magnitude driver is **Surplus allocation** (field `inflation_factor` on the wire). |
 
 ---
 
 ## `context_v2` and `market_notes`
 
 - **`scope.league_id`** — from request **`league_id`** or nested **`league.id`**; otherwise **`"unknown"`**. Draft should send one of these for multi-tenant UIs.
-- **`market_summary.headline`** — template from inflation % + top scarcity position. **Coherent** with `inflation_factor` and `analyzeScarcity` ordering.
+- **`market_summary.headline`** — template from inflation % + top scarcity position. **Coherent** with `inflation_factor` / `inflation_index_vs_opening_auction` and `analyzeScarcity` ordering (v2 prefers the opening index for the headline when present).
 - **`position_alerts`** — from **`analyzeScarcity`** on the **baseline-adjusted** pool; **aligned** with the same undrafted set used after drafted ids (not raw Mongo).
 - **`assumptions` / `confidence`** — includes inflation clamp note and catalog-calibration pointer (fixture audit script).
 

@@ -234,6 +234,7 @@ export interface ValuedPlayer {
     replacement_key_used: string | null;
     replacement_value_used: number | null;
     surplus_basis?: number;
+    /** Echo of response `inflation_factor`. For `replacement_slots_v2`, treat as **surplus allocation factor** in `auction_value = min_bid + inflation_factor × surplus_basis`, not a simple market “inflation index.” */
     inflation_factor: number;
     /** Eligible valuation universe size (same for every row in a response). */
     pool_size?: number;

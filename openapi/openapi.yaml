@@ -548,7 +548,7 @@ components:
           description: Always 0; use baseline_components.scarcity_component and baseline_value for scarcity economics.
         inflation_adjustment:
           type: number
-          description: adjusted_value minus baseline_value (total auction delta from inflation factor).
+          description: adjusted_value minus baseline_value (auction delta). For replacement_slots_v2 this is the surplus-allocation move vs list strength, not a separate penalty line item; for global_v1 it is the list-rescale delta.
         why:
           type: array
           description: Short rationale strings for UI / trust.
@@ -567,7 +567,7 @@ components:
               type: number
             adjustments:
               type: object
-              description: scarcity is 0 (embedded in list_value); inflation + other = auction_target − list_value.
+              description: scarcity is 0 (embedded in list_value); inflation + other = auction_target − list_value. For replacement_slots_v2, inflation is the surplus-allocation component (same dollars as explain_v2 drivers labeled Surplus allocation).
               properties:
                 scarcity:
                   type: number

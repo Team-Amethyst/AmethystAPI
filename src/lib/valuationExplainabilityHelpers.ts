@@ -1,4 +1,4 @@
-import type { ValuationResponse, ValuedPlayer } from "../types/brain";
+import type { InflationModel, ValuationResponse, ValuedPlayer } from "../types/brain";
 
 export type InflationHeadlineBasis = "neutral_1" | "opening_index";
 
@@ -58,6 +58,10 @@ export function clamp01(n: number): number {
   return Math.max(0, Math.min(1, n));
 }
 
+function driverLabelForInflationModel(model: InflationModel): string {
+  return model === "replacement_slots_v2" ? "Surplus allocation" : "League inflation";
+}
+
 export function buildDriverRows(row: ValuedPlayer, response: ValuationResponse) {
   const inflationFactor = response.inflation_factor;
   const scarcityImpact = rounded(row.scarcity_adjustment ?? 0);
@@ -68,14 +72,17 @@ export function buildDriverRows(row: ValuedPlayer, response: ValuationResponse) 
   const raw = response.inflation_raw;
   const bounded = response.inflation_bounded_by;
   const idxOpen = response.inflation_index_vs_opening_auction;
+  const minBid = response.min_bid ?? 1;
   let leagueReason =
     response.inflation_model === "replacement_slots_v2"
-      ? `replacement_slots_v2: slot-aware surplus allocation (factor ${inflationFactor.toFixed(2)}× on marginal list $ above replacement); see response replacement_values_by_slot_or_position and fallback_reason.${
+      ? `replacement_slots_v2: surplus allocation factor ${inflationFactor.toFixed(2)}× maps remaining league auction dollars onto surplus_basis (baseline list strength above slot replacement); auction_value = min_bid (${minBid.toFixed(1)}) + factor × surplus_basis. See replacement_values_by_slot_or_position and fallback_reason.${
           idxOpen != null && Number.isFinite(idxOpen)
-            ? ` Auction-open index ${idxOpen.toFixed(2)}× (1.0 = same allocator at replayed auction open).`
+            ? ` inflation_index_vs_opening_auction ${idxOpen.toFixed(2)}× compares allocator tightness vs a replayed auction-open board (not a retail “inflation index”).`
             : ""
         }`
-      : `League-wide factor ${inflationFactor.toFixed(2)}× applied to list_value (baseline already includes scoring/roster scarcity).`;
+      : response.inflation_model === "surplus_slots_v1"
+        ? `surplus_slots_v1: league-wide factor ${inflationFactor.toFixed(2)}× on max(0, baseline − replacement) after $1/slot reserve; baseline already includes scoring/roster scarcity.`
+        : `League-wide factor ${inflationFactor.toFixed(2)}× applied to list_value (baseline already includes scoring/roster scarcity).`;
   if (bounded === "cap") {
     leagueReason += ` Raw ratio was ${raw.toFixed(2)}× before the workflow cap.`;
   } else if (bounded === "floor") {
@@ -83,7 +90,7 @@ export function buildDriverRows(row: ValuedPlayer, response: ValuationResponse) 
   }
   const drivers = [
     {
-      label: "League inflation",
+      label: driverLabelForInflationModel(response.inflation_model),
       impact: inflationImpact,
       reason: leagueReason,
     },
@@ -109,9 +116,19 @@ export function buildDriverRows(row: ValuedPlayer, response: ValuationResponse) 
 
 export function buildPlayerWhy(
   row: ValuedPlayer,
-  leagueInflation: number,
+  response: ValuationResponse,
   scarcityByPos: Map<string, { score: number; alert: string | null }>
 ): string[] {
+  const leagueInflation = response.inflation_factor;
+  const idxOpen = response.inflation_index_vs_opening_auction;
+  const minBid = response.min_bid ?? 1;
+  const hotBoardVsOpen =
+    response.inflation_model === "replacement_slots_v2" &&
+    idxOpen != null &&
+    Number.isFinite(idxOpen)
+      ? idxOpen > 1.08
+      : leagueInflation > 1.08;
+
   const why: string[] = [];
   if (row.indicator === "Steal") {
     why.push(
@@ -125,15 +142,35 @@ export function buildPlayerWhy(
     why.push("Catalog-order rank and baseline strength rank are broadly aligned.");
   }
 
-  why.push(
-    `Adjusted auction $${row.adjusted_value.toFixed(1)} vs baseline $${row.baseline_value.toFixed(1)} after league inflation (${leagueInflation.toFixed(2)}×).`
-  );
+  if (response.inflation_model === "replacement_slots_v2") {
+    why.push(
+      `Auction target $${row.adjusted_value.toFixed(1)} (auction_value): min_bid $${minBid.toFixed(1)} + surplus allocation factor ${leagueInflation.toFixed(2)}× applied to surplus_basis; baseline $${row.baseline_value.toFixed(1)} is pre-auction list strength; replacement_value and surplus_basis are on valuation_explain when explain_valuation_rows is enabled.`
+    );
+  } else if (response.inflation_model === "surplus_slots_v1") {
+    why.push(
+      `Adjusted auction $${row.adjusted_value.toFixed(1)} vs baseline $${row.baseline_value.toFixed(1)} after league inflation (${leagueInflation.toFixed(2)}×).`
+    );
+  } else {
+    why.push(
+      `Adjusted auction $${row.adjusted_value.toFixed(1)} vs baseline $${row.baseline_value.toFixed(1)} after league-wide list rescale (${leagueInflation.toFixed(2)}×).`
+    );
+  }
 
   const scFac = row.baseline_components?.scarcity_component ?? 0;
   if (Number.isFinite(scFac) && Math.abs(scFac) >= 0.01) {
-    why.push(
-      `Roster/scarcity is reflected in baseline list price (scarcity_component=${scFac.toFixed(3)} on baseline_components), before the league inflation factor.`
-    );
+    if (response.inflation_model === "replacement_slots_v2") {
+      why.push(
+        `Roster/scarcity is embedded in baseline list strength (scarcity_component=${scFac.toFixed(3)} on baseline_components); surplus allocation then maps remaining auction dollars over value above replacement.`
+      );
+    } else if (response.inflation_model === "surplus_slots_v1") {
+      why.push(
+        `Roster/scarcity is reflected in baseline list price (scarcity_component=${scFac.toFixed(3)} on baseline_components), before the league inflation factor.`
+      );
+    } else {
+      why.push(
+        `Roster/scarcity is reflected in baseline list price (scarcity_component=${scFac.toFixed(3)} on baseline_components), before the league-wide inflation factor.`
+      );
+    }
   }
 
   for (const tok of positionTokens(row.position)) {
@@ -144,8 +181,12 @@ export function buildPlayerWhy(
     }
   }
 
-  if ((row.auction_tier || 99) <= 1 && leagueInflation > 1.08) {
-    why.push("Elite tier in an inflated market — expect competitive bidding.");
+  if ((row.auction_tier || 99) <= 1 && hotBoardVsOpen) {
+    why.push(
+      response.inflation_model === "replacement_slots_v2"
+        ? "Elite tier with the board hotter vs our replayed auction-open baseline — expect competitive bidding."
+        : "Elite tier in an inflated market — expect competitive bidding."
+    );
   }
 
   return why;

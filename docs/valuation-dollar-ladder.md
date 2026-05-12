@@ -40,7 +40,7 @@ Many tools collapse everything into **one dollar column** (sometimes mixing “v
 
 - **List / build context** (`baseline_value`) vs **official auction dollars** (`auction_value` / `adjusted_value`) vs **draftroom bid suggestion** (`recommended_bid`) vs **your roster context** (`team_adjusted_value`).
 
-**When yours looks good in a side-by-side:** lead with **transparency** (same request → reproducible ladder + `explain_v2` / `why`), **slot-aware inflation** when `inflation_model` is `replacement_slots_v2`, and **monotone bid curves** within position after smoothing — not with “our single number is always higher.” **When to be humble:** other products may use different projections or ADP sources; your **`indicator`** (Steal / Reach / Fair) is defined vs **your** catalog `adp`, not “the industry.”
+**When yours looks good in a side-by-side:** lead with **transparency** (same request → reproducible ladder + `explain_v2` / `why`), **slot-aware surplus allocation** when `inflation_model` is `replacement_slots_v2` (UI label: surplus allocation factor, not a simple inflation index), and **monotone bid curves** within position after smoothing — not with “our single number is always higher.” **When to be humble:** other products may use different projections or ADP sources; your **`indicator`** (Steal / Reach / Fair) is defined vs **your** catalog `adp`, not “the industry.”
 
 ---
 

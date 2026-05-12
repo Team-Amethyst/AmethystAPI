@@ -126,6 +126,16 @@ So players at or below **replacement** in model dollars stay near **$1**; stars 
 
 ### Display semantics (v2 vs `global_v1`)
 
+User-facing language (Player Detail / `explain_v2` / `market_notes`):
+
+- **`baseline_value`** — pre-auction **list strength** (projection + roster scarcity already embedded).
+- **`replacement_value`** — dollars for a **comparable roster-slot replacement** (from `replacement_values_by_slot_or_position` / per-row `valuation_explain.replacement_value_used` when explain mode is on).
+- **`surplus_basis`** — how far the player sits **above** that replacement floor on the best eligible slot (per-row `valuation_explain.surplus_basis` when explain mode is on; engine uses `max(0, …)` over eligible slots).
+- **`auction_value`** (same as **`adjusted_value`**) — **`min_bid + inflation_factor × surplus_basis`** on the normal v2 path (plus terminal/fallback branches documented above).
+- **`inflation_factor`** on **`replacement_slots_v2`** — call this the **surplus allocation factor** in UI and docs: it **scales remaining league auction dollars** (`surplus_cash`) across total marginal surplus (`total_surplus_mass`), **not** a retail “inflation index” that starts at 1.0.
+
+Technical notes:
+
 - **`inflation_factor`** is the **surplus allocator** used in `adjusted_value`; it is **not** meant to read like `global_v1`’s “1.0 = list dollars match cash.” Values below 1.0 at a fresh auction are normal.
 - **`inflation_index_vs_opening_auction`** (when present) is **current applied `inflation_factor` ÷** the same v2 pass recomputed on a **replayed auction-open** counterfactual: roster with **non-keeper** `drafted_players` rows removed, off-board ids from that opening roster plus `additionalDraftedIds`, and league budget **grossed up** by `paid` on those removed rows. **~1.0** means “same allocator tightness as at our replayed open.” Keeper rows must use **`is_keeper: true`** when they appear in `drafted_players`, or opening roster/budget can be wrong.
 - After **`attachValuationExplainability`**: **`inflation_percent_vs_auction_open`** = `(index − 1) × 100` (top-level echo + `context_v2.market_summary`) — **preferred for UI** (“% vs auction open”). **`inflation_percent_vs_neutral`** in `market_summary` is always **`(inflation_factor − 1) × 100`** (allocator vs 1.0), including for v2.

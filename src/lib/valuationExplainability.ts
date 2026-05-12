@@ -50,7 +50,7 @@ export function attachValuationExplainability(
 
   const valuations = response.valuations.map((row) => ({
     ...row,
-    why: buildPlayerWhy(row, response.inflation_factor, scarcityByPos),
+    why: buildPlayerWhy(row, response, scarcityByPos),
     explain_v2: (() => {
       const { scarcityImpact, inflationImpact, otherImpact, drivers } = buildDriverRows(
         row,

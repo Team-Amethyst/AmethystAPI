@@ -103,7 +103,8 @@ This map documents where each pricing responsibility lives after the refactor.
 - `src/lib/playerCatalog.ts`
   - Normalizes Mongo docs into `LeanPlayer` and hardens coercion.
 - `scripts/sync-players.ts`
-  - Syncs MLB splits to Mongo, preserves two-way eligibility (`positions[]`), persists coarse `depthChartPosition`, writes **`stats`** for the last completed season and **`projection`** as a three-year weighted blend (`catalogMeta` lists seasons).
+  - Default path: **roster-universe v1** (`runRosterCatalogUniverseBuild`) — roster + optional NFBC ids, paginated stats, gated Mongo writes via `--confirm-universe-write`. Legacy capped-split-only upserts: `--legacy-catalog-sync`.
+  - Persists two-way eligibility (`positions[]`), coarse `depthChartPosition`, **`stats`** (last completed season) and **`projection`** (three-year weighted blend; `catalogMeta` lists seasons).
 - `scripts/audit-player-eligibility.ts`
   - Post-sync QA script (`pnpm sync-players:verify`).
 
@@ -117,7 +118,7 @@ This map documents where each pricing responsibility lives after the refactor.
 ## Explainability (additive UI fields)
 
 - `src/lib/valuationExplainability.ts` — public entry (`attachValuationExplainability`).
-- `src/lib/valuationExplainabilityHelpers.ts` — string/formatting + per-row driver construction.
+- `src/lib/valuationExplainabilityHelpers.ts` — string/formatting + per-row driver construction (`replacement_slots_v2` → driver label **Surplus allocation**; `why[]` spells `min_bid + surplus allocation factor × surplus_basis`).
 - `src/lib/valuationExplainabilityContext.ts` — cached `context_v2` + `market_notes` assembly (scarcity scan).
 
 ## Output validation + scarcity analytics
