@@ -1,7 +1,7 @@
 /**
  * Golden ranges for Draftroom-default roster + synthetic catalog after roto Z
  * tuning (`baselineRotoZConfig.ts`) and intrinsic bases (`baselineValueEngine.ts`).
- * Keeps replacement_slots_v2 budget conservation (~sum top draftable ≈ league budget) stable.
+ * Keeps replacement_slots_v2 budget conservation (~sum auction over draftable_player_ids ≈ league budget) stable on the synthetic pool.
  */
 import { describe, expect, it } from "vitest";
 import { isPitcherForBaseline } from "../src/services/baselineProjectionStats";

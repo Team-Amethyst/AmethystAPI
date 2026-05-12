@@ -36,6 +36,7 @@ import {
   isPlayerInDraftablePool,
   normalizeDraftablePoolMeta,
 } from "../src/lib/draftablePoolSemantics";
+import { sumAuctionValueForDraftablePool } from "../src/lib/rosterUniverseValuationCalibration";
 import { loadMongoCatalogForEngine } from "../src/lib/mongoCatalogPipeline";
 import { listUnsupportedScoringCategories } from "../src/lib/scoringCategorySupport";
 
@@ -87,6 +88,10 @@ function sumAuction(rows: ValuedPlayer[]): number {
 function sumTopN(rows: ValuedPlayer[], n: number): number {
   const sorted = [...rows].sort((a, b) => b.auction_value - a.auction_value);
   return sorted.slice(0, Math.max(0, n)).reduce((s, r) => s + r.auction_value, 0);
+}
+
+function rosterSlotCount(rosterSlots: NormalizedValuationInput["roster_slots"]): number {
+  return rosterSlots.reduce((s, slot) => s + slot.count, 0);
 }
 
 function topByPosition(rows: ValuedPlayer[]): Map<string, ValuedPlayer> {
@@ -319,8 +324,17 @@ function printScenarioReport(
   const dps = response.draftable_pool_size;
   const sumDraftableTop =
     dps != null && dps > 0 ? sumTopN(rows, dps) : null;
-  const ratioDraftable =
+  const { sum: sumDraftablePlayerIds, mode: draftableSumMode } = sumAuctionValueForDraftablePool(
+    rows,
+    response
+  );
+  const ratioDraftablePlayerIds =
+    leagueBudget > 0 ? sumDraftablePlayerIds / leagueBudget : null;
+  /** Legacy audit: top `draftable_pool_size` rows by auction_value (should match engine ids sum when v2 lists ids). */
+  const ratioDraftableTopNAudit =
     sumDraftableTop != null && leagueBudget > 0 ? sumDraftableTop / leagueBudget : null;
+  const draftableTopNMinusIdsDiff =
+    sumDraftableTop != null ? sumDraftableTop - sumDraftablePlayerIds : null;
 
   const ge = (t: number) => rows.filter((r) => r.auction_value >= t).length;
   const nearOne = rows.filter((r) => r.auction_value <= 1.05).length;
@@ -353,18 +367,24 @@ function printScenarioReport(
     `Pool rows (post-filter): ${pool.length} (${valuationEligibleInPool} valuation_eligible) → valuation rows: ${rows.length}`
   );
   console.log(`League budget (num_teams × total_budget): ${leagueBudget}`);
+  console.log(`num_teams: ${scenario.input.num_teams}  total_budget (per team): ${scenario.input.total_budget}`);
+  console.log(`roster_slots (total active slots): ${rosterSlotCount(scenario.input.roster_slots)}`);
   console.log(`Sum auction_value (all rows): ${sumAll.toFixed(2)}  ratio: ${ratio.toFixed(4)}`);
+  console.log(
+    `Engine economics: remaining_slots=${response.remaining_slots ?? "n/a"}  draftable_pool_size=${dps ?? "n/a"}  min_bid=${response.min_bid ?? "n/a"}  surplus_cash=${response.surplus_cash ?? "n/a"}  total_surplus_mass=${response.total_surplus_mass ?? "n/a"}  inflation_raw=${response.inflation_raw?.toFixed(4) ?? "n/a"}  inflation_factor=${response.inflation_factor}  inflation_bounded_by=${response.inflation_bounded_by}`
+  );
+  console.log(
+    `Sum auction_value over draftable_player_ids (${draftableSumMode}): ${sumDraftablePlayerIds.toFixed(2)}` +
+      (ratioDraftablePlayerIds != null ? `  ratio: ${ratioDraftablePlayerIds.toFixed(4)}` : "")
+  );
   if (sumDraftableTop != null) {
     console.log(
-      `Sum top-${dps} auction_value (draftable_pool_size slice): ${sumDraftableTop.toFixed(2)}` +
-        (ratioDraftable != null ? `  ratio: ${ratioDraftable.toFixed(4)}` : "")
+      `Sum top-${dps} by auction_value (audit cross-check): ${sumDraftableTop.toFixed(2)}` +
+        (ratioDraftableTopNAudit != null ? `  ratio: ${ratioDraftableTopNAudit.toFixed(4)}` : "") +
+        (draftableTopNMinusIdsDiff != null && Math.abs(draftableTopNMinusIdsDiff) > 1e-3
+          ? `  Δ vs ids: ${draftableTopNMinusIdsDiff.toFixed(4)}`
+          : "  (matches ids sum)")
     );
-  }
-  if (response.remaining_slots != null) {
-    console.log(`remaining_slots (v2): ${response.remaining_slots}`);
-  }
-  if (response.draftable_pool_size != null) {
-    console.log(`draftable_pool_size: ${response.draftable_pool_size}`);
   }
   if (response.scoring_category_warnings?.length) {
     console.log("scoring_category_warnings:");
@@ -374,6 +394,12 @@ function printScenarioReport(
   if (uns.length && !response.scoring_category_warnings?.length) {
     console.log(
       "NOTE: categories flagged as unsupported by analyzer but no response warnings (strict path or workflow bug)."
+    );
+  }
+
+  if (response.inflation_bounded_by === "cap" && ratioDraftablePlayerIds != null && ratioDraftablePlayerIds < 0.97) {
+    console.log(
+      "\nNOTE: Draftable $/budget below ~1 while inflation is cap-limited — surplus is scaled with inflation_factor at the workflow ceiling, not a draftable_player_ids vs top-N sort mismatch (compare sum lines above)."
     );
   }
 
@@ -388,6 +414,13 @@ function printScenarioReport(
   );
 
   const top50 = [...rows].sort((a, b) => b.auction_value - a.auction_value).slice(0, 50);
+  const dpIds = response.draftable_player_ids ?? [];
+  const first25DraftableEngineOrder = dpIds.slice(0, 25);
+  const top25ByAuctionValuePlayerIds = top50.slice(0, 25).map((r) => r.player_id);
+  const top25AvSet = new Set(top25ByAuctionValuePlayerIds);
+  const overlapFirst25DraftableWithTop25Av = first25DraftableEngineOrder.filter((id) =>
+    top25AvSet.has(id)
+  ).length;
   const hitRows = rows.filter((r) => classifyRow(r, byId, ov) === "hitter");
   const pitRows = rows.filter((r) => classifyRow(r, byId, ov) === "pitcher");
   const top25h = [...hitRows].sort((a, b) => b.auction_value - a.auction_value).slice(0, 25);
@@ -442,6 +475,13 @@ function printScenarioReport(
     }
   }
 
+  if (dpIds.length > 0) {
+    console.log("\nDraftable vs top-25-by-auction_value (debug, first 25 engine order):");
+    console.log(`  overlap (engine-first-25 ∩ top-25-AV): ${overlapFirst25DraftableWithTop25Av}`);
+    console.log(`  draftable[0..24]: ${first25DraftableEngineOrder.join(", ")}`);
+    console.log(`  top25 AV:       ${top25ByAuctionValuePlayerIds.join(", ")}`);
+  }
+
   return {
     scenario: scenario.id,
     ok: true,
@@ -449,10 +489,28 @@ function printScenarioReport(
     valuation_eligible_in_pool: valuationEligibleInPool,
     valuationRows: rows.length,
     leagueBudget,
+    num_teams: scenario.input.num_teams,
+    total_budget_per_team: scenario.input.total_budget,
+    roster_active_slot_count: rosterSlotCount(scenario.input.roster_slots),
     sumAuctionAll: sumAll,
     ratioSumToBudget: ratio,
+    sumAuctionOverDraftablePlayerIds: sumDraftablePlayerIds,
+    draftable_sum_mode: draftableSumMode,
     sumTopDraftablePoolSize: sumDraftableTop,
-    ratioTopDraftableToBudget: ratioDraftable,
+    draftableTopNMinusIdsDiff: draftableTopNMinusIdsDiff,
+    ratioDraftablePlayerIdsToBudget: ratioDraftablePlayerIds,
+    ratioTopDraftableToBudget: ratioDraftableTopNAudit,
+    inflation_raw: response.inflation_raw,
+    inflation_factor: response.inflation_factor,
+    inflation_bounded_by: response.inflation_bounded_by,
+    surplus_cash: response.surplus_cash ?? null,
+    total_surplus_mass: response.total_surplus_mass ?? null,
+    min_bid: response.min_bid ?? null,
+    draftable_vs_top25_debug: {
+      first_25_draftable_player_ids_engine_order: first25DraftableEngineOrder,
+      top_25_player_ids_by_auction_value: top25ByAuctionValuePlayerIds,
+      overlap_count_first25_engine_order_vs_top25_av: overlapFirst25DraftableWithTop25Av,
+    },
     remaining_slots: response.remaining_slots,
     draftable_pool_size: response.draftable_pool_size,
     valuation_context: response.valuation_context ?? null,

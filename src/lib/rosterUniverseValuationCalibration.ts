@@ -61,6 +61,31 @@ function sortedByAv(rows: ValuedPlayer[]): ValuedPlayer[] {
   return [...rows].sort((a, b) => b.auction_value - a.auction_value);
 }
 
+/** Sum auction_value over the engine's `draftable_player_ids` when present; else top `draftable_pool_size` by auction_value (legacy audit). */
+export function sumAuctionValueForDraftablePool(
+  rows: ValuedPlayer[],
+  response: ValuationResponse
+): { sum: number; mode: "draftable_player_ids" | "top_n_by_auction_value" } {
+  const ids = response.draftable_player_ids;
+  if (ids != null && ids.length > 0) {
+    const byId = new Map(rows.map((r) => [r.player_id, r]));
+    let sum = 0;
+    for (const id of ids) {
+      sum += byId.get(id)?.auction_value ?? 0;
+    }
+    return { sum, mode: "draftable_player_ids" };
+  }
+  const dps = response.draftable_pool_size ?? 0;
+  if (dps > 0) {
+    const sorted = sortedByAv(rows);
+    return {
+      sum: sorted.slice(0, dps).reduce((s, r) => s + r.auction_value, 0),
+      mode: "top_n_by_auction_value",
+    };
+  }
+  return { sum: 0, mode: "top_n_by_auction_value" };
+}
+
 export type ValuationCalibrationSnapshot = {
   scenario_id: string;
   ok: boolean;
@@ -196,8 +221,7 @@ export function summarizeValuationResponse(
   const nearOne = rows.filter((r) => r.auction_value <= 1.05 && r.auction_value >= 0).length;
 
   const dps = res.draftable_pool_size ?? 0;
-  const draftableSum =
-    dps > 0 ? sorted.slice(0, dps).reduce((s, r) => s + r.auction_value, 0) : 0;
+  const { sum: draftableSum } = sumAuctionValueForDraftablePool(rows, res);
   const leagueBudget = input.total_budget * input.num_teams;
 
   const eligible = res.valuation_context?.eligible_pool_size ?? rows.length;
