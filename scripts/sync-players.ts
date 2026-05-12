@@ -3,16 +3,22 @@
  * into the `players` collection by canonical **mlbId** only (`catalogKind: "mlb"`).
  *
  * Run:
- *   pnpm sync-players
+ *   pnpm sync-players -- --confirm-universe-write   # roster-universe Mongo upserts (non-dry-run)
  *   pnpm sync-players -- --dry-run
  *   pnpm sync-players -- --dry-run --rebuild-catalog
  *   pnpm sync-players -- --rebuild-catalog --confirm-destructive   # dedupe + remove invalid
  *   pnpm sync-players -- --skip-sync --rebuild-catalog --dry-run
  *
- * Roster + NFBC catalog universe (v1, dry-run by default for writes):
- *   pnpm sync-players -- --roster-universe-v1 --dry-run
- *   pnpm sync-players -- --roster-universe-v1 --universe-nfbc-preview tmp/nfbc-data-mongo-preview.json --dry-run
- *   pnpm sync-players -- --roster-universe-v1 --confirm-universe-write   # writes Mongo (requires non-dry-run)
+ * Default catalog path is **roster-universe v1** (roster IDs + optional NFBC ids, paginated stats).
+ * Mongo upserts require an explicit write gate (still use `--dry-run` to preview only):
+ *   pnpm sync-players -- --confirm-universe-write
+ *   pnpm sync-players -- --universe-nfbc-preview tmp/nfbc-data-mongo-preview.json --confirm-universe-write
+ *
+ * Legacy capped-split-only catalog sync (rollback / comparison):
+ *   pnpm sync-players -- --legacy-catalog-sync
+ *   pnpm sync-players -- --legacy-catalog-sync --dry-run
+ *
+ * `--roster-universe-v1` remains accepted as an explicit no-op alias (scripts / muscle memory).
  *
  * Roster-universe stat maps mirror legacy capped sync for anchor-capped MLB IDs (paginated fill only
  * where appropriate); see `runRosterCatalogUniverseBuild` in `src/lib/mlbCatalogUniverse/`.
@@ -66,6 +72,9 @@ type SyncCli = {
   skipSync: boolean;
   failOnGate: boolean;
   archiveInvalid: boolean;
+  /** Opt in to pre-roster-universe capped-split catalog upserts only. */
+  legacyCatalogSync: boolean;
+  /** Explicit roster-universe flag (optional; roster path is already the default when legacy is off). */
   rosterUniverseV1: boolean;
   confirmUniverseWrite: boolean;
   universeNfbcPreviewPath?: string;
@@ -88,6 +97,7 @@ function parseArgs(argv: string[]): SyncCli {
     skipSync: a.has("--skip-sync") || a.has("--skipSync"),
     failOnGate: !a.has("--no-fail-gates"),
     archiveInvalid: a.has("--archive-invalid"),
+    legacyCatalogSync: a.has("--legacy-catalog-sync") || a.has("--legacyCatalogSync"),
     rosterUniverseV1: a.has("--roster-universe-v1") || a.has("--rosterUniverseV1"),
     confirmUniverseWrite: a.has("--confirm-universe-write") || a.has("--confirmUniverseWrite"),
     universeNfbcPreviewPath,
@@ -530,54 +540,65 @@ async function main(): Promise<void> {
       );
     }
 
-    if (cli.rosterUniverseV1) {
+    const useRosterCatalogUniverse = !cli.legacyCatalogSync;
+    if (!cli.skipSync) {
+      console.log(
+        `[Sync] Catalog path: ${
+          useRosterCatalogUniverse
+            ? "roster_universe_v1 (default)"
+            : "legacy_capped_splits_only (--legacy-catalog-sync)"
+        }${cli.rosterUniverseV1 && useRosterCatalogUniverse ? " [--roster-universe-v1 redundant]" : ""}`
+      );
+    }
+
+    if (!cli.skipSync && useRosterCatalogUniverse) {
       await runRosterUniverseSync(cli);
-    } else if (!cli.skipSync) {
-        const players = await fetchMlbPlayerDocs();
+    } else if (!cli.skipSync && cli.legacyCatalogSync) {
+      const players = await fetchMlbPlayerDocs();
 
-        const existing = await Player.find({ mlbId: { $gt: 0 } })
-          .select("mlbId")
-          .lean();
-        const existingIds = new Set(
-          existing.map((e) => e.mlbId as number).filter((n) => typeof n === "number")
+      const existing = await Player.find({ mlbId: { $gt: 0 } })
+        .select("mlbId")
+        .lean();
+      const existingIds = new Set(
+        existing.map((e) => e.mlbId as number).filter((n) => typeof n === "number")
+      );
+
+      let wouldInsert = 0;
+      let wouldUpdate = 0;
+      for (const p of players) {
+        if (existingIds.has(p.mlbId)) wouldUpdate++;
+        else wouldInsert++;
+      }
+
+      const ops = players.map((p) => ({
+        updateOne: {
+          filter: { mlbId: p.mlbId },
+          update: { $set: p },
+          upsert: true,
+        },
+      }));
+
+      if (cli.dryRun) {
+        console.log(
+          JSON.stringify(
+            {
+              dry_run: true,
+              would_upsert_total: players.length,
+              would_insert_approx: wouldInsert,
+              would_update_approx: wouldUpdate,
+              projection_resolution_failures: 0,
+              note: "Approximate insert vs update based on existing mlbIds in Mongo.",
+            },
+            null,
+            2
+          )
         );
-
-        let wouldInsert = 0;
-        let wouldUpdate = 0;
-        for (const p of players) {
-          if (existingIds.has(p.mlbId)) wouldUpdate++;
-          else wouldInsert++;
-        }
-
-        const ops = players.map((p) => ({
-          updateOne: {
-            filter: { mlbId: p.mlbId },
-            update: { $set: p },
-            upsert: true,
-          },
-        }));
-
-        if (cli.dryRun) {
-          console.log(
-            JSON.stringify(
-              {
-                dry_run: true,
-                would_upsert_total: players.length,
-                would_insert_approx: wouldInsert,
-                would_update_approx: wouldUpdate,
-                projection_resolution_failures: 0,
-                note: "Approximate insert vs update based on existing mlbIds in Mongo.",
-              },
-              null,
-              2
-            )
-          );
-        } else {
-          const result = await Player.bulkWrite(ops);
-          console.log(
-            `[Sync] Done — ${result.upsertedCount} inserted, ${result.modifiedCount} modified, ${players.length} upserts`
-          );
-        }
+      } else {
+        const result = await Player.bulkWrite(ops);
+        console.log(
+          `[Sync] Done — ${result.upsertedCount} inserted, ${result.modifiedCount} modified, ${players.length} upserts`
+        );
+      }
     }
 
     await runPostSyncGates(cli);

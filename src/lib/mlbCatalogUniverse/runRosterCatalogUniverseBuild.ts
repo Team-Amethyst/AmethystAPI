@@ -165,7 +165,7 @@ function buildMinimalTierDoc(args: {
  *   (`anchorSplitAggPreferCapped`).
  *
  * **Mongo:** this function does not write. CLI upserts remain gated by
- * `sync-players --roster-universe-v1 --confirm-universe-write` (no `--dry-run`).
+ * `pnpm sync-players -- --confirm-universe-write` (roster-universe is default; no `--dry-run`).
  */
 export async function runRosterCatalogUniverseBuild(
   options: RunRosterCatalogUniverseBuildOptions

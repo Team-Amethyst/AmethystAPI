@@ -32,7 +32,7 @@ jobs:
       - name: Sync MLB Players
         env:
           MONGO_URI: ${{ secrets.MONGO_URI }}
-        run: pnpm sync-players
+        run: pnpm sync-players -- --confirm-universe-write
 
       # Optional: repo secret CI_FAILURE_WEBHOOK (Slack incoming webhook or Discord;
       # payload sets both `text` and `content` so either accepts the message.)
