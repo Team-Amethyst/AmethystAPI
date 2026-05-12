@@ -4,6 +4,8 @@ import {
   calcAge,
   calcBatterValue,
   calcPitcherValue,
+  catalogDollarValueFromProjection,
+  catalogValueFromBattingProjection,
 } from "../src/lib/mlbSyncFormulas";
 
 describe("mlbSyncFormulas", () => {
@@ -69,5 +71,31 @@ describe("mlbSyncFormulas", () => {
       inningsPitched: "180.0",
     });
     expect(v).toBeGreaterThan(0);
+  });
+
+  it("blended batting projection yields catalog dollar >> 1 (injured-anchor guard)", () => {
+    const v = catalogValueFromBattingProjection({
+      hr: 20,
+      rbi: 59,
+      runs: 50,
+      sb: 2,
+      avg: "0.295",
+      atBats: 330,
+    });
+    expect(v).toBeGreaterThan(5);
+  });
+
+  it("catalogDollarValueFromProjection picks max of batting and pitching shapes", () => {
+    const onlyBat = catalogDollarValueFromProjection({
+      batting: {
+        hr: 20,
+        rbi: 59,
+        runs: 50,
+        sb: 2,
+        avg: "0.295",
+        atBats: 330,
+      },
+    });
+    expect(onlyBat).toBeGreaterThan(5);
   });
 });

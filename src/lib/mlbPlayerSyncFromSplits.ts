@@ -8,6 +8,7 @@ import {
   calcAge,
   calcBatterValue,
   calcPitcherValue,
+  catalogDollarValueFromProjection,
 } from "./mlbSyncFormulas";
 import {
   applyAnchorYearProjectionEnrichment,
@@ -182,7 +183,7 @@ export function buildPlayerDocFromAgg(
   const pitVal = agg.pit ? calcPitcherValue(agg.pit.stat) : 0;
   if (batVal <= 0 && pitVal <= 0) return null;
 
-  const value = Math.max(batVal, pitVal);
+  let value = Math.max(batVal, pitVal);
   const team = resolveMlbTeamAbbrev(
     agg.bat?.team ?? agg.pit?.team,
     bio?.currentTeam,
@@ -322,6 +323,9 @@ export function buildPlayerDocFromAgg(
       agg.pit?.stat
     );
   }
+
+  const projectionDollar = catalogDollarValueFromProjection(projection);
+  if (projectionDollar > value) value = projectionDollar;
 
   const doc: PlayerSyncDoc = {
     mlbId,

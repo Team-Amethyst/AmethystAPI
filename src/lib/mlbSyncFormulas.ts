@@ -54,3 +54,54 @@ export function calcPitcherValue(stat: Record<string, string | number>): number 
     sv * 2.8;
   return Math.round(Math.max(1, score * 0.22 + 12));
 }
+
+/**
+ * Catalog **value** / tier should track the same blended **projection** shown on the row when it is
+ * stronger than the anchor-season split dollar (short injured seasons can collapse anchor `calcBatterValue`).
+ */
+export function catalogValueFromBattingProjection(bat: Record<string, unknown>): number {
+  const ab = Number(bat.atBats ?? 0);
+  if (ab < 100) return 0;
+  const hr = Number(bat.hr ?? bat.homeRuns ?? 0);
+  const rbi = Number(bat.rbi ?? 0);
+  const runs = Number(bat.runs ?? 0);
+  const sb = Number(bat.sb ?? bat.stolenBases ?? 0);
+  const avgRaw = bat.avg;
+  const avg =
+    typeof avgRaw === "number" && Number.isFinite(avgRaw)
+      ? avgRaw < 1
+        ? avgRaw.toFixed(3)
+        : String(avgRaw)
+      : String(avgRaw ?? ".000");
+  return calcBatterValue({
+    homeRuns: hr,
+    rbi,
+    runs,
+    stolenBases: sb,
+    avg,
+    atBats: ab,
+  });
+}
+
+export function catalogValueFromPitchingProjection(pit: Record<string, unknown>): number {
+  const ipRaw = pit.inningsPitched ?? pit.innings ?? "0";
+  const ipStr = typeof ipRaw === "number" ? String(ipRaw) : String(ipRaw);
+  return calcPitcherValue({
+    era: String(pit.era ?? "9"),
+    whip: String(pit.whip ?? "2"),
+    strikeOuts: Number(pit.strikeOuts ?? pit.strikeouts ?? 0),
+    wins: Number(pit.wins ?? 0),
+    saves: Number(pit.saves ?? 0),
+    inningsPitched: ipStr,
+  });
+}
+
+/** Max dollar from blended projection batting/pitching objects (same formula family as anchor splits). */
+export function catalogDollarValueFromProjection(projection: Record<string, unknown>): number {
+  let max = 0;
+  const bat = projection.batting as Record<string, unknown> | undefined;
+  const pit = projection.pitching as Record<string, unknown> | undefined;
+  if (bat && typeof bat === "object") max = Math.max(max, catalogValueFromBattingProjection(bat));
+  if (pit && typeof pit === "object") max = Math.max(max, catalogValueFromPitchingProjection(pit));
+  return max;
+}
