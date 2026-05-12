@@ -31,6 +31,11 @@ import { positionOverridesFromRequest } from "../src/lib/fantasyRosterSlots";
 import { valuationHitterPitcherBucket } from "../src/lib/valuationHitterPitcherBucket";
 import { ROTO_Z_HITTER, ROTO_Z_PITCHER } from "../src/services/baselineRotoZConfig";
 import { ROTO_INTRINSIC_BASE_PITCHER_REF } from "../src/services/baselineValueEngine";
+import { isValuationEligibleCatalogRow } from "../src/lib/catalogRowClassification";
+import {
+  isPlayerInDraftablePool,
+  normalizeDraftablePoolMeta,
+} from "../src/lib/draftablePoolSemantics";
 import { loadMongoCatalogForEngine } from "../src/lib/mongoCatalogPipeline";
 import { listUnsupportedScoringCategories } from "../src/lib/scoringCategorySupport";
 
@@ -319,6 +324,21 @@ function printScenarioReport(
 
   const ge = (t: number) => rows.filter((r) => r.auction_value >= t).length;
   const nearOne = rows.filter((r) => r.auction_value <= 1.05).length;
+  const draftableMeta = normalizeDraftablePoolMeta({
+    draftable_player_ids: response.draftable_player_ids,
+    draftable_pool_size: response.draftable_pool_size,
+  });
+  let nearOneDraftable = 0;
+  let nearOneOutsideDraftable = 0;
+  let nearOneDraftableUnknown = 0;
+  for (const r of rows) {
+    if (r.auction_value > 1.05) continue;
+    const d = isPlayerInDraftablePool(draftableMeta, r.player_id);
+    if (d === true) nearOneDraftable++;
+    else if (d === false) nearOneOutsideDraftable++;
+    else nearOneDraftableUnknown++;
+  }
+  const valuationEligibleInPool = pool.filter((p) => isValuationEligibleCatalogRow(p)).length;
 
   let hitSum = 0;
   let pitSum = 0;
@@ -329,7 +349,9 @@ function printScenarioReport(
   }
   const hp = hitSum + pitSum;
 
-  console.log(`Pool rows (post-filter): ${pool.length} → valuation rows: ${rows.length}`);
+  console.log(
+    `Pool rows (post-filter): ${pool.length} (${valuationEligibleInPool} valuation_eligible) → valuation rows: ${rows.length}`
+  );
   console.log(`League budget (num_teams × total_budget): ${leagueBudget}`);
   console.log(`Sum auction_value (all rows): ${sumAll.toFixed(2)}  ratio: ${ratio.toFixed(4)}`);
   if (sumDraftableTop != null) {
@@ -357,7 +379,9 @@ function printScenarioReport(
 
   console.log("\nCounts auction_value thresholds:");
   console.log(`  >=50: ${ge(50)}  >=40: ${ge(40)}  >=30: ${ge(30)}  >=20: ${ge(20)}  >=10: ${ge(10)}`);
-  console.log(`  <=1.05 (near min): ${nearOne}`);
+  console.log(
+    `  <=1.05 (near min): ${nearOne}  (draftable: ${nearOneDraftable}, outside draftable: ${nearOneOutsideDraftable}, unknown: ${nearOneDraftableUnknown})`
+  );
 
   console.log(
     `\nDollar share (hitter / pitcher): ${hp > 0 ? ((hitSum / hp) * 100).toFixed(1) : "n/a"}% / ${hp > 0 ? ((pitSum / hp) * 100).toFixed(1) : "n/a"}%`
@@ -422,6 +446,7 @@ function printScenarioReport(
     scenario: scenario.id,
     ok: true,
     poolRows: pool.length,
+    valuation_eligible_in_pool: valuationEligibleInPool,
     valuationRows: rows.length,
     leagueBudget,
     sumAuctionAll: sumAll,
@@ -435,7 +460,17 @@ function printScenarioReport(
     scoring_categories_summary: scenario.input.scoring_categories
       .map((c) => `${c.name}:${c.type}`)
       .join("|"),
-    counts: { ge50: ge(50), ge40: ge(40), ge30: ge(30), ge20: ge(20), ge10: ge(10), nearOne },
+    counts: {
+      ge50: ge(50),
+      ge40: ge(40),
+      ge30: ge(30),
+      ge20: ge(20),
+      ge10: ge(10),
+      nearOne,
+      nearOne_le_105_draftable: nearOneDraftable,
+      nearOne_le_105_outside_draftable: nearOneOutsideDraftable,
+      nearOne_le_105_draftable_unknown: nearOneDraftableUnknown,
+    },
     hitterShare: hp > 0 ? hitSum / hp : null,
     pitcherShare: hp > 0 ? pitSum / hp : null,
     top50: top50.map((r) => ({
