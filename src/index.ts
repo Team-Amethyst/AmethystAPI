@@ -175,8 +175,15 @@ app.use(errorHandler);
 // ── Startup ───────────────────────────────────────────────────────────────────
 const PORT = env.port;
 
+const mongoConnectOptions: mongoose.ConnectOptions = {
+  appName: env.mongoAppName,
+};
+if (env.mongoMaxPoolSize != null) {
+  mongoConnectOptions.maxPoolSize = env.mongoMaxPoolSize;
+}
+
 mongoose
-  .connect(env.mongoUri)
+  .connect(env.mongoUri, mongoConnectOptions)
   .then(async () => {
     logger.info("MongoDB connected");
     await relaxApiKeysCollectionValidation();

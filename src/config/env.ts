@@ -75,6 +75,10 @@ const Schema = z.object({
    * INTERNAL_WEBHOOK_SECRET is unset (matches Draft hook validation).
    */
   AMETHYST_API_KEY: z.string().optional(),
+  /** Cap Mongo connections per Engine process (driver default is 100). Set on shared Atlas clusters. */
+  MONGODB_MAX_POOL_SIZE: z.string().optional(),
+  /** Shown in Atlas / logs as client app name; helps attribute connections to this service. */
+  MONGODB_APP_NAME: z.string().optional(),
 });
 
 const raw = Schema.safeParse(process.env);
@@ -89,11 +93,23 @@ const trustProxyFirstHop = allowlistActive || trim(e.TRUST_PROXY) === "1";
 
 const DEFAULT_PEPPER = "amethyst_dev_pepper_2026";
 
+function parseMongoMaxPoolSize(raw: string | undefined): number | undefined {
+  const t = trim(raw);
+  if (!t) return undefined;
+  const n = Number.parseInt(t, 10);
+  if (!Number.isFinite(n) || n < 1 || n > 500) return undefined;
+  return n;
+}
+
 export const env = {
   nodeEnv: trim(e.NODE_ENV),
   isVitest: e.VITEST === "true",
   forceSecureCookies: trim(e.FORCE_SECURE_COOKIES) === "1",
   mongoUri: trim(e.MONGO_URI),
+  /** When set, passed to mongoose as `maxPoolSize` (caps sockets per Engine process). */
+  mongoMaxPoolSize: parseMongoMaxPoolSize(e.MONGODB_MAX_POOL_SIZE),
+  /** Driver `appName` for observability (Atlas “Client”, Atlas logs). */
+  mongoAppName: trim(e.MONGODB_APP_NAME) ?? "AmethystEngine",
   /** Default matches README / portal (`public/js/portal.js`) so local sign-in hits the same origin. */
   port: e.PORT ?? 3002,
   /** Empty array ⇒ reflect `Origin` header (works for App Runner / custom domains without env churn). */
