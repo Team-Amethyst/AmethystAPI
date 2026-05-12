@@ -10,6 +10,7 @@ import {
   groupKeyName,
   hasCanonicalMlbId,
   isObjectIdStylePlayerId,
+  canonicalMlbTeamAbbrevForMatch,
   normalizePlayerName,
   normalizeTeamAbbrev,
   positionsRolesCompatible,
@@ -24,6 +25,16 @@ describe("catalogIdentityHelpers", () => {
     expect(normalizePlayerName("  José Ramírez  ")).toBe("jose ramirez");
     expect(normalizePlayerName("Trea Turner")).toBe("trea turner");
     expect(normalizePlayerName("J.T. Realmuto")).toBe("jt realmuto");
+  });
+
+  it("normalizePlayerName strips trailing roman numerals", () => {
+    expect(normalizePlayerName("Michael Harris II")).toBe("michael harris");
+  });
+
+  it("canonicalMlbTeamAbbrevForMatch buckets alias pairs", () => {
+    expect(canonicalMlbTeamAbbrevForMatch("KCR")).toBe("KC");
+    expect(canonicalMlbTeamAbbrevForMatch("TBR")).toBe("TB");
+    expect(canonicalMlbTeamAbbrevForMatch("WSN")).toBe("WSH");
   });
 
   it("normalizeTeamAbbrev treats placeholders", () => {
