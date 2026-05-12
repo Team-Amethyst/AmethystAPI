@@ -1,0 +1,72 @@
+[
+  {
+    "_id": "s660271",
+    "mlbId": 660271,
+    "name": "Shohei Ohtani",
+    "team": "LAD",
+    "position": "DH",
+    "catalog_rank": 1,
+    "catalog_tier": 1,
+    "value": 99
+  },
+  {
+    "_id": "s592450",
+    "mlbId": 592450,
+    "name": "Aaron Judge",
+    "team": "NYY",
+    "position": "OF",
+    "catalog_rank": 2,
+    "catalog_tier": 1,
+    "value": 98
+  },
+  {
+    "_id": "s677877",
+    "mlbId": 677877,
+    "name": "Bobby Witt Jr.",
+    "team": "KC",
+    "position": "SS",
+    "catalog_rank": 3,
+    "catalog_tier": 1,
+    "value": 90
+  },
+  {
+    "_id": "s682734",
+    "mlbId": 682734,
+    "name": "Elly De La Cruz",
+    "team": "ARI",
+    "position": "SS",
+    "catalog_rank": 5,
+    "catalog_tier": 1,
+    "value": 50
+  },
+  {
+    "_id": "s669234",
+    "mlbId": 669234,
+    "name": "Jazz Chisholm Jr.",
+    "team": "MIL",
+    "position": "3B",
+    "catalog_rank": 30,
+    "catalog_tier": 2,
+    "value": 20
+  },
+  {
+    "_id": "dupa",
+    "mlbId": 201,
+    "name": "Dup Player",
+    "team": "NYY",
+    "position": "OF",
+    "catalog_rank": 100,
+    "catalog_tier": 3,
+    "value": 5
+  },
+  {
+    "_id": "dupb",
+    "mlbId": 202,
+    "name": "Dup Player",
+    "team": "NYY",
+    "position": "OF",
+    "catalog_rank": 101,
+    "catalog_tier": 3,
+    "value": 4
+  }
+]

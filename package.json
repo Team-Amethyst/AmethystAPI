@@ -41,6 +41,9 @@
     "dedupe-fixtures": "ts-node --project tsconfig.scripts.json scripts/dedupe-fixture-auction-picks.ts",
     "check-fixture-catalog": "ts-node --project tsconfig.scripts.json scripts/check-fixture-catalog-ids.ts",
     "market-adp-preview": "ts-node --project tsconfig.scripts.json scripts/market-adp-ingest-preview.ts",
+    "market-adp-apply": "ts-node --project tsconfig.scripts.json scripts/apply-market-adp-updates.ts",
+    "market-adp-preview:remote-selftest": "ts-node --project tsconfig.scripts.json scripts/nfbc-remote-preview-selftest.ts",
+    "debug:market-adp-match": "ts-node --project tsconfig.scripts.json scripts/debug-market-adp-match.ts",
     "catalog-universe:dry-run": "ts-node --project tsconfig.scripts.json scripts/catalog-universe-dry-run.ts"
   },
   "keywords": [

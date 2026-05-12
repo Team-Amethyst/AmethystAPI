@@ -1,0 +1,20 @@
+{
+  "adapter_display_name": "NFBC",
+  "proposed_updates": [
+    {
+      "mlb_id": 660271,
+      "player_id": "660271",
+      "match_confidence": "exact_name_team_position",
+      "set": {
+        "market_adp": 12.34,
+        "market_adp_source": "NFBC",
+        "market_adp_updated_at": "2026-05-11T00:00:00.000Z",
+        "market_adp_min": 10,
+        "market_adp_max": 15,
+        "market_pick_count": 99,
+        "market_adp_match_confidence": "exact_name_team_position"
+      }
+    }
+  ],
+  "matches": [{ "kind": "matched" }]
+}

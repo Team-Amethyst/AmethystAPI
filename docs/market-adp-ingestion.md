@@ -48,7 +48,71 @@ pnpm exec ts-node --project tsconfig.scripts.json scripts/market-adp-ingest-prev
 
 Optional catalog from Mongo: `--mongo` (requires `MONGO_URI`). Still **no writes**.
 
-Feature flag (informational): `AMETHYST_MARKET_ADP_ADAPTER=csv_fixture`.
+Feature flag (informational): `AMETHYST_MARKET_ADP_ADAPTER` may reflect `csv_fixture`, `nfbc_csv`, `nfbc_remote_csv`, or `nfbc_data_php`.
+
+## NFBC `adp.data.php` (automated)
+
+`pnpm market-adp-preview -- --source nfbc-data` fetches **`https://nfc.shgn.com/adp.data.php`** by default (override with `--url` or `NFBC_ADP_URL` / `AMETHYST_NFBC_ADP_URL`). The response is parsed as **whitespace rows** (fixtures / samples) or, when those yield no rows, as the **known HTML `<tr>` table** shape returned by the live endpoint — not arbitrary site scraping.
+
+## NFBC remote CSV (automated URL)
+
+Use a **direct HTTPS URL** to an NFBC-shaped CSV you are allowed to pull (e.g. object storage signed URL, internal CDN, automation drop). **Do not** point at HTML login pages or scrape behind authentication.
+
+### Where the CSV should live
+
+- **Production-style:** HTTPS host you control or vendor-approved storage, returning `text/csv` or `text/plain` with NFBC-like columns.
+- **Local debugging:** Any HTTP(S) server that serves the file; for a **fixture-equivalent** dry-run without a second process, run:
+  - `pnpm run market-adp-preview:remote-selftest`  
+  This starts a short-lived localhost server **in the same Node process** as `fetch`, writes `tmp/nfbc-remote-preview.json`, and exits (no Mongo writes).
+
+### Required / optional env vars
+
+| Variable | Purpose |
+|----------|---------|
+| `NFBC_ADP_URL` or `AMETHYST_NFBC_ADP_URL` | Default CSV URL when `--source nfbc` and neither `--csv` nor `--url` is passed. |
+| `NFBC_ADP_BEARER_TOKEN` | Optional; sets `Authorization: Bearer …` (never commit). |
+| `NFBC_ADP_AUTHORIZATION` | Optional; full `Authorization` header value if not Bearer. |
+| `NFBC_ADP_FETCH_TIMEOUT_MS` | Optional; default timeout for GET (ms). |
+
+### How to run dry-run (remote)
+
+```bash
+export NFBC_ADP_URL='https://example.com/path/to/nfbc-export.csv?signature=…'
+pnpm market-adp-preview -- --source nfbc --url "$NFBC_ADP_URL" --out tmp/nfbc-remote-preview.json
+```
+
+With catalog JSON (recommended before Mongo apply):
+
+```bash
+pnpm market-adp-preview -- \
+  --source nfbc \
+  --url "$NFBC_ADP_URL" \
+  --catalog-json path/to/catalog.json \
+  --out tmp/nfbc-remote-preview.json
+```
+
+Preview JSON includes:
+
+- `adapter_id`: `nfbc_remote_csv` when using `--url` / env URL.
+- `csv_path`: `null` for remote pulls.
+- `remote_csv_url_redacted`: **origin + pathname only** (query string stripped so secrets in `?…` are not persisted).
+- `stats`: `vendor_rows`, `matched`, `ambiguous`, `unmatched_vendor`, `proposed_update_count`.
+
+### How to inspect unmatched / ambiguous rows
+
+- Open `tmp/nfbc-remote-preview.json` (or your `--out` path).
+- **`matches`**: entries with `kind: "unmatched_vendor"` include `vendor` + `reason`; `kind: "ambiguous"` include `candidate_player_ids`.
+- Fix catalog gaps or vendor column issues, then re-run dry-run.
+
+### What makes a preview “acceptable” (threshold)
+
+Tune per league, but a reasonable bar before any **apply** step:
+
+- **Match rate:** high share of `matched / vendor_rows` (e.g. ≥ **95%** for production catalogs once NFBC export is aligned).
+- **Ambiguous:** **0** ambiguous rows, or each resolved manually (duplicate identities in catalog).
+- **Unmatched:** only expected gaps (prospects not in catalog, retired players, name/team mismatches) with documented reasons.
+- **Proposed IDs:** `player_id` values should be **canonical MLB numeric ids** for rows that have `mlbId` in catalog; investigate any 24-hex ObjectId-style ids before apply.
+- **Metadata:** every proposed row has `market_adp_source: "NFBC"` and a consistent `market_adp_updated_at` for the run.
 
 ## Rank / tier field map (API)
 

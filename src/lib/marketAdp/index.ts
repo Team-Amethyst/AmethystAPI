@@ -1,4 +1,5 @@
 export * from "./types";
+export * from "./applyMarketAdpFromPreview";
 export * from "./matchDryRun";
 export * from "./csvFixtureAdapter";
 export * from "./csvParse";

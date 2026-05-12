@@ -1,0 +1,9 @@
+1 Shohei Ohtani LAD UT, P 1.20 1 4 1640
+2 Aaron Judge NYY OF 1.93 1 5 1640
+3 Bobby Witt Jr. KC SS 3.18 1 6 1640
+4 Elly De La Cruz ARZ SS, 3B 12.50 5 20 500
+5 Jazz Chisholm Jr. MLW 2B, 3B 55.00 40 70 1200
+50 Dup Player NYY OF 88.00 70 95 400
+98 No Catalog Player Here TOR OF 400.00 1 500 10
+this is not a valid nfbc data row at all
+2.5 invalid rank still TOR OF 1 1 1 1
