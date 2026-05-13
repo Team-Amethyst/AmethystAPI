@@ -10,7 +10,7 @@ on:
   workflow_dispatch:
     inputs:
       mode:
-        description: "Run mode: redeploy (default), restart (pause/resume App Runner to force fresh instances), or sync-players (run roster sync now)"
+        description: "Run mode: redeploy, restart, sync-players, or describe-env (dump App Runner config — read-only)"
         type: choice
         required: true
         default: redeploy
@@ -18,6 +18,7 @@ on:
           - redeploy
           - restart
           - sync-players
+          - describe-env
 
 jobs:
   sync-players:
@@ -62,6 +63,76 @@ jobs:
           payload=$(jq -n --arg text "$msg" --arg content "$msg" '{text: $text, content: $content}')
           curl -fsS -X POST -H 'Content-Type: application/json' \
             -d "$payload" "$WEBHOOK_URL"
+
+  describe-env:
+    runs-on: ubuntu-latest
+    # Read-only diagnostic. Dumps the App Runner service config (env vars,
+    # image identifier, observability config) so we can confirm what's
+    # actually running in production. AWS masks plaintext secret values
+    # ("RuntimeEnvironmentSecrets" returns ARNs only; plaintext
+    # "RuntimeEnvironmentVariables" come back verbatim — we redact
+    # passwords from MONGO_URI / REDIS_URL in the post-processing step).
+    if: github.event_name == 'workflow_dispatch' && inputs.mode == 'describe-env'
+    steps:
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+      - name: Describe service (redacted)
+        env:
+          APP_RUNNER_SERVICE_NAME: amethyst-standalone-api
+        run: |
+          set -euo pipefail
+          SERVICE_ARN=$(aws apprunner list-services \
+            --query "ServiceSummaryList[?ServiceName=='${APP_RUNNER_SERVICE_NAME}'].ServiceArn | [0]" \
+            --output text)
+          if [ -z "$SERVICE_ARN" ] || [ "$SERVICE_ARN" = "None" ]; then
+            echo "Error: App Runner service '${APP_RUNNER_SERVICE_NAME}' not found."
+            exit 1
+          fi
+          echo "Service ARN: $SERVICE_ARN"
+          echo
+          echo "==== service status / image identifier / observability ===="
+          aws apprunner describe-service --service-arn "$SERVICE_ARN" \
+            --query "{Status: Service.Status, ServiceUrl: Service.ServiceUrl, CreatedAt: Service.CreatedAt, UpdatedAt: Service.UpdatedAt, ImageIdentifier: Service.SourceConfiguration.ImageRepository.ImageIdentifier, ImageRepositoryType: Service.SourceConfiguration.ImageRepository.ImageRepositoryType, AutoDeploymentsEnabled: Service.SourceConfiguration.AutoDeploymentsEnabled, AuthenticationConfiguration: Service.SourceConfiguration.AuthenticationConfiguration, InstanceConfigCpu: Service.InstanceConfiguration.Cpu, InstanceConfigMemory: Service.InstanceConfiguration.Memory, AutoScalingConfigurationSummary: Service.AutoScalingConfigurationSummary, ObservabilityConfiguration: Service.ObservabilityConfiguration}" \
+            --output json
+          echo
+          echo "==== environment variables (passwords redacted) ===="
+          aws apprunner describe-service --service-arn "$SERVICE_ARN" \
+            --query "Service.SourceConfiguration.ImageRepository.ImageConfiguration.RuntimeEnvironmentVariables" \
+            --output json \
+            | python3 -c '
+import json, re, sys
+env = json.load(sys.stdin) or {}
+def red(v):
+    if not isinstance(v, str): return v
+    return re.sub(r"(://[^:]+:)[^@]+(@)", r"\1***\2", v)
+print(json.dumps({k: red(v) for k, v in env.items()}, indent=2, sort_keys=True))
+'
+          echo
+          echo "==== secret refs (ARNs only) ===="
+          aws apprunner describe-service --service-arn "$SERVICE_ARN" \
+            --query "Service.SourceConfiguration.ImageRepository.ImageConfiguration.RuntimeEnvironmentSecrets" \
+            --output json
+          echo
+          echo "==== latest two deployment operations ===="
+          aws apprunner list-operations --service-arn "$SERVICE_ARN" --max-results 2 \
+            --query "OperationSummaryList[].{Id: Id, Type: Type, Status: Status, StartedAt: StartedAt, EndedAt: EndedAt, TargetArn: TargetArn}" \
+            --output json
+          echo
+          echo "==== ECR image manifest for currently-pinned identifier (digest + pushedAt) ===="
+          IMG=$(aws apprunner describe-service --service-arn "$SERVICE_ARN" \
+            --query "Service.SourceConfiguration.ImageRepository.ImageIdentifier" --output text)
+          REPO=${IMG##*/}
+          REPO=${REPO%%:*}
+          TAG=${IMG##*:}
+          echo "ECR repository: $REPO   tag: $TAG"
+          aws ecr describe-images --repository-name "$REPO" \
+            --image-ids imageTag="$TAG" \
+            --query "imageDetails[].{Digest: imageDigest, PushedAt: imagePushedAt, Size: imageSizeInBytes, Tags: imageTags}" \
+            --output json
 
   restart:
     runs-on: ubuntu-latest
