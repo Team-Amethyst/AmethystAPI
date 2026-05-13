@@ -103,14 +103,14 @@ jobs:
           aws apprunner describe-service --service-arn "$SERVICE_ARN" \
             --query "Service.SourceConfiguration.ImageRepository.ImageConfiguration.RuntimeEnvironmentVariables" \
             --output json \
-            | python3 -c '
-import json, re, sys
-env = json.load(sys.stdin) or {}
-def red(v):
-    if not isinstance(v, str): return v
-    return re.sub(r"(://[^:]+:)[^@]+(@)", r"\1***\2", v)
-print(json.dumps({k: red(v) for k, v in env.items()}, indent=2, sort_keys=True))
-'
+            | jq 'to_entries
+                  | map({key: .key,
+                         value: (.value
+                                  | if type == "string"
+                                    then gsub("(?<a>://[^:]+:)[^@]+(?<b>@)"; "\(.a)***\(.b)")
+                                    else . end)})
+                  | sort_by(.key)
+                  | from_entries'
           echo
           echo "==== secret refs (ARNs only) ===="
           aws apprunner describe-service --service-arn "$SERVICE_ARN" \
