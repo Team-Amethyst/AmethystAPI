@@ -6,6 +6,7 @@ import "dotenv/config";
 import { mkdirSync, writeFileSync } from "fs";
 import path from "path";
 import mongoose from "mongoose";
+import { scriptMongoConnectOptions } from "../src/lib/mongoPoolConfig";
 import { loadMongoCatalogForEngine } from "../src/lib/mongoCatalogPipeline";
 import {
   buildDraftroomStandardValuationInput,
@@ -168,7 +169,7 @@ async function main(): Promise<void> {
     console.error("MONGO_URI required");
     process.exit(1);
   }
-  await mongoose.connect(uri);
+  await mongoose.connect(uri, scriptMongoConnectOptions());
   let pool: LeanPlayer[];
   try {
     pool = await loadMongoCatalogForEngine(undefined, { skipMlbHydration: true });

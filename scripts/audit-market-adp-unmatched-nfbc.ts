@@ -4,6 +4,7 @@ import path from "path";
 
 import dotenv from "dotenv";
 import mongoose from "mongoose";
+import { scriptMongoConnectOptions } from "../src/lib/mongoPoolConfig";
 
 import { normalizePlayerName } from "../src/lib/catalogIdentityHelpers";
 import type { LeanPlayer } from "../src/types/brain";
@@ -124,7 +125,8 @@ async function main() {
 
   // Avoid the default 10s buffering timeout when Mongo is slow to respond.
   mongoose.set("bufferTimeoutMS", 60_000);
-  await mongoose.connect(process.env.MONGO_URI, {
+  await mongoose.connect(process.env.MONGO_URI!, {
+    ...scriptMongoConnectOptions(),
     serverSelectionTimeoutMS: 30_000,
     connectTimeoutMS: 30_000,
   });

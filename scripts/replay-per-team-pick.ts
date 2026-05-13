@@ -13,6 +13,7 @@ import "dotenv/config";
 import { readFileSync } from "fs";
 import path from "path";
 import mongoose from "mongoose";
+import { scriptMongoConnectOptions } from "../src/lib/mongoPoolConfig";
 import Player from "../src/models/Player";
 import { PLAYER_CATALOG_LEAN_SELECT } from "../src/lib/playerCatalogProjection";
 import { normalizeCatalogPlayers } from "../src/lib/playerCatalog";
@@ -91,7 +92,7 @@ type PickRow = {
 async function loadMongoPool(): Promise<LeanPlayer[]> {
   const uri = process.env.MONGO_URI;
   if (!uri) throw new Error("MONGO_URI missing");
-  await mongoose.connect(uri);
+  await mongoose.connect(uri, scriptMongoConnectOptions());
   try {
     const docs = await Player.find({}).select(PLAYER_CATALOG_LEAN_SELECT).lean().exec();
     return normalizeCatalogPlayers(docs, () => undefined);

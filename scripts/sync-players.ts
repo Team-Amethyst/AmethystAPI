@@ -25,6 +25,7 @@
  */
 
 import mongoose from "mongoose";
+import { scriptMongoConnectOptions } from "../src/lib/mongoPoolConfig";
 import dotenv from "dotenv";
 import { mkdirSync, readFileSync, writeFileSync } from "fs";
 import path from "path";
@@ -516,7 +517,7 @@ async function runRosterUniverseSync(cli: SyncCli): Promise<void> {
 
 async function main(): Promise<void> {
   const cli = parseArgs(process.argv.slice(2));
-  await mongoose.connect(MONGO_URI as string);
+  await mongoose.connect(MONGO_URI as string, scriptMongoConnectOptions());
   console.log("[MongoDB] Connected");
 
   try {

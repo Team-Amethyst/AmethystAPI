@@ -75,7 +75,7 @@ const Schema = z.object({
    * INTERNAL_WEBHOOK_SECRET is unset (matches Draft hook validation).
    */
   AMETHYST_API_KEY: z.string().optional(),
-  /** Cap Mongo connections per Engine process (driver default is 100). Set on shared Atlas clusters. */
+  /** Cap Mongo connections per Engine process (default 10 when unset; driver default without a cap is 100). */
   MONGODB_MAX_POOL_SIZE: z.string().optional(),
   /** Shown in Atlas / logs as client app name; helps attribute connections to this service. */
   MONGODB_APP_NAME: z.string().optional(),
@@ -93,11 +93,11 @@ const trustProxyFirstHop = allowlistActive || trim(e.TRUST_PROXY) === "1";
 
 const DEFAULT_PEPPER = "amethyst_dev_pepper_2026";
 
-function parseMongoMaxPoolSize(raw: string | undefined): number | undefined {
+function parseMongoMaxPoolSize(raw: string | undefined): number {
   const t = trim(raw);
-  if (!t) return undefined;
+  if (!t) return 10;
   const n = Number.parseInt(t, 10);
-  if (!Number.isFinite(n) || n < 1 || n > 500) return undefined;
+  if (!Number.isFinite(n) || n < 1 || n > 500) return 10;
   return n;
 }
 
@@ -106,7 +106,10 @@ export const env = {
   isVitest: e.VITEST === "true",
   forceSecureCookies: trim(e.FORCE_SECURE_COOKIES) === "1",
   mongoUri: trim(e.MONGO_URI),
-  /** When set, passed to mongoose as `maxPoolSize` (caps sockets per Engine process). */
+  /**
+   * Mongoose `maxPoolSize` for the Engine process (default 10 when MONGODB_MAX_POOL_SIZE unset;
+   * driver default without this would be 100).
+   */
   mongoMaxPoolSize: parseMongoMaxPoolSize(e.MONGODB_MAX_POOL_SIZE),
   /** Driver `appName` for observability (Atlas “Client”, Atlas logs). */
   mongoAppName: trim(e.MONGODB_APP_NAME) ?? "AmethystEngine",

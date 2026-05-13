@@ -9,6 +9,7 @@ import "dotenv/config";
 import { mkdirSync, writeFileSync } from "fs";
 import path from "path";
 import mongoose from "mongoose";
+import { scriptMongoConnectOptions } from "../src/lib/mongoPoolConfig";
 import type { DraftedPlayer, LeanPlayer, ValuedPlayer } from "../src/types/brain";
 import { loadMongoCatalogForEngine } from "../src/lib/mongoCatalogPipeline";
 import { getPlayerId } from "../src/lib/playerId";
@@ -131,7 +132,7 @@ function taEqualsAvStats(rows: ValuedPlayer[]) {
 async function main(): Promise<void> {
   const uri = process.env.MONGO_URI;
   if (!uri) throw new Error("MONGO_URI required for catalog-backed audit");
-  await mongoose.connect(uri);
+  await mongoose.connect(uri, scriptMongoConnectOptions());
   let pool: LeanPlayer[];
   try {
     pool = await loadMongoCatalogForEngine(undefined, {

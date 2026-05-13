@@ -10,6 +10,7 @@ import "dotenv/config";
 import { mkdirSync, writeFileSync } from "fs";
 import path from "path";
 import mongoose from "mongoose";
+import { scriptMongoConnectOptions } from "../src/lib/mongoPoolConfig";
 import type { LeanPlayer, ValuedPlayer } from "../src/types/brain";
 import { buildDraftroomStandardValuationInput } from "../src/lib/calibrationDraftroomFixture";
 import { executeValuationWorkflow } from "../src/services/valuationWorkflow";
@@ -78,7 +79,7 @@ function topKByAbs(
 async function loadPool(): Promise<LeanPlayer[]> {
   const uri = process.env.MONGO_URI;
   if (!uri) throw new Error("MONGO_URI required");
-  await mongoose.connect(uri);
+  await mongoose.connect(uri, scriptMongoConnectOptions());
   try {
     return await loadMongoCatalogForEngine(undefined);
   } finally {

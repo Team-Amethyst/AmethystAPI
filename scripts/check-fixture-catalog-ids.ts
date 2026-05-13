@@ -8,6 +8,7 @@ import "dotenv/config";
 import { readFileSync } from "fs";
 import path from "path";
 import mongoose from "mongoose";
+import { scriptMongoConnectOptions } from "../src/lib/mongoPoolConfig";
 import Player from "../src/models/Player";
 
 const ROOT = path.resolve(__dirname, "..");
@@ -58,7 +59,7 @@ async function main(): Promise<void> {
   const uri = process.env.MONGO_URI?.trim();
   if (!uri) throw new Error("MONGO_URI missing");
 
-  await mongoose.connect(uri);
+  await mongoose.connect(uri, scriptMongoConnectOptions());
   try {
     const nums = ids
       .map((s) => Number(s))

@@ -12,6 +12,7 @@
 import "dotenv/config";
 import { readFileSync } from "fs";
 import mongoose, { Types } from "mongoose";
+import { scriptMongoConnectOptions } from "../src/lib/mongoPoolConfig";
 import path from "path";
 import Player from "../src/models/Player";
 
@@ -106,7 +107,7 @@ async function main(): Promise<void> {
     process.exit(1);
   }
 
-  await mongoose.connect(uri);
+  await mongoose.connect(uri, scriptMongoConnectOptions());
   try {
     const results: Record<string, unknown>[] = [];
     for (const op of list.operations) {

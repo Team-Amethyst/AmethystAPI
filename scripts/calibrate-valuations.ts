@@ -14,6 +14,7 @@ import "dotenv/config";
 import { mkdirSync, writeFileSync } from "fs";
 import path from "path";
 import mongoose from "mongoose";
+import { scriptMongoConnectOptions } from "../src/lib/mongoPoolConfig";
 import type { LeanPlayer, NormalizedValuationInput, ValuationResponse, ValuedPlayer } from "../src/types/brain";
 import {
   buildDraftroomStandardValuationInput,
@@ -55,7 +56,7 @@ async function loadMongoCatalog(): Promise<LeanPlayer[]> {
   if (!uri) {
     throw new Error("MONGO_URI is not set (required for --mongo)");
   }
-  await mongoose.connect(uri);
+  await mongoose.connect(uri, scriptMongoConnectOptions());
   try {
     return await loadMongoCatalogForEngine(undefined);
   } finally {

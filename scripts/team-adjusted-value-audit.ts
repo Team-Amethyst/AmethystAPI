@@ -4,6 +4,7 @@
  */
 import "dotenv/config";
 import mongoose from "mongoose";
+import { scriptMongoConnectOptions } from "../src/lib/mongoPoolConfig";
 import type { DraftedPlayer, LeanPlayer } from "../src/types/brain";
 import { getPlayerId } from "../src/lib/playerId";
 import { buildDraftroomStandardValuationInput } from "../src/lib/calibrationDraftroomFixture";
@@ -187,7 +188,7 @@ async function main(): Promise<void> {
   const uri = process.env.MONGO_URI ?? process.env.MONGODB_URI;
   if (!uri) throw new Error("MONGO_URI or MONGODB_URI required");
 
-  await mongoose.connect(uri);
+  await mongoose.connect(uri, scriptMongoConnectOptions());
   let pool: LeanPlayer[];
   try {
     pool = await loadMongoCatalogForEngine(undefined);

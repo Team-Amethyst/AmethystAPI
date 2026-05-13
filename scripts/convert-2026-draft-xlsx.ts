@@ -13,6 +13,7 @@ import * as path from "path";
 import * as XLSX from "xlsx";
 import type { CellObject } from "xlsx";
 import mongoose from "mongoose";
+import { scriptMongoConnectOptions } from "../src/lib/mongoPoolConfig";
 import Player from "../src/models/Player";
 import {
   type CatalogRow,
@@ -256,7 +257,7 @@ type ResolveTask = {
 async function loadMongoCatalog(): Promise<CatalogRow[]> {
   const uri = process.env.MONGO_URI?.trim();
   if (!uri) return [];
-  await mongoose.connect(uri);
+  await mongoose.connect(uri, scriptMongoConnectOptions());
   try {
     const docs = await Player.find({ mlbId: { $exists: true, $ne: null } })
       .select("mlbId name team")

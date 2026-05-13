@@ -14,6 +14,7 @@
 import dotenv from "dotenv";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
 import mongoose from "mongoose";
+import { scriptMongoConnectOptions } from "../src/lib/mongoPoolConfig";
 import path from "path";
 
 import {
@@ -129,7 +130,7 @@ async function main(): Promise<void> {
 
   const log = { warn: console.warn, info: console.info };
 
-  await mongoose.connect(uri);
+  await mongoose.connect(uri, scriptMongoConnectOptions());
   let mongoPool;
   try {
     mongoPool = await loadMongoCatalogForEngine(log, { skipMlbHydration: false });

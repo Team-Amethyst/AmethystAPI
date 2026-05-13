@@ -12,6 +12,7 @@ import dotenv from "dotenv";
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from "fs";
 import path from "path";
 import mongoose from "mongoose";
+import { scriptMongoConnectOptions } from "../src/lib/mongoPoolConfig";
 
 import { calcBatterValue, calcPitcherValue } from "../src/lib/mlbSyncFormulas";
 import Player from "../src/models/Player";
@@ -298,7 +299,10 @@ async function main(): Promise<void> {
   }
 
   if (uri) {
-    await mongoose.connect(uri, { serverSelectionTimeoutMS: 30_000 });
+    await mongoose.connect(uri, {
+      ...scriptMongoConnectOptions(),
+      serverSelectionTimeoutMS: 30_000,
+    });
     try {
       const ids = [...mongoIds];
       const found = await Player.find({ mlbId: { $in: ids } }, { mlbId: 1 }).lean();

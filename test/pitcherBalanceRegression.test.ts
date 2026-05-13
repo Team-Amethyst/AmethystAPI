@@ -15,6 +15,7 @@
  * rise (same predicate as `valuationRowIsPrimaryOutfield` in OF collapse diagnostics).
  */
 import mongoose from "mongoose";
+import { scriptMongoConnectOptions } from "../src/lib/mongoPoolConfig";
 import { describe, expect, it } from "vitest";
 import {
   buildDraftroomStandardValuationInput,
@@ -168,7 +169,7 @@ describe.skipIf(!process.env.MONGO_URI)("pitcher balance regression (Mongo canon
     "standard 12-team mixed: hitter/pitcher split, tops, and budget ratio stay in calibrated bands",
     async () => {
       const uri = process.env.MONGO_URI!;
-      await mongoose.connect(uri);
+      await mongoose.connect(uri, scriptMongoConnectOptions());
       let pool: LeanPlayer[];
       try {
         pool = await loadMongoCatalogForEngine(undefined);

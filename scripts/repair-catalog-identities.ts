@@ -12,6 +12,7 @@ import "dotenv/config";
 import { mkdirSync, writeFileSync } from "fs";
 import path from "path";
 import mongoose from "mongoose";
+import { scriptMongoConnectOptions } from "../src/lib/mongoPoolConfig";
 import Player from "../src/models/Player";
 import type { CatalogIdentityRow } from "../src/lib/catalogIdentityHelpers";
 import {
@@ -82,7 +83,7 @@ async function main(): Promise<void> {
     process.exit(2);
   }
 
-  await mongoose.connect(uri);
+  await mongoose.connect(uri, scriptMongoConnectOptions());
   let rows: CatalogIdentityRow[];
   try {
     const docs = await Player.find({})

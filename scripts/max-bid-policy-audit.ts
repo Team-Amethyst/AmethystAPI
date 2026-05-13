@@ -7,6 +7,7 @@ import "dotenv/config";
 import fs from "fs";
 import path from "path";
 import mongoose from "mongoose";
+import { scriptMongoConnectOptions } from "../src/lib/mongoPoolConfig";
 import type {
   DraftPhaseIndicator,
   DraftedPlayer,
@@ -312,7 +313,7 @@ async function main(): Promise<void> {
   const uri = process.env.MONGO_URI;
   if (!uri) throw new Error("MONGO_URI required");
 
-  await mongoose.connect(uri);
+  await mongoose.connect(uri, scriptMongoConnectOptions());
   let pool: LeanPlayer[];
   try {
     pool = await loadMongoCatalogForEngine(undefined);

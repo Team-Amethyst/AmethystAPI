@@ -9,6 +9,7 @@ import "dotenv/config";
 import { readFileSync } from "fs";
 import path from "path";
 import mongoose from "mongoose";
+import { scriptMongoConnectOptions } from "../src/lib/mongoPoolConfig";
 import Player from "../src/models/Player";
 import { PLAYER_CATALOG_LEAN_SELECT } from "../src/lib/playerCatalogProjection";
 import { normalizeCatalogPlayers } from "../src/lib/playerCatalog";
@@ -70,7 +71,7 @@ function newAuctionPicks(
 
 async function main(): Promise<void> {
   if (!process.env.MONGO_URI) throw new Error("MONGO_URI missing");
-  await mongoose.connect(process.env.MONGO_URI);
+  await mongoose.connect(process.env.MONGO_URI!, scriptMongoConnectOptions());
   const docs = await Player.find({}).select(PLAYER_CATALOG_LEAN_SELECT).lean().exec();
   const pool = normalizeCatalogPlayers(docs, () => undefined);
   await mongoose.disconnect().catch(() => undefined);

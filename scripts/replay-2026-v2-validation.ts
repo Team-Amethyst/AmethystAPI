@@ -18,6 +18,7 @@ import "dotenv/config";
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from "fs";
 import path from "path";
 import mongoose from "mongoose";
+import { scriptMongoConnectOptions } from "../src/lib/mongoPoolConfig";
 import type { DraftedPlayer, LeanPlayer, NormalizedValuationInput } from "../src/types/brain";
 import { parseValuationRequest } from "../src/lib/valuationRequest";
 import { executeValuationWorkflow } from "../src/services/valuationWorkflow";
@@ -546,7 +547,7 @@ async function loadCatalogFromMongo(
   if (!uri) {
     throw new Error("MONGO_URI missing");
   }
-  await mongoose.connect(uri);
+  await mongoose.connect(uri, scriptMongoConnectOptions());
   try {
     const raw = await Player.find({})
       .select(PLAYER_CATALOG_LEAN_SELECT)

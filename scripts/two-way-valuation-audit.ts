@@ -5,6 +5,7 @@
  */
 import "dotenv/config";
 import mongoose from "mongoose";
+import { scriptMongoConnectOptions } from "../src/lib/mongoPoolConfig";
 import type { LeanPlayer, NormalizedValuationInput, RosterSlot, ValuedPlayer } from "../src/types/brain";
 import { loadMongoCatalogForEngine } from "../src/lib/mongoCatalogPipeline";
 import {
@@ -121,9 +122,13 @@ async function main() {
     console.error("Set MONGO_URI (or MONGODB_URI) for catalog audit.");
     process.exit(1);
   }
-  await mongoose.connect(uri);
-  const pool = await loadMongoCatalogForEngine(undefined, { skipMlbHydration: true });
-  await mongoose.disconnect();
+  await mongoose.connect(uri, scriptMongoConnectOptions());
+  let pool: LeanPlayer[];
+  try {
+    pool = await loadMongoCatalogForEngine(undefined, { skipMlbHydration: true });
+  } finally {
+    await mongoose.disconnect().catch(() => undefined);
+  }
 
   const universe = filterValuationUniverse(pool, { leagueScope: "Mixed" });
 

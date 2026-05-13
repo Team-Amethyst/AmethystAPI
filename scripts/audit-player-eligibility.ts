@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import { scriptMongoConnectOptions } from "../src/lib/mongoPoolConfig";
 import dotenv from "dotenv";
 import Player from "../src/models/Player";
 import { tokenizeFantasyPositions } from "../src/lib/fantasyRosterSlots";
@@ -33,7 +34,7 @@ function asStringArray(value: unknown): string[] {
 }
 
 async function run() {
-  await mongoose.connect(MONGO_URI as string);
+  await mongoose.connect(MONGO_URI as string, scriptMongoConnectOptions());
 
   const docs = (await Player.find({})
     .select("mlbId name position positions value")

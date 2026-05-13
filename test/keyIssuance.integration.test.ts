@@ -1,5 +1,6 @@
 import express from "express";
 import mongoose from "mongoose";
+import { scriptMongoConnectOptions } from "../src/lib/mongoPoolConfig";
 import request from "supertest";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import apiKeysRoutes from "../src/routes/apiKeys";
@@ -17,7 +18,7 @@ describe.skipIf(!MONGO_URI)("POST /api/keys/issue (integration)", () => {
 
   beforeAll(async () => {
     if (mongoose.connection.readyState === 0) {
-      await mongoose.connect(MONGO_URI as string);
+      await mongoose.connect(MONGO_URI as string, scriptMongoConnectOptions());
     }
     await mongoose.connection.dropDatabase();
   });

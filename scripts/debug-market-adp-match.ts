@@ -10,6 +10,7 @@ import dotenv from "dotenv";
 import { readFileSync, existsSync } from "fs";
 import path from "path";
 import mongoose from "mongoose";
+import { scriptMongoConnectOptions } from "../src/lib/mongoPoolConfig";
 import {
   canonicalMlbTeamAbbrevForMatch,
   normalizePlayerName,
@@ -157,7 +158,7 @@ async function main(): Promise<void> {
 
   const vendorRows = parseNfbcDataPhpText(body).rows;
 
-  await mongoose.connect(uri);
+  await mongoose.connect(uri, scriptMongoConnectOptions());
   let catalog: LeanPlayer[] = [];
   try {
     process.env.AMETHYST_SKIP_MLB_TEAM_HYDRATE = "1";

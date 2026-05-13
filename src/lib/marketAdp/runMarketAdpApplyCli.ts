@@ -5,6 +5,7 @@
 import { readFileSync } from "fs";
 import path from "path";
 import mongoose from "mongoose";
+import { scriptMongoConnectOptions } from "../mongoPoolConfig";
 import Player from "../../models/Player";
 import {
   aggregateRowsSkippedInvalid,
@@ -72,7 +73,7 @@ async function planClearMissing(
   if (!uri) {
     throw new Error("--clear-missing-market-adp requires MONGO_URI for Mongo inspection");
   }
-  await mongoose.connect(uri);
+  await mongoose.connect(uri, scriptMongoConnectOptions());
   try {
     const nin = appliedMlbIds.length > 0 ? appliedMlbIds : [-1];
     const filter = {
@@ -106,7 +107,7 @@ async function executeApply(
   const uri = process.env.MONGO_URI;
   if (!uri) throw new Error("MONGO_URI required for --apply");
 
-  await mongoose.connect(uri);
+  await mongoose.connect(uri, scriptMongoConnectOptions());
   try {
     let modified = 0;
     let matched = 0;

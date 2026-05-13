@@ -9,6 +9,7 @@ import "dotenv/config";
 import { mkdirSync, writeFileSync } from "fs";
 import path from "path";
 import mongoose from "mongoose";
+import { scriptMongoConnectOptions } from "../src/lib/mongoPoolConfig";
 import Player from "../src/models/Player";
 import type { CatalogIdentityRow } from "../src/lib/catalogIdentityHelpers";
 import {
@@ -99,7 +100,7 @@ function pairReport(canonical: CatalogIdentityRow, shadow: CatalogIdentityRow) {
 async function main(): Promise<void> {
   const uri = process.env.MONGO_URI;
   if (!uri) throw new Error("MONGO_URI required");
-  await mongoose.connect(uri);
+  await mongoose.connect(uri, scriptMongoConnectOptions());
   let rows: CatalogIdentityRow[];
   try {
     const docs = await Player.find({})

@@ -5,6 +5,7 @@
  */
 import "dotenv/config";
 import mongoose from "mongoose";
+import { scriptMongoConnectOptions } from "../src/lib/mongoPoolConfig";
 import { loadMongoCatalogForEngine } from "../src/lib/mongoCatalogPipeline";
 import { getProjectionSection, toNum } from "../src/services/baselineProjectionStats";
 
@@ -26,7 +27,7 @@ async function main(): Promise<void> {
     console.error("MONGO_URI required");
     process.exit(1);
   }
-  await mongoose.connect(uri);
+  await mongoose.connect(uri, scriptMongoConnectOptions());
   let players: Awaited<ReturnType<typeof loadMongoCatalogForEngine>>;
   try {
     players = await loadMongoCatalogForEngine(undefined, { skipMlbHydration: true });

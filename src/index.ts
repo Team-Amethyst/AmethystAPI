@@ -31,6 +31,7 @@ import { logger } from "./lib/logger";
 import { getReadiness, readinessHttpStatus } from "./lib/readiness";
 import { relaxApiKeysCollectionValidation } from "./lib/apiKeyCollection";
 import { getValuationModelVersion } from "./lib/valuationModelVersion";
+import { engineMongoConnectOptions, mongoPoolSettingsForLog } from "./lib/mongoPoolConfig";
 
 if (!env.mongoUri) {
   logger.fatal("Missing required environment variable: MONGO_URI");
@@ -175,17 +176,23 @@ app.use(errorHandler);
 // ── Startup ───────────────────────────────────────────────────────────────────
 const PORT = env.port;
 
-const mongoConnectOptions: mongoose.ConnectOptions = {
+const mongoConnectOptions = engineMongoConnectOptions({
   appName: env.mongoAppName,
-};
-if (env.mongoMaxPoolSize != null) {
-  mongoConnectOptions.maxPoolSize = env.mongoMaxPoolSize;
-}
+  maxPoolSize: env.mongoMaxPoolSize,
+});
 
 mongoose
   .connect(env.mongoUri, mongoConnectOptions)
   .then(async () => {
-    logger.info("MongoDB connected");
+    logger.info(
+      {
+        pid: process.pid,
+        service: "AmethystEngine",
+        environment: env.nodeEnv ?? process.env.NODE_ENV ?? "undefined",
+        mongoPool: mongoPoolSettingsForLog(mongoConnectOptions),
+      },
+      "MongoDB connected"
+    );
     await relaxApiKeysCollectionValidation();
     getRedisClient().connect().catch(() => {});
     app.listen(PORT, () =>

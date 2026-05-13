@@ -5,6 +5,7 @@ import "dotenv/config";
 import { mkdirSync, writeFileSync } from "fs";
 import path from "path";
 import mongoose from "mongoose";
+import { scriptMongoConnectOptions } from "../src/lib/mongoPoolConfig";
 import type { LeanPlayer, NormalizedValuationInput } from "../src/types/brain";
 import type { ValuationResponse, ValuedPlayer } from "../src/types/valuation";
 import { buildSyntheticCalibrationDraftroomPool } from "../src/lib/calibrationDraftroomFixture";
@@ -143,7 +144,7 @@ async function loadPool(mongo: boolean): Promise<LeanPlayer[]> {
   if (!mongo) return buildSyntheticCalibrationDraftroomPool();
   const uri = process.env.MONGO_URI;
   if (!uri) throw new Error("MONGO_URI is not set (required for --mongo)");
-  await mongoose.connect(uri);
+  await mongoose.connect(uri, scriptMongoConnectOptions());
   try {
     return await loadMongoCatalogForEngine(undefined);
   } finally {

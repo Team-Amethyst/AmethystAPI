@@ -6,6 +6,7 @@
  */
 import "dotenv/config";
 import mongoose from "mongoose";
+import { scriptMongoConnectOptions } from "../src/lib/mongoPoolConfig";
 import { writeFileSync, mkdirSync } from "fs";
 import path from "path";
 import Player from "../src/models/Player";
@@ -82,7 +83,7 @@ async function snapshot(label: "before" | "after"): Promise<void> {
   if (!uri) throw new Error("MONGO_URI required");
   mkdirSync(TMP, { recursive: true });
 
-  await mongoose.connect(uri);
+  await mongoose.connect(uri, scriptMongoConnectOptions());
   let pool;
   try {
     pool = await loadMongoCatalogForEngine(undefined);
@@ -179,7 +180,7 @@ async function dryRunBuildSpotcheck(): Promise<void> {
   const uri = process.env.MONGO_URI;
   if (!uri) throw new Error("MONGO_URI required");
 
-  await mongoose.connect(uri);
+  await mongoose.connect(uri, scriptMongoConnectOptions());
   let nfbcFromMongo: Set<number>;
   let existingMarket: Map<number, ExistingPlayerMarketFields>;
   try {

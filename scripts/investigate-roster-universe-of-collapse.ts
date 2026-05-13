@@ -7,6 +7,7 @@
 import dotenv from "dotenv";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
 import mongoose from "mongoose";
+import { scriptMongoConnectOptions } from "../src/lib/mongoPoolConfig";
 import path from "path";
 
 import { buildDraftroomStandardValuationInput } from "../src/lib/calibrationDraftroomFixture";
@@ -144,7 +145,7 @@ async function main(): Promise<void> {
   const previewJson = JSON.parse(readFileSync(previewPath, "utf8"));
   const log = { warn: console.warn, info: console.info };
 
-  await mongoose.connect(uri);
+  await mongoose.connect(uri, scriptMongoConnectOptions());
   let mongoPool: LeanPlayer[];
   try {
     mongoPool = await loadMongoCatalogForEngine(log, { skipMlbHydration: false });

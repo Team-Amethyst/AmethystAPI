@@ -36,6 +36,7 @@ import dotenv from "dotenv";
 import { mkdirSync, readFileSync, writeFileSync } from "fs";
 import path from "path";
 import mongoose from "mongoose";
+import { scriptMongoConnectOptions } from "../src/lib/mongoPoolConfig";
 import {
   createCsvFixtureAdapter,
   createNfbcCsvAdapter,
@@ -214,7 +215,7 @@ async function loadCatalog(params: {
   if (params.mongo) {
     const uri = process.env.MONGO_URI;
     if (!uri) throw new Error("MONGO_URI required for --mongo");
-    await mongoose.connect(uri);
+    await mongoose.connect(uri, scriptMongoConnectOptions());
     try {
       process.env.AMETHYST_SKIP_MLB_TEAM_HYDRATE = "1";
       return await loadMongoCatalogForEngine(
