@@ -87,6 +87,14 @@ const Schema = z.object({
    * Read at call time in `src/lib/redis.ts` so tests can flip without re-importing.
    */
   REDIS_CACHE_TIMEOUT_MS: z.string().optional(),
+  /**
+   * Per-URL min-interval (ms) between identical-fingerprint `signals_updated`
+   * POSTs. Default 5000; clamp 0..60000. Read at call time in
+   * `src/lib/newsSignalsWebhookDedupe.ts`.
+   */
+  AMETHYST_NEWS_WEBHOOK_MIN_INTERVAL_MS: z.string().optional(),
+  /** "1" to bypass the in-process dedupe (debug only). Read at call time. */
+  AMETHYST_DISABLE_NEWS_WEBHOOK_DEDUPE: z.string().optional(),
 });
 
 const raw = Schema.safeParse(process.env);

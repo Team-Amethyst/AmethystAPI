@@ -147,8 +147,29 @@ export async function fetchSignals(
   await setCache(cacheKey, response, CACHE_TTL);
   await setCache(etagKey, fingerprint, SIGNALS_ETAG_TTL);
 
-  if (previousFingerprint !== fingerprint) {
-    void notifyNewsSignalsWebhookSubscribers();
+  /*
+   * Two-layer dedupe:
+   *   1. Redis ETag fast-path filters out unchanged snapshots before we
+   *      do anything else (saves the Mongo `ApiKey.find` + axios fan-out).
+   *      When Redis is healthy this short-circuits the common case.
+   *   2. In-process per-URL memo inside `notifyNewsSignalsWebhookSubscribers`
+   *      is the *correctness* layer. It works when Redis is down (which
+   *      is the production-observed condition: no `REDIS_URL` set on
+   *      App Runner). Without it, every cache miss fanned out a POST per
+   *      subscribed URL — producing the ~12 hooks/min seen in Draftroom.
+   *
+   * `previousFingerprint == null` (cache miss OR Redis unavailable) does
+   * NOT short-circuit; we delegate to the in-process memo to make the
+   * final call so we don't reintroduce the broken-open behavior.
+   */
+  const redisSaysChanged =
+    previousFingerprint == null || previousFingerprint !== fingerprint;
+
+  if (redisSaysChanged) {
+    void notifyNewsSignalsWebhookSubscribers({
+      fingerprint,
+      count: response.count,
+    });
   }
 
   return response;
