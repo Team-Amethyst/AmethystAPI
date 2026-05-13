@@ -45,7 +45,10 @@ import Player from "../src/models/Player";
 import { classifyCatalogDoc } from "../src/lib/catalogRowClassification";
 import type { CatalogIdentityRow } from "../src/lib/catalogIdentityHelpers";
 import { findDuplicateMlbIdGroups } from "../src/lib/catalogIdentityHelpers";
-import { loadMongoCatalogForEngine } from "../src/lib/mongoCatalogPipeline";
+import {
+  invalidateCatalogCache,
+  loadMongoCatalogForEngine,
+} from "../src/lib/mongoCatalogPipeline";
 import { collectProjectionSanityIssues } from "../src/lib/projectionSanity";
 import {
   runSyncQualityGates,
@@ -360,6 +363,13 @@ function countCatalogClasses(docs: Record<string, unknown>[]): Record<string, nu
 }
 
 async function runPostSyncGates(cli: SyncCli): Promise<void> {
+  /*
+   * Sync may have just upserted players. Drop any in-process catalog cache so
+   * the quality-gate load below sees the post-write rows. (Cross-process API
+   * instances refresh via TTL — see `src/lib/mongoCatalogCache.ts`.)
+   */
+  invalidateCatalogCache();
+
   const rawDocs = await Player.find({}).select(PLAYER_CATALOG_LEAN_SELECT).lean();
   const allRows = (rawDocs as Record<string, unknown>[]).map(docToIdentityRow);
 

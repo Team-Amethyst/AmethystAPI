@@ -32,6 +32,7 @@ import { getReadiness, readinessHttpStatus } from "./lib/readiness";
 import { relaxApiKeysCollectionValidation } from "./lib/apiKeyCollection";
 import { getValuationModelVersion } from "./lib/valuationModelVersion";
 import { engineMongoConnectOptions, mongoPoolSettingsForLog } from "./lib/mongoPoolConfig";
+import { warmCatalogCache } from "./lib/mongoCatalogPipeline";
 
 if (!env.mongoUri) {
   logger.fatal("Missing required environment variable: MONGO_URI");
@@ -195,6 +196,12 @@ mongoose
     );
     await relaxApiKeysCollectionValidation();
     getRedisClient().connect().catch(() => {});
+    /*
+     * Fire-and-forget catalog cache warm so the first valuation request after
+     * a cold start does not pay the full Mongo find + normalize cost. The
+     * helper logs success/failure and never throws.
+     */
+    void warmCatalogCache(logger);
     app.listen(PORT, () =>
       logger.info({ port: PORT }, "Amethyst Engine listening")
     );
