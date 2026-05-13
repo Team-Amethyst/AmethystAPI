@@ -7,7 +7,10 @@ import {
   rosterSlotSchema,
 } from "../lib/draftedPlayerZod";
 import { zodIssuesToFieldErrors } from "../lib/zodErrors";
-import { loadMongoCatalogForEngine } from "../lib/mongoCatalogPipeline";
+import {
+  httpCatalogMlbTeamHydrationEnabled,
+  loadMongoCatalogForEngine,
+} from "../lib/mongoCatalogPipeline";
 import { logger } from "../lib/logger";
 
 const router: Router = Router();
@@ -47,7 +50,9 @@ const mockPick: RequestHandler = async (
 
   const body = parsed.data;
 
-  const players = await loadMongoCatalogForEngine(logger);
+  const players = await loadMongoCatalogForEngine(logger, {
+    skipMlbHydration: !httpCatalogMlbTeamHydrationEnabled(),
+  });
 
   const result = simulateMockPicks(
     players,

@@ -40,6 +40,8 @@ export function selectInflationModel(params: {
   getPlayerId: (p: LeanPlayer) => string;
   minAuctionBid: number;
   defaultSurplusDraftablePoolMultiplier: number;
+  /** Optional; records `replacement_slots_v2_ms` for the primary v2 plan only. */
+  inflationPhaseTimings?: Record<string, number>;
 }): InflationModelSelection {
   const {
     requestedModel,
@@ -55,6 +57,7 @@ export function selectInflationModel(params: {
     getPlayerId,
     minAuctionBid,
     defaultSurplusDraftablePoolMultiplier,
+    inflationPhaseTimings,
   } = params;
 
   if (requestedModel === "replacement_slots_v2") {
@@ -63,6 +66,7 @@ export function selectInflationModel(params: {
     for (const p of scoped) {
       baselineById.set(getPlayerId(p), p.value || 0);
     }
+    const tV2 = performance.now();
     const v2Result = computeReplacementSlotsV2(
       undraftedFull,
       rostered,
@@ -76,6 +80,11 @@ export function selectInflationModel(params: {
         positionOverrides: options?.positionOverrides,
       }
     );
+    if (inflationPhaseTimings) {
+      inflationPhaseTimings.replacement_slots_v2_ms =
+        (inflationPhaseTimings.replacement_slots_v2_ms ?? 0) +
+        (performance.now() - tV2);
+    }
     return {
       inflationModelEffective: "replacement_slots_v2",
       poolValueRemaining: v2Result.pool_value_remaining,
@@ -145,6 +154,7 @@ export function computeInflationIndexVsOpeningAuction(params: {
   budgetRemaining: number;
   inflationFactor: number;
   getPlayerId: (p: LeanPlayer) => string;
+  inflationPhaseTimings?: Record<string, number>;
 }): number | undefined {
   const {
     inflationModelEffective,
@@ -157,6 +167,7 @@ export function computeInflationIndexVsOpeningAuction(params: {
     budgetRemaining,
     inflationFactor,
     getPlayerId,
+    inflationPhaseTimings,
   } = params;
   if (inflationModelEffective !== "replacement_slots_v2" || !v2Result) {
     return undefined;
@@ -179,6 +190,7 @@ export function computeInflationIndexVsOpeningAuction(params: {
   for (const p of scoped) {
     baselineByIdOpen.set(getPlayerId(p), p.value || 0);
   }
+  const tOpen = inflationPhaseTimings ? performance.now() : 0;
   const v2Open = computeReplacementSlotsV2(
     undraftedOpen,
     rosteredOpen,
@@ -192,6 +204,11 @@ export function computeInflationIndexVsOpeningAuction(params: {
       positionOverrides: options?.positionOverrides,
     }
   );
+  if (inflationPhaseTimings) {
+    inflationPhaseTimings.replacement_slots_v2_opening_index_ms =
+      (inflationPhaseTimings.replacement_slots_v2_opening_index_ms ?? 0) +
+      (performance.now() - tOpen);
+  }
   let openClamped = clampInflation(
     v2Open.inflation_factor_precap,
     options?.inflationCap,

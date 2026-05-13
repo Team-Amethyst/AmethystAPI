@@ -66,6 +66,12 @@ export function calculateInflation(
   leagueScope: LeagueScope = "Mixed",
   options?: CalculateInflationOptions
 ): ValuationResponse {
+  const timings = options?.inflationPhaseTimings;
+  const mark = (key: string, start: number) => {
+    if (!timings) return;
+    timings[key] = (timings[key] ?? 0) + (performance.now() - start);
+  };
+
   void leagueScope;
   const requestedModel: InflationModel =
     options?.inflationModel ?? DEFAULT_INFLATION_MODEL;
@@ -75,6 +81,7 @@ export function calculateInflation(
     draftedIds.add(pid);
   }
 
+  const tPrep = performance.now();
   /* `allPlayers` must already be the request valuation universe (see `filterValuationUniverse`). */
   const undraftedFull = allPlayers.filter((p) => !draftedIds.has(getPlayerId(p)));
 
@@ -110,7 +117,9 @@ export function calculateInflation(
   const byValueRows = [...undraftedForRows].sort((a, b) =>
     compareByValueDesc(a, b, options)
   );
+  mark("inflation_prep_ms", tPrep);
 
+  const tModel = performance.now();
   const modelSelection = selectInflationModel({
     requestedModel,
     scoped: allPlayers,
@@ -125,7 +134,9 @@ export function calculateInflation(
     getPlayerId,
     minAuctionBid: MIN_AUCTION_BID,
     defaultSurplusDraftablePoolMultiplier: DEFAULT_SURPLUS_DRAFTABLE_MULTIPLIER,
+    inflationPhaseTimings: timings,
   });
+  mark("inflation_model_selection_ms", tModel);
   const inflationModelEffective = modelSelection.inflationModelEffective;
   const poolValueRemaining = modelSelection.poolValueRemaining;
   const rawInflationFactor = modelSelection.rawInflationFactor;
@@ -133,6 +144,7 @@ export function calculateInflation(
   const v2Meta = modelSelection.v2Meta;
   const v2Result = modelSelection.v2Result;
 
+  const tClamp = performance.now();
   let clamped = clampInflation(
     rawInflationFactor,
     options?.inflationCap,
@@ -151,7 +163,9 @@ export function calculateInflation(
   const inflationFactor = clamped.inflation_factor;
   const inflationRaw = clamped.inflation_raw;
   const inflationBoundedBy = clamped.inflation_bounded_by;
+  mark("inflation_clamp_ms", tClamp);
 
+  const tIdx = performance.now();
   const inflationIndexVsOpeningAuction = computeInflationIndexVsOpeningAuction({
     inflationModelEffective,
     v2Result,
@@ -163,8 +177,11 @@ export function calculateInflation(
     budgetRemaining,
     inflationFactor,
     getPlayerId,
+    inflationPhaseTimings: timings,
   });
+  mark("inflation_opening_index_ms", tIdx);
 
+  const tRows = performance.now();
   const valuations = buildValuedRows({
     byValueRows,
     inflationModelEffective,
@@ -176,8 +193,11 @@ export function calculateInflation(
     catalogOrderRank,
     undraftedCount: undraftedFull.length,
   });
+  mark("inflation_build_valued_rows_ms", tRows);
 
+  const tTiers = performance.now();
   attachAuctionBaselineRanksAndTiers(valuations, options);
+  mark("inflation_attach_tiers_ms", tTiers);
 
   const leagueCap = leagueSlotCapacity(rosterSlots, numTeams);
   const remainingSlotsLeague =
@@ -197,6 +217,7 @@ export function calculateInflation(
       : {};
   const byRowPlayerId = new Map(byValueRows.map((p) => [getPlayerId(p), p]));
 
+  const tRec = performance.now();
   applyRecommendedBidPass({
     valuations,
     byValueRows,
@@ -219,6 +240,7 @@ export function calculateInflation(
   if (capRatio != null) {
     applyRecommendedBidSoftCap(valuations, capRatio, MIN_AUCTION_BID);
   }
+  mark("inflation_recommended_bid_pass_ms", tRec);
 
   const symmetricOpenLeague = isSymmetricOpenLeagueContext({
     numTeams,
@@ -229,6 +251,7 @@ export function calculateInflation(
   });
 
   const userTeamId = options?.userTeamId?.trim() || DEFAULT_USER_TEAM_ID;
+  const tTeam = performance.now();
   applyTeamAdjustedAndEdgePass({
     valuations,
     byRowPlayerId,
@@ -246,6 +269,7 @@ export function calculateInflation(
     minAuctionBid: MIN_AUCTION_BID,
     options,
   });
+  mark("inflation_team_adjusted_pass_ms", tTeam);
 
   const slotMeta: Partial<ValuationResponse> = {
     ...v2Meta,
@@ -254,7 +278,8 @@ export function calculateInflation(
       : {}),
   };
 
-  return buildInflationResponse({
+  const tAsm = performance.now();
+  const built = buildInflationResponse({
     inflationModelEffective,
     inflationFactor,
     inflationIndexVsOpeningAuction,
@@ -269,4 +294,6 @@ export function calculateInflation(
     slotMeta,
     deterministic: options?.deterministic,
   });
+  mark("inflation_build_response_ms", tAsm);
+  return built;
 }

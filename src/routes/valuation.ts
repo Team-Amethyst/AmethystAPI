@@ -1,9 +1,18 @@
 import { Router, Request, Response, RequestHandler } from "express";
 import { z } from "zod";
+import mongoose from "mongoose";
 import { env } from "../config/env";
 import { getRequestId } from "../lib/requestContext";
 import { logger } from "../lib/logger";
 import { parseValuationRequest } from "../lib/valuationRequest";
+import {
+  createValuationRequestDiagnostics,
+  estimateRequestBodyBytes,
+  injuryOverridesCount,
+  positionOverridesCount,
+  valuationConcurrencyEnter,
+  valuationConcurrencyExit,
+} from "../lib/valuationRequestTiming";
 import { runValuationWithMongoCatalog } from "../services/valuationCatalogRun";
 import { resolveScoringMode } from "../services/valuationWorkflow";
 
@@ -28,6 +37,15 @@ async function runValuation(
     ...parsed.normalized,
     player_ids: overridePlayerIds ?? parsed.normalized.player_ids,
   };
+  const diag = env.valuationRequestTiming ? createValuationRequestDiagnostics() : undefined;
+  if (diag) {
+    const t0 = performance.now();
+    diag.counts.request_player_ids_count = n.player_ids?.length ?? 0;
+    diag.counts.position_overrides_count = positionOverridesCount(n);
+    diag.counts.injury_overrides_count = injuryOverridesCount(n);
+    diag.timings_ms.valuation_request_setup_ms = performance.now() - t0;
+  }
+
   const reqLog = logger.child({
     requestId: getRequestId(res),
     route: "valuation/calculate",
@@ -39,11 +57,13 @@ async function runValuation(
       scoring_mode: resolveScoringMode(n),
       seed: n.seed ?? null,
       player_ids_count: n.player_ids?.length ?? 0,
+      position_overrides_count: positionOverridesCount(n),
+      injury_overrides_count: injuryOverridesCount(n),
     },
     "valuation request"
   );
 
-  const outcome = await runValuationWithMongoCatalog(n, scope, reqLog);
+  const outcome = await runValuationWithMongoCatalog(n, scope, reqLog, diag);
   if (!outcome.ok) {
     res.status(422).json({
       errors: outcome.issues.map((message) => ({ field: "", message })),
@@ -79,9 +99,42 @@ export const valuationCalculateHandler: RequestHandler = async (
   req: Request,
   res: Response
 ): Promise<void> => {
-  const response = await runValuation(req, res);
-  if (!response) return;
-  res.json(response);
+  const httpT0 = env.valuationRequestTiming ? performance.now() : 0;
+  let conc = 0;
+  if (env.valuationRequestTiming) conc = valuationConcurrencyEnter();
+  try {
+    const response = await runValuation(req, res);
+    if (!response) return;
+    if (env.valuationRequestTiming) {
+      const reqLog = logger.child({
+        requestId: getRequestId(res),
+        route: "valuation/calculate",
+      });
+      const tSer = performance.now();
+      const body = JSON.stringify(response);
+      const serMs = performance.now() - tSer;
+      reqLog.info(
+        {
+          component: "ValuationHttp",
+          valuation_request_timing: true,
+          valuation_handler_pre_serialization_ms: Math.round(performance.now() - httpT0 - serMs),
+          response_serialization_ms: Math.round(serMs),
+          response_body_bytes: Buffer.byteLength(body, "utf8"),
+          valuation_total_wall_ms: Math.round(performance.now() - httpT0),
+          request_body_bytes: estimateRequestBodyBytes(req),
+          mongoose_ready_state: mongoose.connection.readyState,
+          mongo_max_pool_size: env.mongoMaxPoolSize,
+          valuation_concurrency_at_entry: conc,
+        },
+        "valuation_http_timing"
+      );
+      res.status(200).type("application/json").send(body);
+      return;
+    }
+    res.json(response);
+  } finally {
+    if (env.valuationRequestTiming) valuationConcurrencyExit();
+  }
 };
 
 /**
@@ -102,24 +155,55 @@ export const valuationPlayerHandler: RequestHandler = async (
     return;
   }
 
-  const response = await runValuation(
-    req,
-    res,
-    [one.data.player_id],
-    { playerId: one.data.player_id }
-  );
-  if (!response) return;
-  const player = response.valuations[0];
-  if (!player) {
-    res.status(404).json({
-      errors: [{ field: "player_id", message: "Player not found in valuation pool" }],
-    });
-    return;
+  const httpT0 = env.valuationRequestTiming ? performance.now() : 0;
+  let conc = 0;
+  if (env.valuationRequestTiming) conc = valuationConcurrencyEnter();
+  try {
+    const response = await runValuation(
+      req,
+      res,
+      [one.data.player_id],
+      { playerId: one.data.player_id }
+    );
+    if (!response) return;
+    const player = response.valuations[0];
+    if (!player) {
+      res.status(404).json({
+        errors: [{ field: "player_id", message: "Player not found in valuation pool" }],
+      });
+      return;
+    }
+    const payload = { ...response, player };
+    if (env.valuationRequestTiming) {
+      const reqLog = logger.child({
+        requestId: getRequestId(res),
+        route: "valuation/player",
+      });
+      const tSer = performance.now();
+      const body = JSON.stringify(payload);
+      const serMs = performance.now() - tSer;
+      reqLog.info(
+        {
+          component: "ValuationHttp",
+          valuation_request_timing: true,
+          valuation_handler_pre_serialization_ms: Math.round(performance.now() - httpT0 - serMs),
+          response_serialization_ms: Math.round(serMs),
+          response_body_bytes: Buffer.byteLength(body, "utf8"),
+          valuation_total_wall_ms: Math.round(performance.now() - httpT0),
+          request_body_bytes: estimateRequestBodyBytes(req),
+          mongoose_ready_state: mongoose.connection.readyState,
+          mongo_max_pool_size: env.mongoMaxPoolSize,
+          valuation_concurrency_at_entry: conc,
+        },
+        "valuation_http_timing"
+      );
+      res.status(200).type("application/json").send(body);
+      return;
+    }
+    res.json(payload);
+  } finally {
+    if (env.valuationRequestTiming) valuationConcurrencyExit();
   }
-  res.json({
-    ...response,
-    player,
-  });
 };
 
 router.post("/calculate", valuationCalculateHandler);

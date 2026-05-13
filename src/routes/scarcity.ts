@@ -15,7 +15,10 @@ import {
 import { zodIssuesToFieldErrors } from "../lib/zodErrors";
 import { positionOverrideEntrySchema } from "../lib/valuationRequestSchemas";
 import { positionOverridesFromRequest } from "../lib/fantasyRosterSlots";
-import { loadMongoCatalogForEngine } from "../lib/mongoCatalogPipeline";
+import {
+  httpCatalogMlbTeamHydrationEnabled,
+  loadMongoCatalogForEngine,
+} from "../lib/mongoCatalogPipeline";
 import { logger } from "../lib/logger";
 
 const router: Router = Router();
@@ -49,7 +52,9 @@ const scarcity: RequestHandler = async (
   const input = parsed.data;
   const numTeams = input.num_teams ?? 12;
 
-  const players = await loadMongoCatalogForEngine(logger);
+  const players = await loadMongoCatalogForEngine(logger, {
+    skipMlbHydration: !httpCatalogMlbTeamHydrationEnabled(),
+  });
 
   const ov = positionOverridesFromRequest(input.position_overrides);
   const result = analyzeScarcity(

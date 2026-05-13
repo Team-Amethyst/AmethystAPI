@@ -142,6 +142,8 @@ export interface CalculateInflationOptions {
    * after isotonic smoothing (trust / UI alignment mode).
    */
   recommendedBidSoftCapRatio?: number;
+  /** When set, Engine accumulates inflation sub-phase durations (ms) for ops / staging. */
+  inflationPhaseTimings?: Record<string, number>;
 }
 
 export interface ValuedPlayer {

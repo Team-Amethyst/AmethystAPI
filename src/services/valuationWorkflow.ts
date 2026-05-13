@@ -22,6 +22,12 @@ import {
   buildValuationContextMetrics,
   buildValuationContextWarnings,
 } from "../lib/valuationContextGuards";
+import {
+  addTimingMs,
+  nowMs,
+  setCount,
+} from "../lib/valuationRequestTiming";
+import type { ValuationRequestDiagnostics } from "../lib/valuationRequestTiming";
 
 /**
  * Valuation pipeline (course UML activity diagram — first pass mapping)
@@ -123,13 +129,21 @@ export function executeValuationWorkflow(
   allPlayers: LeanPlayer[],
   input: NormalizedValuationInput,
   scope: { playerId?: string; position?: string } = {},
-  options: { debugSignals?: boolean } = {}
+  options: { debugSignals?: boolean; diagnostics?: ValuationRequestDiagnostics } = {}
 ): ValuationWorkflowResult {
+  const diag = options.diagnostics;
+
+  const tFilter0 = diag ? nowMs() : 0;
   const valuationPool = filterValuationUniverse(allPlayers, {
     leagueScope: input.league_scope,
     eligiblePlayerIds: input.eligible_player_ids,
     excludedPlayerIds: input.excluded_player_ids,
   });
+  if (diag) {
+    addTimingMs(diag, "workflow_filter_universe_ms", tFilter0);
+    setCount(diag, "valuation_eligible_count", valuationPool.length);
+  }
+
   const positionOverrides = positionOverridesFromRequest(input.position_overrides);
   const unsupportedCats = listUnsupportedScoringCategories(input.scoring_categories);
   if (input.strict_scoring_categories && unsupportedCats.length > 0) {
@@ -144,11 +158,14 @@ export function executeValuationWorkflow(
   const scoringCategoryWarnings =
     unsupportedCats.length > 0 ? scoringCategorySupportWarnings(unsupportedCats) : [];
 
+  const tInj0 = diag ? nowMs() : 0;
   const poolWithInjury = applyInjuryOverridesToPool(
     valuationPool,
     input.injury_overrides
   );
+  if (diag) addTimingMs(diag, "workflow_injury_overrides_ms", tInj0);
 
+  const tBase0 = diag ? nowMs() : 0;
   const basePlayers = scoringAwareBaselinePlayers(
     poolWithInjury,
     input.scoring_format,
@@ -156,6 +173,9 @@ export function executeValuationWorkflow(
     input.roster_slots,
     positionOverrides
   );
+  if (diag) addTimingMs(diag, "workflow_scoring_aware_baseline_ms", tBase0);
+
+  const tSlot0 = diag ? nowMs() : 0;
   const extra = extractDraftedIdsAndSpend(input);
   const rosteredPlayersForSlots = buildRosteredPlayersForSlotEngine(input);
   const remainingLeagueSlots = computeRemainingLeagueRosterSlots(
@@ -164,6 +184,7 @@ export function executeValuationWorkflow(
     input.drafted_players,
     extra.additionalDraftedIds
   );
+  if (diag) addTimingMs(diag, "workflow_slot_context_ms", tSlot0);
 
   const retryPlan = [
     { inflationCap: 3.0, inflationFloor: 0.25 },
@@ -174,6 +195,7 @@ export function executeValuationWorkflow(
 
   for (let i = 0; i < retryPlan.length; i++) {
     const pass = retryPlan[i];
+    const tInfl0 = diag ? nowMs() : 0;
     const response = calculateInflation(
       basePlayers,
       input.drafted_players,
@@ -198,11 +220,14 @@ export function executeValuationWorkflow(
         explainValuationRows: input.explain_valuation_rows === true,
         recommendedBidSoftCapRatio: input.recommended_bid_soft_cap_ratio,
         positionOverrides,
+        inflationPhaseTimings: diag?.timings_ms,
       }
     );
+    if (diag) addTimingMs(diag, "workflow_calculate_inflation_ms", tInfl0);
 
     const quality = validateValuationResponse(response);
     if (quality.ok) {
+      if (diag) setCount(diag, "inflation_retry_pass_index", i + 1);
       if (i > 0) {
         logger.warn(
           { pass: i + 1, component: "valuationWorkflow" },
@@ -227,12 +252,14 @@ export function executeValuationWorkflow(
           ? { valuation_context_warnings: ctxWarnList }
           : {}),
       };
+      const tEx0 = diag ? nowMs() : 0;
       const explained = attachValuationExplainability(
         responseWithContext,
         input,
         basePlayers,
         scope
       );
+      if (diag) addTimingMs(diag, "workflow_attach_explain_ms", tEx0);
       let merged: ValuationResponse = {
         ...explained,
         ...(scoringCategoryWarnings.length > 0
@@ -262,6 +289,9 @@ export function executeValuationWorkflow(
             };
           }),
         };
+      }
+      if (diag) {
+        setCount(diag, "response_valuation_rows", merged.valuations.length);
       }
       return {
         ok: true,

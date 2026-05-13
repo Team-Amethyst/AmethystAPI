@@ -77,6 +77,8 @@ const Schema = z.object({
   AMETHYST_API_KEY: z.string().optional(),
   /** Cap Mongo connections per Engine process (default 10 when unset; driver default without a cap is 100). */
   MONGODB_MAX_POOL_SIZE: z.string().optional(),
+  /** When 1, POST /valuation/* logs structured phase timings + counts (staging / perf triage). */
+  VALUATION_REQUEST_TIMING: z.string().optional(),
   /** Shown in Atlas / logs as client app name; helps attribute connections to this service. */
   MONGODB_APP_NAME: z.string().optional(),
 });
@@ -113,6 +115,8 @@ export const env = {
   mongoMaxPoolSize: parseMongoMaxPoolSize(e.MONGODB_MAX_POOL_SIZE),
   /** Driver `appName` for observability (Atlas “Client”, Atlas logs). */
   mongoAppName: trim(e.MONGODB_APP_NAME) ?? "AmethystEngine",
+  /** Log per-request valuation phase timings (Mongo load, baseline, inflation sub-phases, JSON size). */
+  valuationRequestTiming: trim(e.VALUATION_REQUEST_TIMING) === "1",
   /** Default matches README / portal (`public/js/portal.js`) so local sign-in hits the same origin. */
   port: e.PORT ?? 3002,
   /** Empty array ⇒ reflect `Origin` header (works for App Runner / custom domains without env churn). */
