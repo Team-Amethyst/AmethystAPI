@@ -28,6 +28,10 @@ import {
   setCount,
 } from "../lib/valuationRequestTiming";
 import type { ValuationRequestDiagnostics } from "../lib/valuationRequestTiming";
+import { isBaselineOutputCollapsed } from "../lib/catalogProjectionHealth";
+
+const BASELINE_COLLAPSE_WARNING =
+  "Baseline valuations are uniform across the eligible pool — upstream `projection.batting/pitching` data is likely empty for this catalog snapshot, so auction_value will not differentiate players. Re-run `pnpm sync-players` and restart the API process (catalog cache is in-process).";
 
 /**
  * Valuation pipeline (course UML activity diagram — first pass mapping)
@@ -175,6 +179,27 @@ export function executeValuationWorkflow(
   );
   if (diag) addTimingMs(diag, "workflow_scoring_aware_baseline_ms", tBase0);
 
+  /*
+   * Detect the "every player at $10" failure mode (production 2026-05-13). When the projection
+   * blob upstream of `scoringAwareBaselinePlayers` is empty/uniform for the whole catalog, every
+   * player gets the same baseline `value` and downstream inflation collapses to a degenerate
+   * "everybody at the same price" response. We log the failure and pass it along as a context
+   * warning instead of failing closed, so Draftroom keeps responding while operators see the
+   * alert in App Runner logs.
+   */
+  const baselineCollapsed = isBaselineOutputCollapsed(basePlayers);
+  if (baselineCollapsed) {
+    logger.warn(
+      {
+        component: "valuationWorkflow",
+        baseline_pool_size: basePlayers.length,
+        baseline_collapsed: true,
+      },
+      "baseline valuations collapsed — projection inputs likely empty"
+    );
+    if (diag) setCount(diag, "baseline_pool_collapsed", 1);
+  }
+
   const tSlot0 = diag ? nowMs() : 0;
   const extra = extractDraftedIdsAndSpend(input);
   const rosteredPlayersForSlots = buildRosteredPlayersForSlotEngine(input);
@@ -245,6 +270,9 @@ export function executeValuationWorkflow(
         customEligibleUniverse: (input.eligible_player_ids?.length ?? 0) > 0,
         rosteredPlayers: rosteredPlayersForSlots,
       });
+      if (baselineCollapsed) {
+        ctxWarnList.push(BASELINE_COLLAPSE_WARNING);
+      }
       const responseWithContext: ValuationResponse = {
         ...response,
         valuation_context,

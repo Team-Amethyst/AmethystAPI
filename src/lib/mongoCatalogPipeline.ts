@@ -18,6 +18,7 @@ import { PLAYER_CATALOG_LEAN_SELECT } from "./playerCatalogProjection";
 import type { LeanPlayer } from "../types/brain";
 import type { ValuationRequestDiagnostics } from "./valuationRequestTiming";
 import { addTimingMs, nowMs, setCount } from "./valuationRequestTiming";
+import { assessCatalogProjectionHealth } from "./catalogProjectionHealth";
 
 export type MongoCatalogLoadLogger = Pick<Logger, "warn" | "info" | "error">;
 
@@ -173,6 +174,30 @@ export async function loadMongoCatalogForEngine(
    */
   if (skipHydrate && !isCatalogCacheDisabled()) {
     setCachedValuationEligibleRows(valuationRows);
+  }
+
+  /*
+   * Cheap projection-diversity audit on the freshly loaded catalog. Logs a
+   * `catalog_projection_collapsed` warning when the upstream `projection`
+   * sub-doc is empty/uniform across the top of the board — the exact failure
+   * mode that produced "every player at $10" in production 2026-05-13. We
+   * only run this on the cache-miss path so cached requests stay free.
+   */
+  if (skipHydrate) {
+    const health = assessCatalogProjectionHealth(valuationRows);
+    if (!health.ok) {
+      log?.warn(
+        {
+          component: "MongoCatalogPipeline",
+          catalog_projection_collapsed: true,
+          catalog_projection_collapse_reason: health.reason,
+          catalog_projection_sample_size: health.sampled,
+          catalog_projection_distinct: health.distinct,
+          catalog_pool_size: valuationRows.length,
+        },
+        "catalog projection diversity below threshold — baseline valuations will collapse"
+      );
+    }
   }
 
   const mongoFindMs = tFind1 - tFind0;
