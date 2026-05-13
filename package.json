@@ -46,7 +46,8 @@
     "debug:market-adp-match": "ts-node --project tsconfig.scripts.json scripts/debug-market-adp-match.ts",
     "catalog-universe:dry-run": "ts-node --project tsconfig.scripts.json scripts/catalog-universe-dry-run.ts",
     "calibrate:roster-universe-valuation": "ts-node --project tsconfig.scripts.json scripts/calibrate-roster-universe-valuation.ts",
-    "investigate:roster-universe-of-collapse": "ts-node --project tsconfig.scripts.json scripts/investigate-roster-universe-of-collapse.ts"
+    "investigate:roster-universe-of-collapse": "ts-node --project tsconfig.scripts.json scripts/investigate-roster-universe-of-collapse.ts",
+    "audit:value-confidence": "ts-node --project tsconfig.scripts.json scripts/audit-value-confidence.ts"
   },
   "keywords": [
     "api",
