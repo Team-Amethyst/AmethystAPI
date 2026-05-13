@@ -7,12 +7,23 @@ on:
   schedule:
     # Runs at 06:00 UTC every day during MLB season (March–October)
     - cron: '0 6 * 3-10 *'
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "Run mode: redeploy (default), restart (pause/resume App Runner to force fresh instances), or sync-players (run roster sync now)"
+        type: choice
+        required: true
+        default: redeploy
+        options:
+          - redeploy
+          - restart
+          - sync-players
 
 jobs:
   sync-players:
     runs-on: ubuntu-latest
-    # Only run on schedule; skip on push triggers
-    if: github.event_name == 'schedule'
+    # Run on the daily schedule or on manual `sync-players` dispatch.
+    if: github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.mode == 'sync-players')
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -52,9 +63,65 @@ jobs:
           curl -fsS -X POST -H 'Content-Type: application/json' \
             -d "$payload" "$WEBHOOK_URL"
 
+  restart:
+    runs-on: ubuntu-latest
+    # Hard cycle App Runner instances: pause -> wait -> resume. This is the
+    # only reliable way to drop in-process catalog caches on stuck instances
+    # when `start-deployment` doesn't roll them on its own (e.g. when the
+    # new image is a no-op vs. the running one). Triggered manually via
+    # `gh workflow run deploy.yml -f mode=restart`.
+    if: github.event_name == 'workflow_dispatch' && inputs.mode == 'restart'
+    steps:
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+      - name: Pause + resume App Runner service
+        env:
+          APP_RUNNER_SERVICE_NAME: amethyst-standalone-api
+        run: |
+          set -euo pipefail
+          SERVICE_ARN=$(aws apprunner list-services \
+            --query "ServiceSummaryList[?ServiceName=='${APP_RUNNER_SERVICE_NAME}'].ServiceArn | [0]" \
+            --output text)
+          if [ -z "$SERVICE_ARN" ] || [ "$SERVICE_ARN" = "None" ]; then
+            echo "Error: App Runner service '${APP_RUNNER_SERVICE_NAME}' not found."
+            exit 1
+          fi
+          echo "Service ARN: $SERVICE_ARN"
+
+          echo "Pausing service..."
+          aws apprunner pause-service --service-arn "$SERVICE_ARN" >/dev/null
+          for i in {1..20}; do
+            STATUS=$(aws apprunner describe-service --service-arn "$SERVICE_ARN" --query "Service.Status" --output text)
+            echo "[$i/20] status=$STATUS"
+            if [ "$STATUS" = "PAUSED" ]; then break; fi
+            sleep 15
+          done
+          if [ "$STATUS" != "PAUSED" ]; then
+            echo "Error: service did not reach PAUSED in time (last status: $STATUS)."
+            exit 1
+          fi
+
+          echo "Resuming service..."
+          aws apprunner resume-service --service-arn "$SERVICE_ARN" >/dev/null
+          for i in {1..20}; do
+            STATUS=$(aws apprunner describe-service --service-arn "$SERVICE_ARN" --query "Service.Status" --output text)
+            echo "[$i/20] status=$STATUS"
+            if [ "$STATUS" = "RUNNING" ]; then break; fi
+            sleep 15
+          done
+          if [ "$STATUS" != "RUNNING" ]; then
+            echo "Error: service did not return to RUNNING in time (last status: $STATUS)."
+            exit 1
+          fi
+          echo "Service is RUNNING again — fresh instances will warm against current Mongo."
+
   deploy:
     runs-on: ubuntu-latest
-    if: github.event_name == 'push'
+    if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.mode == 'redeploy')
     services:
       mongo:
         image: mongo:7
