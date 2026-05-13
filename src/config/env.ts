@@ -81,6 +81,12 @@ const Schema = z.object({
   VALUATION_REQUEST_TIMING: z.string().optional(),
   /** Shown in Atlas / logs as client app name; helps attribute connections to this service. */
   MONGODB_APP_NAME: z.string().optional(),
+  /**
+   * Hard per-call timeout (ms) for Redis cache get/set/del so a stalled Redis
+   * cannot block licensed-request paths. Default 50; clamp 5..500.
+   * Read at call time in `src/lib/redis.ts` so tests can flip without re-importing.
+   */
+  REDIS_CACHE_TIMEOUT_MS: z.string().optional(),
 });
 
 const raw = Schema.safeParse(process.env);
