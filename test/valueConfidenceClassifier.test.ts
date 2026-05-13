@@ -89,7 +89,7 @@ describe("valueConfidence classifier", () => {
       topSpAuction: 40,
       draftedPickCount: 0,
     });
-    expect(f.some((x) => x.rule_id === "market_adp_top25_auction_le_3")).toBe(true);
+    expect(f.some((x) => x.rule_id === "market_adp_top15_auction_le_3")).toBe(true);
   });
 
   it("does not flag market_adp50 rank rule when auction dollars remain healthy", () => {

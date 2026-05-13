@@ -181,10 +181,10 @@ export function collectSuspiciousValueFindings(ctx: ClassifierContext): Suspicio
     const lp = poolById.get(row.player_id);
     const bc = row.baseline_components;
     const adp = row.market_adp;
-    if (adp != null && adp <= 25 && row.auction_value <= 3) {
+    if (adp != null && adp <= 15 && row.auction_value <= 3) {
       out.push(
-        mkFinding(scenarioId, "market_adp_top25_auction_le_3", "important", row, lp, {
-          notes: `market_adp ${adp} but auction_value ${row.auction_value} (tight floor: ADP scale is vendor pick #; flag only at ≤$3)`,
+        mkFinding(scenarioId, "market_adp_top15_auction_le_3", "important", row, lp, {
+          notes: `market_adp ${adp} but auction_value ${row.auction_value} (elite ADP band ≤15 pick #; ≤$3 auction)`,
         })
       );
     }
