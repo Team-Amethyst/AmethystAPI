@@ -109,6 +109,69 @@ function pickMarketAdpFields(
   return out;
 }
 
+/**
+ * Coerce Mongo `_id` to a stable string at the catalog boundary.
+ *
+ * Why: downstream baseline math uses `String(p._id)` as a Map key
+ * (see `scoringAwareBaselinePlayers`). When the catalog row is cached and
+ * later returned via `structuredClone`, the BSON `ObjectId` instance is
+ * stripped of its prototype and reduced to `{ buffer: { 0: ..., 11: ... } }`.
+ * `String({...})` collapses to the literal string `"[object Object]"` for
+ * every row, collapsing the Map (last write wins → uniform `$10` baselines
+ * everywhere). Normalising `_id` to a hex string here means
+ * `structuredClone` round-trips it as a primitive string and downstream
+ * `String(p._id)` returns the canonical hex on both cold and cache-hit
+ * paths.
+ *
+ * Accepts: ObjectId instances, plain objects with `toHexString`, plain
+ * objects with `{buffer: Uint8Array | numeric-keyed object}`, strings,
+ * or anything stringifiable.
+ */
+export function coerceCatalogIdToString(raw: unknown): string {
+  if (raw == null) return "";
+  if (typeof raw === "string") return raw;
+  if (typeof raw === "number" || typeof raw === "bigint") return String(raw);
+  if (typeof raw === "object") {
+    const obj = raw as {
+      toHexString?: unknown;
+      toString?: unknown;
+      buffer?: unknown;
+      id?: unknown;
+    };
+    if (typeof obj.toHexString === "function") {
+      try {
+        const h = (obj.toHexString as () => unknown).call(obj);
+        if (typeof h === "string" && h.length > 0) return h;
+      } catch {
+        // fall through to other strategies
+      }
+    }
+    if (obj.buffer && typeof obj.buffer === "object") {
+      const buf = obj.buffer as Record<string, number> | ArrayLike<number>;
+      const bytes: number[] = [];
+      const len =
+        typeof (buf as ArrayLike<number>).length === "number"
+          ? (buf as ArrayLike<number>).length
+          : 12;
+      for (let i = 0; i < len; i++) {
+        const b = Number((buf as Record<number, number>)[i]);
+        if (!Number.isFinite(b)) return "";
+        bytes.push(b & 0xff);
+      }
+      if (bytes.length > 0) {
+        return bytes
+          .map((b) => b.toString(16).padStart(2, "0"))
+          .join("");
+      }
+    }
+    if (typeof obj.toString === "function") {
+      const s = obj.toString();
+      if (typeof s === "string" && s !== "[object Object]") return s;
+    }
+  }
+  return "";
+}
+
 function coercePositions(raw: unknown): string[] | undefined {
   if (Array.isArray(raw)) {
     const arr = raw.filter(
@@ -179,7 +242,7 @@ export function normalizeCatalogPlayers(
     );
 
     rows.push({
-      _id: d._id,
+      _id: coerceCatalogIdToString(d._id),
       mlbId,
       ...(catalogKind ? { catalogKind } : {}),
       name: typeof d.name === "string" ? d.name : "Unknown",
