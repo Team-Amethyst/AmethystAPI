@@ -1,4 +1,6 @@
 import { playerTokensFromLean } from "../lib/fantasyRosterSlots";
+import { classifyDurabilityExpectation } from "../lib/durabilityExpectation";
+import type { DurabilityExpectationReason } from "../types/durabilityExpectation";
 import { getPlayerId } from "../lib/playerId";
 import { pickBaselineRiskExplainFromMeta } from "../types/baselineRiskExplain";
 import type {
@@ -101,6 +103,19 @@ export function applyRecommendedBidPass(params: {
       const meta = (
         lpEx?.projection as { __valuation_meta__?: Record<string, unknown> } | undefined
       )?.__valuation_meta__;
+      const tw =
+        meta?.two_way_role_selected === "hitter" || meta?.two_way_role_selected === "pitcher"
+          ? (meta.two_way_role_selected as "hitter" | "pitcher")
+          : undefined;
+      const dur = lpEx
+        ? classifyDurabilityExpectation(lpEx, {
+            positionOverrides: options?.positionOverrides,
+            twoWayRoleSelected: tw,
+          })
+        : {
+            durability_expectation: "unknown" as const,
+            durability_expectation_reasons: [] as DurabilityExpectationReason[],
+          };
       row.valuation_explain = {
         effective_positions: [...tokens],
         replacement_key_used: replBestEx?.key ?? null,
@@ -122,6 +137,8 @@ export function applyRecommendedBidPass(params: {
               pitcher_baseline_candidate: Number(meta.pitcher_baseline_candidate),
             }
           : {}),
+        durability_expectation: dur.durability_expectation,
+        durability_expectation_reasons: dur.durability_expectation_reasons,
       };
     }
     if (!options?.debugSignals) continue;

@@ -1,5 +1,11 @@
 import type { LeanPlayer, NormalizedValuationInput } from "../../types/brain";
+import type { DurabilityExpectation, DurabilityExpectationReason } from "../../types/durabilityExpectation";
 import type { ValuedPlayer, ValuationResponse } from "../../types/valuation";
+import { classifyDurabilityExpectation } from "../durabilityExpectation";
+import {
+  positionOverridesFromRequest,
+  type PositionOverrideMap,
+} from "../fantasyRosterSlots";
 import { listUnsupportedScoringCategories } from "../scoringCategorySupport";
 import { isPlayerInDraftablePool, normalizeDraftablePoolMeta } from "../draftablePoolSemantics";
 import { getPlayerId } from "../playerId";
@@ -41,6 +47,9 @@ export type SuspiciousValueFinding = {
   replacement_value_used: number | null;
   surplus_basis: number | null;
   surplus_allocation_factor: number | null;
+  /** Audit-only; from `classifyDurabilityExpectation` (catalog + baseline role). */
+  durability_expectation?: DurabilityExpectation | null;
+  durability_expectation_reasons?: DurabilityExpectationReason[] | null;
   notes?: string;
 };
 
@@ -91,11 +100,19 @@ function mkFinding(
   severity: ValueConfidenceSeverity,
   row: ValuedPlayer,
   lp: LeanPlayer | undefined,
+  positionOverrides: PositionOverrideMap | undefined,
   extras: Partial<SuspiciousValueFinding> = {}
 ): SuspiciousValueFinding {
   const bc = row.baseline_components;
   const ve = row.valuation_explain;
   const proj = lp?.projection as Record<string, unknown> | undefined;
+  const durMeta =
+    lp != null
+      ? classifyDurabilityExpectation(lp, {
+          positionOverrides,
+          twoWayRoleSelected: bc?.two_way_role_selected,
+        })
+      : null;
   return {
     scenario_id: scenarioId,
     rule_id: ruleId,
@@ -118,6 +135,8 @@ function mkFinding(
     replacement_value_used: ve?.replacement_value_used ?? row.debug_v2?.replacement_value_used ?? null,
     surplus_basis: ve?.surplus_basis ?? row.debug_v2?.surplus_basis ?? null,
     surplus_allocation_factor: ve?.inflation_factor ?? row.inflation_factor ?? null,
+    durability_expectation: durMeta?.durability_expectation ?? null,
+    durability_expectation_reasons: durMeta?.durability_expectation_reasons ?? null,
     ...extras,
   };
 }
@@ -145,6 +164,7 @@ export function collectSuspiciousValueFindings(ctx: ClassifierContext): Suspicio
   const { scenarioId, input, response, poolById, topSpAuction, draftedPickCount } = ctx;
   const rows = response.valuations;
   const out: SuspiciousValueFinding[] = [];
+  const positionOverrides = positionOverridesFromRequest(input.position_overrides);
 
   const unsupported = listUnsupportedScoringCategories(input.scoring_categories);
   if (
@@ -183,7 +203,7 @@ export function collectSuspiciousValueFindings(ctx: ClassifierContext): Suspicio
     const adp = row.market_adp;
     if (adp != null && adp <= 15 && row.auction_value <= 3) {
       out.push(
-        mkFinding(scenarioId, "market_adp_top15_auction_le_3", "important", row, lp, {
+        mkFinding(scenarioId, "market_adp_top15_auction_le_3", "important", row, lp, positionOverrides, {
           notes: `market_adp ${adp} but auction_value ${row.auction_value} (elite ADP band ≤15 pick #; ≤$3 auction)`,
         })
       );
@@ -195,7 +215,7 @@ export function collectSuspiciousValueFindings(ctx: ClassifierContext): Suspicio
       row.auction_value <= 6
     ) {
       out.push(
-        mkFinding(scenarioId, "market_adp50_auction_rank_gt200_cheap", "watch", row, lp, {
+        mkFinding(scenarioId, "market_adp50_auction_rank_gt200_cheap", "watch", row, lp, positionOverrides, {
           notes: `market_adp ${adp}, auction_rank ${row.auction_rank}, auction_value ${row.auction_value}`,
         })
       );
@@ -208,7 +228,7 @@ export function collectSuspiciousValueFindings(ctx: ClassifierContext): Suspicio
       row.market_adp <= 100
     ) {
       out.push(
-        mkFinding(scenarioId, "market_adp_high_baseline_auction_le1", "important", row, lp, {
+        mkFinding(scenarioId, "market_adp_high_baseline_auction_le1", "important", row, lp, positionOverrides, {
           notes: `market_adp ${row.market_adp}, baseline ${row.baseline_value}, auction ${row.auction_value}`,
         })
       );
@@ -226,7 +246,7 @@ export function collectSuspiciousValueFindings(ctx: ClassifierContext): Suspicio
       row.baseline_value + 0.25 < Math.min(h, p)
     ) {
       out.push(
-        mkFinding(scenarioId, "two_way_below_both_candidates", "watch", row, lp, {
+        mkFinding(scenarioId, "two_way_below_both_candidates", "watch", row, lp, positionOverrides, {
           notes: `baseline ${row.baseline_value} vs hitter_cand ${h} pitcher_cand ${p}`,
         })
       );
@@ -237,14 +257,14 @@ export function collectSuspiciousValueFindings(ctx: ClassifierContext): Suspicio
     const ic = bc?.injury_component ?? 0;
     if (sev >= 2 && im >= 0.999 && Math.abs(ic) < 1e-3) {
       out.push(
-        mkFinding(scenarioId, "injury_severity_no_baseline_impact", "watch", row, lp, {
+        mkFinding(scenarioId, "injury_severity_no_baseline_impact", "watch", row, lp, positionOverrides, {
           notes: `catalog injurySeverity ${sev}, injury_multiplier ${im}, injury_component ${ic}`,
         })
       );
     }
 
     if (playerIdLooksLikeMongoObjectId(row.player_id)) {
-      out.push(mkFinding(scenarioId, "objectid_like_player_id", "watch", row, lp));
+      out.push(mkFinding(scenarioId, "objectid_like_player_id", "watch", row, lp, positionOverrides));
     }
   }
 

@@ -78,6 +78,8 @@ function scenarioSnapshot(params: {
     position: r.position,
     auction_value: r.auction_value,
     market_adp: r.market_adp ?? null,
+    durability_expectation: r.valuation_explain?.durability_expectation ?? null,
+    durability_expectation_reasons: r.valuation_explain?.durability_expectation_reasons ?? null,
   }));
   const catchers = sorted.filter((r) => (r.position ?? "").toUpperCase().trim() === "C");
   const topCatchers = catchers.slice(0, 8).map((r) => ({

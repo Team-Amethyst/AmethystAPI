@@ -11,8 +11,7 @@ import type {
   ValueIndicator,
 } from "./core";
 import type { BaselineRiskExplainFields } from "./baselineRiskExplain";
-
-/** Per-player catalog position overrides (Draftroom eligibility); replaces Mongo `position` / `positions` for valuation math. */
+import type { DurabilityExpectation, DurabilityExpectationReason } from "./durabilityExpectation";
 export type PositionOverrideEntry = { player_id: string; positions: string[] };
 
 /** Per-player injury severity from Draftroom (roster / IL status); overrides Mongo `injurySeverity` for baseline injury pass only. */
@@ -243,6 +242,9 @@ export interface ValuedPlayer {
     /** League-wide empty roster slots used for thin-pool heuristics. */
     roster_demand_slots?: number;
     pool_to_slot_ratio?: number | null;
+    /** Audit-only durability / PT posture (no projection or dollar effects). */
+    durability_expectation?: DurabilityExpectation;
+    durability_expectation_reasons?: DurabilityExpectationReason[];
     /** Echo of response `scoring_category_warnings` when non-empty (explain mode). */
     scoring_category_warnings?: string[];
     /** Echo of response `valuation_context_warnings` when non-empty (explain mode). */
