@@ -44,6 +44,20 @@ Many tools collapse everything into **one dollar column** (sometimes mixing “v
 
 ---
 
+## Market ADP vs `auction_value` (policy)
+
+**`auction_value`** (same as **`adjusted_value`**) is the engine’s **model fair value** under the active inflation model: league-wide **surplus-based auction dollars** from baseline strength above replacement and remaining league cash. It is **not** “what the external draft market will pay this week,” and it is **not** an NFBC price oracle.
+
+**`market_adp`** on a row (when populated from a real vendor feed — see [market-adp-ingestion.md](market-adp-ingestion.md)) is **external draft-market context** for transparency, ordering, and UI. It is **not** an input to the **`auction_value`** formula. **Do not treat `market_adp` as a formula driver** without a separate product policy, explicit tuning, and **budget rescaling**; naive blends (for example, pulling **`auction_value`** toward **`recommended_bid`**) can create **large budget drift** relative to the surplus-cash identity.
+
+**Large gaps** between **`auction_value`** and early **`market_adp`** are **expected** when (1) **projection / playing-time** in Mongo is conservative vs what drafters pay for; (2) **replacement pressure** shrinks **surplus_basis** for fungible positions; or (3) the market prices **upside or recovery risk** that the baseline does not fully encode.
+
+**`recommended_bid`** (and any UI “max bid” derived from it) remains the **strategic ceiling / draft anchor**: phase- and depth-aware, and by design it **can sit materially above `auction_value`** when list strength exceeds surplus-deflated auction targets (see [valuation-inflation-semantics.md](valuation-inflation-semantics.md) — *recommended_bid vs auction_value*). Use **`recommended_bid`** for live bidding discipline; use **`auction_value`** for benchmarks and model transparency.
+
+**Current decision:** Do **not** blend **`market_adp`** into **`auction_value`**. Keep **`market_adp`** as **context** only. A future **small ADP-informed tilt** would require its own design, **budget rescaling**, and a clear product definition before any formula change.
+
+---
+
 ## Invariants (regression-backed)
 
 The engine maintains (see `test/valuationDollarLadder.test.ts`, `test/valuationCanonicalEvaluation.test.ts`):

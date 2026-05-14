@@ -4,6 +4,10 @@ Internal **`catalog_rank`** / **`catalog_tier`** describe preseason model orderi
 
 External consensus draft position lives only in **`market_adp`** (+ optional **`market_adp_*`** metadata) when populated from a **real vendor source**. Nothing in the valuation pipeline derives `market_adp` from `catalog_rank`.
 
+## Valuation policy: `market_adp` is context, not an `auction_value` input
+
+Ingested **`market_adp`** is for **response context** (labels, comparisons, explainability) and operator workflows — **not** to move **`auction_value`**, which stays **surplus-based model fair value** only. **Do not** blend **`market_adp`** into **`auction_value`** without a separate policy pass, tuning, and budget rescaling; naive mixes with **`recommended_bid`** blow aggregate dollars vs the surplus identity. **Live draft / max bid** UX should continue to treat **`recommended_bid`** as the bid anchor that may sit above model **`auction_value`**. Full ladder and rationale: [valuation-dollar-ladder.md](valuation-dollar-ladder.md) (section **Market ADP vs `auction_value` (policy)**).
+
 ## Adapter interface
 
 Code: `MarketAdpAdapter` in `src/lib/marketAdp/types.ts`.
