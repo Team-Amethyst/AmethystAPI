@@ -5,6 +5,7 @@ import {
   type TierSurplusConfig,
   type TieredSurplusTier,
 } from "./auctionCurveModel";
+import { applyTieredSurplusSmoothing } from "./auctionSurplusSmoothing";
 
 export type LeagueBoardPhase =
   | "fresh"
@@ -434,8 +435,17 @@ export function allocateSurplusForCurve(params: {
     tierConfig: resolution.weights,
   });
 
+  const smoothed = applyTieredSurplusSmoothing({
+    tieredDollars: tiered.dollarsByPlayerId,
+    surplusCash,
+    draftablePlayerIds,
+    surplusBasisById,
+    internalMode: resolution.internalMode,
+    phase: resolution.phase,
+  });
+
   const guarded = applySurplusGuardrails({
-    dollarsByPlayerId: tiered.dollarsByPlayerId,
+    dollarsByPlayerId: smoothed.dollarsByPlayerId,
     surplusCash,
     minBid,
     guardrails: resolution.guardrails,
@@ -447,7 +457,7 @@ export function allocateSurplusForCurve(params: {
     dollarsByPlayerId: guarded.dollarsByPlayerId,
     tierByPlayerId: tiered.tierByPlayerId,
     weightByPlayerId: tiered.weightByPlayerId,
-    guardrailsApplied: guarded.guardrailsApplied,
+    guardrailsApplied: [...smoothed.applied, ...guarded.guardrailsApplied],
     conservationDelta: guarded.conservationDelta,
   };
 }
