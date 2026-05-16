@@ -293,35 +293,6 @@ function sumMapValues(map: Map<string, number>): number {
   return sum;
 }
 
-/** Cap top player and redistribute excess to others (conserves total surplus mass). */
-function capTopSurplusAndRedistribute(
-  map: Map<string, number>,
-  maxTopSurplus: number
-): { map: Map<string, number>; capped: boolean } {
-  let topId: string | null = null;
-  let topSurplus = -1;
-  for (const [id, d] of map) {
-    if (d > topSurplus) {
-      topSurplus = d;
-      topId = id;
-    }
-  }
-  if (topId == null || topSurplus <= maxTopSurplus + 1e-6) {
-    return { map: new Map(map), capped: false };
-  }
-  const excess = topSurplus - maxTopSurplus;
-  const out = new Map(map);
-  out.set(topId, maxTopSurplus);
-  const others = [...out.entries()].filter(([id]) => id !== topId);
-  const otherSum = others.reduce((s, [, d]) => s + d, 0);
-  if (otherSum > 0) {
-    for (const [id, d] of others) {
-      out.set(id, d + excess * (d / otherSum));
-    }
-  }
-  return { map: out, capped: true };
-}
-
 /** Cap top surplus share; preserves total surplus when input already sums to `surplusCash`. */
 export function applySurplusGuardrails(params: {
   dollarsByPlayerId: Map<string, number>;
@@ -342,7 +313,7 @@ export function applySurplusGuardrails(params: {
     (params.guardrails.max_top_player_auction_value ?? 999) - params.minBid
   );
 
-  let priorSum = sumMapValues(map);
+  const priorSum = sumMapValues(map);
   if (Math.abs(priorSum - params.surplusCash) > 0.5 && priorSum > 0) {
     const scale = params.surplusCash / priorSum;
     const scaled = new Map<string, number>();

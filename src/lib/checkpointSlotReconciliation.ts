@@ -4,7 +4,7 @@ import {
   isReserveRosterSlotForEngine,
 } from "./rosteredPlayersForSlots";
 import { leagueSlotCapacity } from "../services/teamAdjustedBudget";
-import type { DraftedPlayer, NormalizedValuationInput, RosterSlot } from "../types/brain";
+import type { NormalizedValuationInput, RosterSlot } from "../types/brain";
 
 /** Catalog checkpoint id (payload `checkpoint` field). */
 export const ENGINE_CHECKPOINT_IDS = [

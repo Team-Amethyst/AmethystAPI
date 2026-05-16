@@ -46,7 +46,6 @@ export function buildAuctionCurveLeagueState(params: {
   const minBid = params.v2.min_bid;
   const minReserve = params.remainingSlots * minBid;
   const surplusCash = params.v2.surplus_cash;
-  const remainingAuctionDollars = surplusCash + minReserve;
 
   const slotEngineIds = new Set(params.rosteredForSlots.map((p) => p.player_id));
   let minTaxiPoolCount = 0;
