@@ -112,6 +112,7 @@ So players at or below **replacement** in model dollars stay near **$1**; stars 
 - **`total_surplus_mass`** = Σ **`surplus_basis`** over undrafted players who **received** a slot in the undrafted greedy pass (the marginal draft economy).
 - **`pool_value_remaining`** = **`total_surplus_mass`** (denominator for `inflation_raw` when positive).
 - **`inflation_raw`** = `surplus_cash / total_surplus_mass` when both are positive; workflow **cap/floor** applies unless the engine marks a **terminal** path (**`skip`** clamp for `no_remaining_slots`, `no_surplus_cash`, `no_surplus_mass`, `no_undrafted_players`).
+- When many active slots remain after keepers (`remaining_slots / capacity` high), **`inflation_raw`** often falls below the workflow floor; a **higher first-pass floor** (up to **0.38**) applies so auction values are not over-compressed into a tight band. This does **not** create fake scarcity — it reflects limited **allocatable surplus cash** (~`$1,300` league-wide in a 9×$260 keeper board) spread across a large **total_surplus_mass**. **Baseline_value** may still show wider tier separation than **auction_value** when top catalog baselines cluster.
 
 ### Per row
 

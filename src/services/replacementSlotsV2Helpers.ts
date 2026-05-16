@@ -81,3 +81,38 @@ export function buildSurplusBasisMap(
   }
   return out;
 }
+
+/**
+ * Split `surplus_cash` across draftable players with convex weights so elites
+ * receive more than a flat linear factor when surplus_basis clusters at the top.
+ */
+export function buildConvexSurplusDollars(params: {
+  surplusCash: number;
+  draftablePlayerIds: readonly string[];
+  surplusBasisById: Map<string, number>;
+  baselineById: Map<string, number>;
+  exponent: number;
+}): Map<string, number> {
+  const out = new Map<string, number>();
+  const { surplusCash, draftablePlayerIds, surplusBasisById, baselineById, exponent } =
+    params;
+  if (surplusCash <= 0 || draftablePlayerIds.length === 0 || exponent <= 1) {
+    return out;
+  }
+  let weightSum = 0;
+  const weights = new Map<string, number>();
+  for (const id of draftablePlayerIds) {
+    const sb = surplusBasisById.get(id) ?? 0;
+    const baseline = baselineById.get(id) ?? 0;
+    if (sb <= 0 && baseline <= 0) continue;
+    const core = Math.max(0.01, sb) * Math.max(0.01, baseline);
+    const w = Math.pow(core, exponent);
+    weights.set(id, w);
+    weightSum += w;
+  }
+  if (weightSum <= 0) return out;
+  for (const [id, w] of weights) {
+    out.set(id, (surplusCash * w) / weightSum);
+  }
+  return out;
+}

@@ -211,8 +211,25 @@ export function executeValuationWorkflow(
   );
   if (diag) addTimingMs(diag, "workflow_slot_context_ms", tSlot0);
 
+  const slotCapacity =
+    input.roster_slots.reduce((s, r) => s + (r.count ?? 0), 0) * input.num_teams;
+  /** Use active slot-engine roster size (keepers + auction), not offboard id count (includes MIN/TAXI). */
+  const openSlotRatio =
+    slotCapacity > 0
+      ? Math.max(0, slotCapacity - rosteredPlayersForSlots.length) / slotCapacity
+      : 0;
+  const hasKeeperOrAuctionRoster = rosteredPlayersForSlots.length > 0;
+  const firstPassFloor =
+    hasKeeperOrAuctionRoster && openSlotRatio >= 0.55
+      ? 0.38
+      : hasKeeperOrAuctionRoster && openSlotRatio >= 0.4
+        ? 0.32
+        : openSlotRatio >= 0.35
+          ? 0.28
+          : 0.25;
+
   const retryPlan = [
-    { inflationCap: 3.0, inflationFloor: 0.25 },
+    { inflationCap: 3.0, inflationFloor: firstPassFloor },
     { inflationCap: 3.0, inflationFloor: 0.35 },
     { inflationCap: 2.5, inflationFloor: 0.5 },
   ];

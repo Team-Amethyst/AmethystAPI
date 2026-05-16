@@ -34,6 +34,7 @@
     "audit:valuation-factor-influence": "ts-node --project tsconfig.scripts.json scripts/valuation-factor-influence-audit.ts",
     "keeper-pre-draft-audit": "ts-node --project tsconfig.scripts.json scripts/keeper-pre-draft-valuation-audit.ts",
     "pre-draft-before-after": "ts-node --project tsconfig.scripts.json scripts/pre-draft-slot-engine-before-after.ts",
+    "valuation-curve-audit": "ts-node --project tsconfig.scripts.json scripts/valuation-curve-audit.ts",
     "replay-four-values": "ts-node --project tsconfig.scripts.json scripts/replay-four-values-eval.ts",
     "replay-per-team-pick": "ts-node --project tsconfig.scripts.json scripts/replay-per-team-pick.ts",
     "replay-per-pick-draft": "ts-node --project tsconfig.scripts.json scripts/replay-per-pick-draft.ts",

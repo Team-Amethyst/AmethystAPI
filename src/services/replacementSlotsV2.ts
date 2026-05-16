@@ -214,6 +214,8 @@ export function computeReplacementSlotsV2(
     positionOverrides
   );
 
+  const draftablePlayerIds = Array.from(undraftedAssignedIds);
+
   const pool_value_remaining = total_surplus_mass;
 
   return {
@@ -222,7 +224,7 @@ export function computeReplacementSlotsV2(
     pool_value_remaining,
     playerIdToSurplusBasis,
     draftablePoolSize,
-    draftablePlayerIds: Array.from(undraftedAssignedIds),
+    draftablePlayerIds,
     remaining_slots,
     min_bid: REPLACEMENT_SLOTS_V2_MIN_BID,
     surplus_cash,
