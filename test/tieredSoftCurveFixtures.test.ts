@@ -8,7 +8,6 @@ import { filterValuationUniverse } from "../src/lib/valuationPlayerPool";
 import { loadMongoCatalogForEngine } from "../src/lib/mongoCatalogPipeline";
 import { scriptMongoConnectOptions } from "../src/lib/mongoPoolConfig";
 import {
-  ENGINE_CHECKPOINT_IDS,
   draftCheckpointFixturesAvailable,
   resolveDraftCheckpointFixturePath,
   type EngineCheckpointId,
