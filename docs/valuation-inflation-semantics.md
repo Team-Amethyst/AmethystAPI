@@ -94,7 +94,7 @@ So players at or below **replacement** in model dollars stay near **$1**; stars 
 
 ### Roster consumption (greedy, deterministic)
 
-1. Build **`rosteredPlayersForSlotEngine`**: unique `player_id` from **`drafted_players`** plus keepers/minors/taxi rows (auction rows win on duplicate ids). Baselines come from the scoped catalog (`value` after the baseline engine).
+1. Build **`rosteredPlayersForSlotEngine`**: unique `player_id` from **`drafted_players`** plus **keepers** in `pre_draft_rosters` (auction rows win on duplicate ids). **Minors/taxi are not slot consumers** — they are removed from the undrafted pool via `additionalDraftedIds` but do not reduce active slot demand. Baselines come from the scoped catalog (`value` after the baseline engine).
 2. Sort rostered candidates by **baseline descending** (seeded tie-break when `deterministic`).
 3. **Greedy assign** each rostered player to an open slot they **fit** (see `src/lib/fantasyRosterSlots.ts`): maximize **`baseline − min(assigned baselines at that slot)`** with empty slot floor **0**; ties → **more specific** slot first (`SLOT_SPECIFICITY_ORDER`). If nothing fits, force **BN** when BN demand exists.
 4. Repeat greedy assignment for **undrafted** players (same sort) until **all slot demand is 0** or the undrafted list is exhausted. Track which undrafted ids received a slot → **`draftable_pool_size`** and **`total_surplus_mass`**.
@@ -142,13 +142,14 @@ Technical notes:
 
 ---
 
-## `recommended_bid` vs `auction_value` (trust)
+## `auction_value`, `recommended_bid`, `max_bid`, and `team_adjusted_value`
 
 - **`auction_value`** (equals **`adjusted_value`**) is **league-wide fair market auction dollars** from the active **`inflation_model`** (default **`replacement_slots_v2`**). Use it for benchmarks, exports, and “what is this player worth in this league economy?”
-- **`recommended_bid`** is a **Draftroom bid anchor**: a phase/depth-aware clearing price that blends **`auction_value` (a)** toward **`baseline_value` (r)** via **`a + L·(r−a)`** (then hitter/pitcher floors, elite boosts, caps, and **isotonic smoothing** within hitters and pitchers). When list **`r` is well above surplus-deflated `a`** for stars, **`recommended_bid` can sit materially above `auction_value` by design** — treat it as an aggressive **ceiling / discipline signal**, not a second FMV.
+- **`recommended_bid`** is a **suggested bid / market-aware draftroom anchor**: a phase/depth-aware clearing price that blends **`auction_value` (a)** toward **`baseline_value` (r)** via **`a + L·(r−a)`** (then hitter/pitcher floors, elite boosts, caps, and **isotonic smoothing** within hitters and pitchers). It is **not** the user’s hard stop; after this pass the engine **clamps** **`recommended_bid ≤ max_bid`**.
+- **`max_bid`** is the **team-specific hard stop** (auction ceiling): **`base = team_adjusted_value ?? adjusted_value`**, then small **bounded** premiums (elite/tier, slot scarcity, roster/category fit when the league is asymmetric) and penalties (budget pressure, roster tightness). It does **not** read as a second FMV and is **not** an alias of **`recommended_bid`**.
 - **`team_adjusted_value`** is **marginal worth to the requesting team’s** roster and budget (need, dollars per slot vs peers, scarcity). In a **symmetric open** snapshot it collapses to **`adjusted_value`**; it diverges when rosters or budgets are asymmetric.
-- **`edge`** = **`team_adjusted_value − recommended_bid`**. Negative edge on stars is common when **`recommended_bid ≫ auction_value`**; **edge is not “profit vs FMV.”**
-- Optional request **`recommended_bid_soft_cap_ratio`** (≥ 1) clamps **`recommended_bid`** to at most **`ratio × auction_value`** after smoothing (trust / UI alignment) without changing **`auction_value`**.
+- **`edge`** = **`team_adjusted_value − recommended_bid`** using the **post-clamp** suggested bid (symmetric open: **`team_adjusted_value`** equals **`adjusted_value`**). Negative edge is common when the anchor is aggressive versus marginal roster dollars; **edge is not “profit vs FMV.”**
+- Optional request **`recommended_bid_soft_cap_ratio`** (≥ 1) clamps **`recommended_bid`** to at most **`ratio × auction_value`** after smoothing (trust / UI alignment) **before** the **`max_bid`** clamp, without changing **`auction_value`**.
 - Optional **`explain_valuation_rows`** adds per-row **`valuation_explain`** (effective slot tokens, replacement key/value, surplus basis). The response also carries **`valuation_context`** / **`valuation_context_warnings`** for thin pools and skewed keeper layouts.
 
 ---
