@@ -1,3 +1,4 @@
+import { existsSync } from "fs";
 import path from "path";
 import {
   buildRosteredPlayersForSlotEngine,
@@ -36,6 +37,11 @@ export function resolveDraftCheckpointFixturePath(
     resolveDraftCheckpointsDir(),
     DRAFT_CHECKPOINT_FILENAME[checkpointId]
   );
+}
+
+/** True when AmethystDraft nested checkpoint JSON is present (local monorepo checkout). */
+export function draftCheckpointFixturesAvailable(): boolean {
+  return existsSync(resolveDraftCheckpointFixturePath("pre_draft"));
 }
 
 /** AmethystDraft fixture filenames (canonical for curve audit). */

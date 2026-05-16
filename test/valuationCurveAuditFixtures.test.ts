@@ -3,19 +3,23 @@ import path from "path";
 import { describe, it, expect } from "vitest";
 import {
   ENGINE_CHECKPOINT_IDS,
+  draftCheckpointFixturesAvailable,
   resolveDraftCheckpointFixturePath,
   resolveDraftCheckpointsDir,
 } from "../src/lib/checkpointSlotReconciliation";
 
 describe("valuation-curve-audit fixture guard", () => {
-  it("resolves checkpoints only from AmethystDraft nested fixtures", () => {
-    const dir = resolveDraftCheckpointsDir();
-    expect(dir).toContain(`${path.sep}AmethystDraft${path.sep}`);
-    expect(dir).toContain("test-fixtures/player-api/checkpoints");
-    expect(dir).not.toContain("AmethystAPI/test-fixtures");
-  });
+  it.skipIf(!draftCheckpointFixturesAvailable())(
+    "resolves checkpoints only from AmethystDraft nested fixtures",
+    () => {
+      const dir = resolveDraftCheckpointsDir();
+      expect(dir).toContain(`${path.sep}AmethystDraft${path.sep}`);
+      expect(dir).toContain("test-fixtures/player-api/checkpoints");
+      expect(dir).not.toContain("AmethystAPI/test-fixtures");
+    },
+  );
 
-  it.each([...ENGINE_CHECKPOINT_IDS])(
+  it.skipIf(!draftCheckpointFixturesAvailable()).each([...ENGINE_CHECKPOINT_IDS])(
     "%s fixture exists under Draft dir and is not legacy flat after_pick file",
     (id) => {
       const fixturePath = resolveDraftCheckpointFixturePath(id);

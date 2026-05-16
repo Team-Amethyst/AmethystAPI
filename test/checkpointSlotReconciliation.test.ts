@@ -7,24 +7,22 @@ import {
   DRAFT_CHECKPOINT_FILENAME,
   ENGINE_CHECKPOINT_IDS,
   EXPECTED_DRAFT_STATE_LENGTH,
+  draftCheckpointFixturesAvailable,
   reconcileCheckpointSlotDemand,
+  resolveDraftCheckpointFixturePath,
 } from "../src/lib/checkpointSlotReconciliation";
 import { leagueSlotCapacity } from "../src/services/teamAdjustedBudget";
 
-const DRAFT_FIXTURES_DIR = path.resolve(
-  __dirname,
-  "../../AmethystDraft/apps/api/test-fixtures/player-api/checkpoints"
-);
-
 function loadDraftCheckpoint(id: (typeof ENGINE_CHECKPOINT_IDS)[number]) {
-  const file = DRAFT_CHECKPOINT_FILENAME[id];
   const raw = JSON.parse(
-    readFileSync(path.join(DRAFT_FIXTURES_DIR, file), "utf8")
+    readFileSync(resolveDraftCheckpointFixturePath(id), "utf8")
   );
   return buildNormalizedFromNested(nestedValuationBodySchema.parse(raw));
 }
 
-describe("checkpoint slot reconciliation (AmethystDraft fixtures)", () => {
+describe.skipIf(!draftCheckpointFixturesAvailable())(
+  "checkpoint slot reconciliation (AmethystDraft fixtures)",
+  () => {
   it.each([...ENGINE_CHECKPOINT_IDS])("%s draft_state length matches catalog", (id) => {
       const input = loadDraftCheckpoint(id);
       expect(input.drafted_players).toHaveLength(EXPECTED_DRAFT_STATE_LENGTH[id]);
@@ -91,7 +89,10 @@ describe("checkpoint slot reconciliation (AmethystDraft fixtures)", () => {
     expect(finished.remaining_active_slots_arithmetic).toBe(-18);
     expect(finished.keeper_overlap_with_draft_state.length).toBe(2);
   });
+  },
+);
 
+describe("checkpoint slot reconciliation (API repo only)", () => {
   it("legacy AmethystAPI after_pick_10 flat fixture has 198 capacity (not used by curve audit)", () => {
     const legacyPath = path.resolve(
       __dirname,
