@@ -4,7 +4,6 @@ import { describe, it, expect } from "vitest";
 import { buildNormalizedFromNested } from "../src/lib/valuationRequestNormalization";
 import { nestedValuationBodySchema } from "../src/lib/valuationRequestSchemas";
 import {
-  DRAFT_CHECKPOINT_FILENAME,
   ENGINE_CHECKPOINT_IDS,
   EXPECTED_DRAFT_STATE_LENGTH,
   draftCheckpointFixturesAvailable,
