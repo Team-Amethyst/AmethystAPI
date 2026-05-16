@@ -187,6 +187,7 @@ async function main(): Promise<void> {
         auction_rank: null,
         auction_value: null,
         team_value: null,
+        recommended_bid: null,
         max_bid: null,
         baseline_value: null,
         projection_summary: "",

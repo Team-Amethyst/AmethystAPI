@@ -56,7 +56,7 @@ export interface ValuationRequest {
   explain_valuation_rows?: boolean;
   /**
    * Optional cap on `recommended_bid` as a multiple of `auction_value` (e.g. 1.15).
-   * Unset by default — clearing-anchor bids may exceed auction_value by design.
+   * Unset by default — applied after smoothing, before team `max_bid` clamp.
    */
   recommended_bid_soft_cap_ratio?: number;
 }
@@ -114,6 +114,7 @@ export interface NormalizedValuationInput {
   user_team_id?: string;
   inflation_model?: InflationModel;
   explain_valuation_rows?: boolean;
+  /** Optional; applied after smoothing, before team `max_bid` clamp on `recommended_bid`. */
   recommended_bid_soft_cap_ratio?: number;
 }
 
@@ -138,7 +139,7 @@ export interface CalculateInflationOptions {
   explainValuationRows?: boolean;
   /**
    * When set (e.g. 1.15), clamp `recommended_bid` to at most this multiple of `auction_value`
-   * after isotonic smoothing (trust / UI alignment mode).
+   * after isotonic smoothing (trust / UI alignment mode). Runs before team `max_bid` clamp.
    */
   recommendedBidSoftCapRatio?: number;
   /** When set, Engine accumulates inflation sub-phase durations (ms) for ops / staging. */
@@ -175,8 +176,13 @@ export interface ValuedPlayer {
   /** Official dollar valuation for benchmarks and external evaluation; equals `adjusted_value`. */
   auction_value: number;
   adjusted_value: number;
-  /** Draftroom bid suggestion (phase/depth/smoothing); not the canonical player valuation — use `auction_value`. */
+  /** Suggested opening/target bid (phase/depth market anchor); capped to `max_bid` — not the hard stop. */
   recommended_bid?: number;
+  /**
+   * Team-specific hard stop (ceiling) for auction bidding, computed after `team_adjusted_value`
+   * from team marginal dollars plus small premiums/penalties (never unbounded from `baseline_value`).
+   */
+  max_bid?: number;
   /** Marginal worth to the requesting team's roster/budget context only; not a league-universal price — use `auction_value` for that. */
   team_adjusted_value?: number;
   edge?: number;
@@ -284,7 +290,9 @@ export interface ValuationResponse {
   /** Explains `auction_value` as the canonical official valuation (mirrors `adjusted_value`). */
   auction_value_note?: string;
   recommended_bid_note?: string;
-  /** Clarifies `edge` vs `auction_value` / `recommended_bid`. */
+  /** Explains `max_bid` as the team-specific auction ceiling vs `recommended_bid` (suggested bid). */
+  max_bid_note?: string;
+  /** Clarifies `edge` as team_adjusted_value − recommended_bid (after max_bid clamp). */
   edge_note?: string;
   user_team_id_used?: string;
   team_adjusted_value_note?: string;

@@ -36,6 +36,9 @@ export type SuspiciousValueFinding = {
   auction_rank: number | null;
   auction_value: number | null;
   team_value: number | null;
+  /** Suggested bid after engine pass (may equal `max_bid` when clamped). */
+  recommended_bid: number | null;
+  /** Team auction hard stop; not an alias of `recommended_bid`. */
   max_bid: number | null;
   baseline_value: number | null;
   projection_summary: string;
@@ -124,7 +127,8 @@ function mkFinding(
     auction_rank: row.auction_rank ?? null,
     auction_value: row.auction_value ?? null,
     team_value: row.team_adjusted_value ?? null,
-    max_bid: row.recommended_bid ?? null,
+    recommended_bid: row.recommended_bid ?? null,
+    max_bid: row.max_bid ?? null,
     baseline_value: row.baseline_value ?? null,
     projection_summary: summarizeProjection(proj),
     injury_severity_catalog: lp?.injurySeverity ?? null,
@@ -182,6 +186,7 @@ export function collectSuspiciousValueFindings(ctx: ClassifierContext): Suspicio
       auction_rank: null,
       auction_value: null,
       team_value: null,
+      recommended_bid: null,
       max_bid: null,
       baseline_value: null,
       projection_summary: unsupported.map((u) => u.normalized).join("|"),
@@ -285,6 +290,7 @@ export function collectSuspiciousValueFindings(ctx: ClassifierContext): Suspicio
       auction_rank: null,
       auction_value: topSpAuction,
       team_value: null,
+      recommended_bid: null,
       max_bid: null,
       baseline_value: null,
       projection_summary: `band_floor≈${minPitcherBand.toFixed(1)}`,

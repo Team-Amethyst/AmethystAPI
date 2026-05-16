@@ -86,7 +86,13 @@ export const nestedValuationBodySchema = z.object({
   injury_overrides: z.array(injuryOverrideEntrySchema).optional(),
   strict_scoring_categories: z.boolean().optional(),
   explain_valuation_rows: z.boolean().optional(),
-  recommended_bid_soft_cap_ratio: z.number().finite().min(1).max(5).optional(),
+  recommended_bid_soft_cap_ratio: z
+    .number()
+    .finite()
+    .min(1)
+    .max(5)
+    .optional()
+    .describe("Caps recommended_bid vs auction_value after smoothing; runs before team max_bid clamp."),
 });
 
 export const flatValuationBodySchema = z.object({
@@ -118,7 +124,13 @@ export const flatValuationBodySchema = z.object({
   inflation_model: inflationModelSchema.optional(),
   strict_scoring_categories: z.boolean().optional(),
   explain_valuation_rows: z.boolean().optional(),
-  recommended_bid_soft_cap_ratio: z.number().finite().min(1).max(5).optional(),
+  recommended_bid_soft_cap_ratio: z
+    .number()
+    .finite()
+    .min(1)
+    .max(5)
+    .optional()
+    .describe("Caps recommended_bid vs auction_value after smoothing; runs before team max_bid clamp."),
 });
 
 export type NestedValuationBody = z.infer<typeof nestedValuationBodySchema>;

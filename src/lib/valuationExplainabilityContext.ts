@@ -139,7 +139,7 @@ export function getOrBuildExplainabilityContext(params: {
           ? "pool_value_remaining is the sum of max(0, baseline − replacement) over the draftable inflation slice, not full-wire list dollars."
           : "pool_value_remaining sums baseline list dollars on all undrafted players (the global_v1 denominator).",
       "Real auction accuracy depends on catalog value quality and id/name alignment with the player pool.",
-      "recommended_bid is a clearing-style guide (phase- and list-informed); it is not framed as the exact price the room will pay—compare to adjusted_value and team_adjusted_value for surplus vs roster context.",
+      "auction_value equals adjusted_value (league-wide fair value). recommended_bid is the suggested bid for your team (capped by max_bid). max_bid is the team-specific hard stop. edge is team_adjusted_value minus recommended_bid after that clamp.",
     ],
     confidence: {
       overall: confidenceOverall,

@@ -147,6 +147,7 @@ describe("POST /valuation/calculate (Draft checkpoint bodies)", () => {
         auction_value: expect.any(Number),
         adjusted_value: expect.any(Number),
         recommended_bid: expect.any(Number),
+        max_bid: expect.any(Number),
         team_adjusted_value: expect.any(Number),
         edge: expect.any(Number),
         indicator: expect.stringMatching(/^(Steal|Reach|Fair Value)$/),
@@ -160,6 +161,9 @@ describe("POST /valuation/calculate (Draft checkpoint bodies)", () => {
         }),
       });
       expect(res.body.valuations[0].recommended_bid).toBeGreaterThanOrEqual(1);
+      expect(res.body.valuations[0].recommended_bid).toBeLessThanOrEqual(
+        res.body.valuations[0].max_bid + 0.02
+      );
       expect(res.body.valuations[0].team_adjusted_value).toBeGreaterThanOrEqual(0);
       expect(res.body.valuations[0].edge).toBeCloseTo(
         res.body.valuations[0].team_adjusted_value -
@@ -361,6 +365,7 @@ describe("POST /valuation/calculate — AmethystDraft BFF alignment", () => {
       pool_value_remaining: expect.any(Number),
       total_budget_remaining: expect.any(Number),
       recommended_bid_note: expect.stringContaining("draftroom"),
+      max_bid_note: expect.stringContaining("hard stop"),
       auction_value_note: expect.stringContaining("auction_value"),
       team_adjusted_value_note:
         "team_adjusted_value is marginal worth to the requesting team's roster and budget context (need, dollars per open slot vs peers, remaining-slot scarcity, replacement drop-off). It is not a league-universal player price and must not replace auction_value for cross-player evaluation or leaderboards.",
@@ -379,6 +384,7 @@ describe("POST /valuation/calculate — AmethystDraft BFF alignment", () => {
       auction_value: expect.any(Number),
       adjusted_value: expect.any(Number),
       recommended_bid: expect.any(Number),
+      max_bid: expect.any(Number),
       team_adjusted_value: expect.any(Number),
       edge: expect.any(Number),
       indicator: expect.stringMatching(/^(Steal|Reach|Fair Value)$/),

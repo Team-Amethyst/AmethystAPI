@@ -1,5 +1,5 @@
 /**
- * Max Bid / recommended_bid policy audit — writes tmp/max-bid-policy-audit.json
+ * Suggested bid (`recommended_bid`) / team hard stop (`max_bid`) policy audit — writes tmp/max-bid-policy-audit.json
  *
  *   MONGO_URI=... npx ts-node --project tsconfig.scripts.json scripts/max-bid-policy-audit.ts
  */
@@ -607,7 +607,7 @@ async function main(): Promise<void> {
       smoothing:
         "smoothRecommendedBids: sort by baseline_value desc within hitters and pitchers separately; isotonicNonIncreasing on recommended_bid series",
       team_context:
-        "team_adjusted_value applied after recommended_bid; does not rewrite recommended_bid",
+        "team_adjusted_value and max_bid computed after recommended_bid pass; recommended_bid clamped down to max_bid; edge uses clamped suggested bid",
     },
     scenario_gap_table: scenarioGapTable,
     scenario_top25_and_overlap: scenarioExtras,

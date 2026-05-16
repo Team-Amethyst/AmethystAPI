@@ -22,6 +22,7 @@ import {
   userBudgetRemaining,
   userTeamStartingSlots,
 } from "./teamAdjustedValue";
+import { computeMaxBidDollars } from "./maxBid";
 import {
   baseLambdaClearingPrice,
   computeRecommendedBid,
@@ -220,6 +221,8 @@ export function applyTeamAdjustedAndEdgePass(params: {
   const userCap = userTeamStartingSlots(rosterSlots);
   const slotFillRatio =
     userCap > 0 ? Math.max(0, Math.min(1, openSeatTotal / userCap)) : 1;
+  /** Open-seat share of starting lineup (1 = all seats open) — roster flexibility input for max_bid. */
+  const openSeatFraction = userCap > 0 ? openSeatTotal / userCap : 1;
   const slotScarcityMult = 1 + 0.22 * (1 - slotFillRatio);
   const dpsRatio = dollarsPerSlotPeerRatio({
     userRemaining,
@@ -237,9 +240,38 @@ export function applyTeamAdjustedAndEdgePass(params: {
 
   for (const row of valuations) {
     const lp = byRowPlayerId.get(row.player_id);
-    if (!lp) continue;
+    const neutralMaxMult = {
+      need: 1,
+      budget: budgetMult,
+      dollars_per_slot: dpsMult,
+      slot_scarcity: slotScarcityMult,
+      replacement_dropoff: 1,
+    } as const;
+
+    if (!lp) {
+      row.max_bid = computeMaxBidDollars({
+        row,
+        base: row.adjusted_value,
+        adjustedValue: row.adjusted_value,
+        minAuctionBid,
+        multipliers: neutralMaxMult,
+        symmetricOpen: symmetricOpenLeague,
+        openSeatFraction,
+      });
+      continue;
+    }
+
     if (symmetricOpenLeague) {
       row.team_adjusted_value = parseFloat(row.adjusted_value.toFixed(2));
+      row.max_bid = computeMaxBidDollars({
+        row,
+        base: row.team_adjusted_value,
+        adjustedValue: row.adjusted_value,
+        minAuctionBid,
+        multipliers: neutralMaxMult,
+        symmetricOpen: true,
+        openSeatFraction,
+      });
       if (options?.debugSignals) {
         row.debug_v2 = {
           ...(row.debug_v2 ?? {}),
@@ -248,6 +280,7 @@ export function applyTeamAdjustedAndEdgePass(params: {
       }
       continue;
     }
+
     const multipliers = teamAdjustedMultipliers({
       row,
       lp,
@@ -260,6 +293,15 @@ export function applyTeamAdjustedAndEdgePass(params: {
       positionOverrides: options?.positionOverrides,
     });
     row.team_adjusted_value = computeTeamAdjustedValue({ row, multipliers });
+    row.max_bid = computeMaxBidDollars({
+      row,
+      base: row.team_adjusted_value,
+      adjustedValue: row.adjusted_value,
+      minAuctionBid,
+      multipliers,
+      symmetricOpen: false,
+      openSeatFraction,
+    });
     if (options?.debugSignals) {
       row.debug_v2 = {
         ...(row.debug_v2 ?? {}),
@@ -271,6 +313,13 @@ export function applyTeamAdjustedAndEdgePass(params: {
           replacement_dropoff: Number(multipliers.replacement_dropoff.toFixed(4)),
         },
       };
+    }
+  }
+
+  for (const row of valuations) {
+    if (row.max_bid != null && row.recommended_bid != null) {
+      const capped = Math.min(row.recommended_bid, row.max_bid);
+      row.recommended_bid = parseFloat(Math.max(minAuctionBid, capped).toFixed(2));
     }
   }
 

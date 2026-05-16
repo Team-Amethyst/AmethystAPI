@@ -54,9 +54,9 @@ The Engine also mounts **the same licensed routers** under a **`/v1` prefix** (s
 
 **Deprecation policy:** Legacy unprefixed paths remain supported for existing Draft deployments. If a breaking change is ever required, ship **`/v1`** behavior first, update Draft’s `amethyst` client, then remove legacy routes in a coordinated release (and bump `ENGINE_CONTRACT_VERSION` / OpenAPI).
 
-## Per-row dollar ladder (baseline → bid)
+## Per-row dollar ladder (baseline → league FMV → bid → ceiling)
 
-Four dollar fields are a **pipeline**, not interchangeable prices: **`baseline_value`** → **`adjusted_value`** (league model) → **`recommended_bid`** (bid UX + smoothing) → **`team_adjusted_value`** (requesting team); **`edge`** = team − recommended. Product copy and UI primaries: **`docs/valuation-dollar-ladder.md`** in AmethystAPI.
+Five nominal fields on each row: **`baseline_value`** (list-adjacent) → **`auction_value`** / **`adjusted_value`** (league-wide FMV) → **`recommended_bid`** (suggested bid for your team; capped to **`max_bid`**) → **`team_adjusted_value`** (marginal roster dollars) → **`max_bid`** (team auction hard stop). **`edge`** = **`team_adjusted_value − recommended_bid`** (symmetric open: **`team_adjusted_value`** equals **`adjusted_value`**). Product copy: **`docs/valuation-dollar-ladder.md`** in AmethystAPI.
 
 ## Frontend migration notes (explainability v2)
 
@@ -112,6 +112,22 @@ Draft’s error handler **forwards that body as-is** for Engine 400s with this s
    - `README.txt` — how Draft uses them and test-key header for **`POST /api/players/valuations`**.
 
 3. **Draft-only test entry (optional for you):** graders hit Draft with **`x-player-api-key: <PLAYER_API_TEST_KEY>`** on **`POST /api/players/valuations`** with the same JSON; Draft forwards to Engine after validation.
+
+4. **Draftroom AI Mock Draft — bundled checkpoints → Engine (auth stays on Draft API):** Logged-in users can load Activity #9 checkpoints from **`GET /api/engine/checkpoints`** / **`GET /api/engine/checkpoints/:checkpointKey/json`**, hydrate the mock-draft UI, and refresh dollar guides via **`POST /api/engine/leagues/:leagueId/valuation/checkpoint`** (same flattened **`POST /valuation/calculate`** body as **`valuationIncomingToEngineContext`**). Draft ships canonical nested JSON under **`AmethystDraft/apps/api/test-fixtures/player-api/checkpoints/`**.
+
+5. **Engine static checkpoints (portal / curl — same-origin only):** When the Engine process is running, **`express.static`** serves **`public/fixtures/checkpoints/*.json`**. Examples: **`GET /fixtures/checkpoints/pre_draft.json`**, **`GET /fixtures/checkpoints/after_pick_10.json`** (relative to the Engine origin — same filenames as **`test-fixtures/player-api/checkpoints/`** where mirrored). The portal sandbox loads these URLs directly; Draftroom production flows prefer the Draft BFF routes above so **`x-api-key`** and **`X-Request-Id`** remain server-side.
+
+**Draft repo vs Engine repo checkpoint filenames** (logical checkpoint id is always `after_pick_*` in JSON `checkpoint`; Draft shortens **disk names** only):
+
+| `checkpoint` field | Draft file (`apps/api/test-fixtures/.../checkpoints/`) | Engine file (`test-fixtures/...` & `public/fixtures/checkpoints/`) |
+|--------------------|---------------------------------------------------------|----------------------------------------------------------------------|
+| `pre_draft` | `pre_draft.json` | `pre_draft.json` |
+| `after_pick_10` | `after_10.json` | `after_pick_10.json` |
+| `after_pick_50` | `after_50.json` | `after_pick_50.json` |
+| `after_pick_100` | `after_100.json` | `after_pick_100.json` |
+| `after_pick_130` | `after_130.json` | `after_pick_130.json` |
+
+Optional drift check (sibling clones): **`AmethystDraft/scripts/compare-engine-checkpoints.mjs`** compares SHA-256 pairs across repos.
 
 ## Response versioning (optional but aligned with Draft)
 

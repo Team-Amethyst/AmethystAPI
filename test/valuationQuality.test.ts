@@ -19,6 +19,7 @@ function baseRow(over: Partial<ValuedPlayer> = {}): ValuedPlayer {
     auction_value: 11,
     adjusted_value: 11,
     recommended_bid: 10,
+    max_bid: 12,
     team_adjusted_value: 11,
     edge: 1,
     indicator: "Fair Value",
@@ -150,7 +151,7 @@ describe("validateValuationResponse", () => {
 
   it("rejects recommended_bid below min bid", () => {
     const q = validateValuationResponse(
-      baseResponse({ valuations: [baseRow({ recommended_bid: 0.5, edge: 10.5 })] })
+      baseResponse({ valuations: [baseRow({ recommended_bid: 0.5, max_bid: 5, edge: 10.5 })] })
     );
     expect(q.ok).toBe(false);
     if (q.ok) return;
@@ -160,7 +161,7 @@ describe("validateValuationResponse", () => {
   it("rejects team_adjusted_value above sanity ceiling", () => {
     const q = validateValuationResponse(
       baseResponse({
-        valuations: [baseRow({ team_adjusted_value: 30000, edge: 29990 })],
+        valuations: [baseRow({ team_adjusted_value: 30000, max_bid: 31000, edge: 29990 })],
       })
     );
     expect(q.ok).toBe(false);
@@ -172,7 +173,7 @@ describe("validateValuationResponse", () => {
     const q = validateValuationResponse(
       baseResponse({
         valuations: [
-          baseRow({ team_adjusted_value: 20, recommended_bid: 10, edge: 5 }),
+          baseRow({ team_adjusted_value: 20, recommended_bid: 10, max_bid: 15, edge: 5 }),
         ],
       })
     );

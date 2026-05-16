@@ -26,6 +26,15 @@ export function rowIssues(row: ValuedPlayer, index: number): string[] {
   ) {
     out.push(`${p}.auction_value must equal adjusted_value (canonical alias)`);
   }
+  if (row.max_bid != null) {
+    if (!isFiniteNumber(row.max_bid)) {
+      out.push(`${p}.max_bid must be a finite number when present`);
+    } else if (row.max_bid < 1) {
+      out.push(`${p}.max_bid must be >= 1 (min bid)`);
+    } else if (row.max_bid > 25000) {
+      out.push(`${p}.max_bid exceeds sanity ceiling`);
+    }
+  }
   if (row.recommended_bid != null) {
     if (!isFiniteNumber(row.recommended_bid)) {
       out.push(`${p}.recommended_bid must be a finite number when present`);
@@ -33,6 +42,13 @@ export function rowIssues(row: ValuedPlayer, index: number): string[] {
       out.push(`${p}.recommended_bid must be >= 1 (min bid)`);
     } else if (row.recommended_bid > 20000) {
       out.push(`${p}.recommended_bid exceeds sanity ceiling`);
+    } else if (
+      row.max_bid != null &&
+      row.recommended_bid > row.max_bid + 0.02
+    ) {
+      out.push(`${p}.recommended_bid must be <= max_bid (suggested bid capped by team hard stop)`);
+    } else if (row.max_bid == null) {
+      out.push(`${p}.max_bid must be present when recommended_bid is set`);
     }
   }
   if (row.team_adjusted_value != null) {
@@ -47,17 +63,13 @@ export function rowIssues(row: ValuedPlayer, index: number): string[] {
   if (row.edge != null) {
     if (!isFiniteNumber(row.edge)) {
       out.push(`${p}.edge must be a finite number when present`);
-    } else if (
-      row.team_adjusted_value != null &&
-      row.recommended_bid != null &&
-      Math.abs(
-        row.edge -
-          ((row.team_adjusted_value as number) - (row.recommended_bid as number))
-      ) > 0.02
-    ) {
-      out.push(
-        `${p}.edge must equal team_adjusted_value − recommended_bid (within rounding)`
-      );
+    } else if (row.recommended_bid != null) {
+      const ta = row.team_adjusted_value ?? row.adjusted_value;
+      if (Math.abs(row.edge - (ta - row.recommended_bid)) > 0.02) {
+        out.push(
+          `${p}.edge must equal (team_adjusted_value ?? adjusted_value) − recommended_bid (within rounding)`
+        );
+      }
     }
   }
   if (!isFiniteNumber(row.inflation_factor)) {

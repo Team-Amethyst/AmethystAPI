@@ -6,7 +6,7 @@ External consensus draft position lives only in **`market_adp`** (+ optional **`
 
 ## Valuation policy: `market_adp` is context, not an `auction_value` input
 
-Ingested **`market_adp`** is for **response context** (labels, comparisons, explainability) and operator workflows — **not** to move **`auction_value`**, which stays **surplus-based model fair value** only. **Do not** blend **`market_adp`** into **`auction_value`** without a separate policy pass, tuning, and budget rescaling; naive mixes with **`recommended_bid`** blow aggregate dollars vs the surplus identity. **Live draft / max bid** UX should continue to treat **`recommended_bid`** as the bid anchor that may sit above model **`auction_value`**. Full ladder and rationale: [valuation-dollar-ladder.md](valuation-dollar-ladder.md) (section **Market ADP vs `auction_value` (policy)**).
+Ingested **`market_adp`** is for **response context** (labels, comparisons, explainability) and operator workflows — **not** to move **`auction_value`**, which stays **surplus-based model fair value** only. **Do not** blend **`market_adp`** into **`auction_value`** without a separate policy pass, tuning, and budget rescaling; naive mixes with **`recommended_bid`** blow aggregate dollars vs the surplus identity. **Live draft UX:** use **`auction_value`** as league-wide FMV, **`recommended_bid`** as the suggested opening/target bid (capped to **`max_bid`**), and **`max_bid`** as the team-specific hard stop — not the same as **`recommended_bid`**. Full ladder: [valuation-dollar-ladder.md](valuation-dollar-ladder.md) (section **Market ADP vs `auction_value` (policy)**).
 
 ## Adapter interface
 

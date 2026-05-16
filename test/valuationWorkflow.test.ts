@@ -104,6 +104,7 @@ describe("executeValuationWorkflow", () => {
       res.response.players_remaining
     );
     expect(res.response.recommended_bid_note).toContain("draftroom");
+    expect(res.response.max_bid_note).toContain("hard stop");
     expect(res.response.phase_indicator).toMatch(/^(early|mid|late)$/);
     const first = res.response.valuations[0];
     expect(first.explain_v2).toBeDefined();
@@ -131,6 +132,8 @@ describe("executeValuationWorkflow", () => {
       expect(text.trim().length).toBeGreaterThan(0);
     }
     expect(first.recommended_bid).toBeDefined();
+    expect(first.max_bid).toBeDefined();
+    expect(first.recommended_bid!).toBeLessThanOrEqual(first.max_bid! + 0.02);
     expect(first.recommended_bid!).toBeGreaterThanOrEqual(1);
     expect(first.edge).toBeDefined();
     expect(first.edge!).toBeCloseTo(
@@ -180,7 +183,7 @@ describe("executeValuationWorkflow", () => {
     );
   });
 
-  it("team_adjusted_value applies team multipliers and preserves adjusted/recommended", () => {
+  it("team_adjusted_value applies team multipliers; max_bid and recommended respect team context", () => {
     const localPlayers: LeanPlayer[] = [
       {
         _id: "u1",
@@ -236,10 +239,13 @@ describe("executeValuationWorkflow", () => {
     const needB = b.response.valuations.find((v) => v.player_id === "201")!;
 
     expect(needA.team_adjusted_value!).toBeGreaterThan(cA.team_adjusted_value!);
+    expect(needA.team_adjusted_value!).toBeGreaterThan(needB.team_adjusted_value!);
     expect(needA.adjusted_value).toBe(needB.adjusted_value);
     expect(needA.auction_value).toBe(needB.auction_value);
-    expect(needA.recommended_bid).toBe(needB.recommended_bid);
-    expect(needA.team_adjusted_value).not.toBe(needB.team_adjusted_value);
+    expect(needA.max_bid).toBeDefined();
+    expect(needB.max_bid).toBeDefined();
+    expect(needA.recommended_bid!).toBeLessThanOrEqual(needA.max_bid! + 0.02);
+    expect(needB.recommended_bid!).toBeLessThanOrEqual(needB.max_bid! + 0.02);
     expect(needA.edge).not.toBe(needB.edge);
     for (const row of a.response.valuations) {
       expect(row.team_adjusted_value!).toBeGreaterThanOrEqual(0);
@@ -315,7 +321,8 @@ describe("executeValuationWorkflow", () => {
     const hi = highBudget.response.valuations[0]!;
     const lo = lowBudget.response.valuations[0]!;
     expect(hi.adjusted_value).toBe(lo.adjusted_value);
-    expect(hi.recommended_bid).toBe(lo.recommended_bid);
+    expect(hi.recommended_bid!).toBeLessThanOrEqual(hi.max_bid! + 0.02);
+    expect(lo.recommended_bid!).toBeLessThanOrEqual(lo.max_bid! + 0.02);
     expect(hi.team_adjusted_value!).toBeGreaterThan(lo.team_adjusted_value!);
   });
 
@@ -443,6 +450,29 @@ describe("executeValuationWorkflow", () => {
     if (!withKeepers.ok) return;
     expect(withKeepers.response.total_budget_remaining).toBe(260 * 12 - 25);
     expect(withKeepers.response.players_remaining).toBe(0);
+  });
+
+  it("recommended_bid never exceeds max_bid on any row", () => {
+    const res = executeValuationWorkflow(players, minimalInput());
+    expect(res.ok).toBe(true);
+    if (!res.ok) return;
+    for (const v of res.response.valuations) {
+      expect(v.max_bid).toBeDefined();
+      expect(v.recommended_bid).toBeDefined();
+      expect(v.recommended_bid!).toBeLessThanOrEqual(v.max_bid! + 0.02);
+    }
+  });
+
+  it("symmetric open: max_bid stays near auction_value (no runaway from list baseline)", () => {
+    const res = executeValuationWorkflow(players, minimalInput({
+      inflation_model: "replacement_slots_v2",
+    }));
+    expect(res.ok).toBe(true);
+    if (!res.ok) return;
+    for (const v of res.response.valuations) {
+      expect(v.max_bid!).toBeLessThanOrEqual(v.auction_value * 1.12 + 0.02);
+      expect(v.max_bid!).toBeGreaterThanOrEqual(1);
+    }
   });
 
   it("prioritizes selected player position in market_notes for player-scoped responses", () => {

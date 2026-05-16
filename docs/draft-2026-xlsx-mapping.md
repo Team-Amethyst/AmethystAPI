@@ -6,7 +6,7 @@ Activity #9 / Player API testing uses the instructor workbook **2026Draft.xlsx**
 
 | Sheet | Role |
 |-------|------|
-| **Pre-Draft Roster** | Row 0: `Team X $remaining` per team (teams A–E in sample). Rows 1+: repeating 4-column blocks per team: `slot`, `player name`, `tier/scouting label`, `keeper salary` (number). Empty name = empty slot. |
+| **Pre-Draft Roster** | One or more **header rows** with `Team X $remaining` (e.g. Team A–E on the first row, Team F–I on a lower row in the same sheet). Below each header: repeating 4-column blocks per team: `slot`, `player name`, `tier/scouting label`, `keeper salary` (number). Empty name = empty slot. The converter must scan **all** header rows, not only row 0. |
 | **Minors** | Row 0: `Team A`, `Team B`, … columns. Data rows: pairs `(slot #, player name)` per team column group (two columns per team). |
 | **Draft** | Columns: `Pick #`, `Brought Up` (nominating team), `Player`, `POS`, `MLB` (franchise), `Won` (winning fantasy team), `Salary`. Cumulative picks build `drafted_players[]`; `team_id` / spend use **Won** and **Salary**. |
 | **Final Roster** | Same grid pattern as Pre-Draft (post-auction); used by the script only if we extend fixtures; current checkpoints use Pre-Draft + Draft only. |

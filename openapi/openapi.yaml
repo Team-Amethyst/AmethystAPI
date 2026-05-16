@@ -230,13 +230,18 @@ components:
         recommended_bid_note:
           type: string
           description: |
-            Explains `recommended_bid`: draftroom bid anchor (clearing blend of auction_value toward baseline_value),
-            not league-wide FMV — use `auction_value` for evaluation.
+            Explains `recommended_bid`: suggested bid / market-aware draftroom anchor (clearing blend of
+            auction_value toward baseline_value), then clamped to `max_bid` — not league-wide FMV and not the hard stop.
+        max_bid_note:
+          type: string
+          description: |
+            Explains `max_bid`: team-specific auction hard stop (ceiling), computed after `team_adjusted_value`
+            with bounded premiums/penalties — distinct from `recommended_bid`.
         edge_note:
           type: string
           description: |
-            Clarifies `edge` as team_adjusted_value minus recommended_bid; negative edge is common when
-            recommended_bid is intentionally above auction_value for stars.
+            Clarifies `edge` as team_adjusted_value minus recommended_bid (after max_bid clamp on recommended_bid).
+            Symmetric open responses set team_adjusted_value equal to adjusted_value on every row.
         valuation_context:
           type: object
           description: Eligible pool size vs league-wide empty roster slots (thin-pool diagnostics).
@@ -351,8 +356,9 @@ components:
     ValuedPlayer:
       type: object
       description: |
-        Per-row dollars follow a **pipeline** (list → league → bid → roster); see `docs/valuation-dollar-ladder.md`.
+        Per-row dollars follow a **pipeline** (list → league FMV → suggested bid → team marginal → hard stop); see `docs/valuation-dollar-ladder.md`.
         **`auction_value`** is the canonical official valuation (equals `adjusted_value`).
+        **`recommended_bid`** is the suggested bid (capped to **`max_bid`**). **`max_bid`** is the team auction ceiling.
         `scarcity_adjustment` is always 0 (roster scarcity is inside `baseline_value`).
         `inflation_adjustment` is the full delta `adjusted_value - baseline_value`.
       properties:
@@ -429,8 +435,14 @@ components:
         recommended_bid:
           type: number
           description: >-
-            Draftroom bid anchor (phase/depth clearing blend a+L·(r−a) with floors/caps and isotonic smoothing).
-            May exceed auction_value for stars when list baseline r is far above surplus-deflated a — not FMV.
+            Suggested bid / draftroom market anchor (phase/depth clearing blend a+L·(r−a) with floors/caps and
+            isotonic smoothing), then clamped down to `max_bid` so it never exceeds the team hard stop. Not FMV — use `auction_value`.
+        max_bid:
+          type: number
+          description: >-
+            Team-specific auction hard stop (ceiling): base is team_adjusted_value when present else adjusted_value,
+            plus small bounded premiums (elite tier, slot scarcity, roster fit when asymmetric) and penalties
+            (budget pressure, roster tightness). Never an alias of `recommended_bid`.
         team_adjusted_value:
           type: number
           description: >-
@@ -440,7 +452,9 @@ components:
             equal per-team budgets when budget_by_team_id is set, equal rostered counts per team).
         edge:
           type: number
-          description: team_adjusted_value minus recommended_bid; not "profit vs FMV" when recommended_bid > auction_value.
+          description: >-
+            team_adjusted_value minus recommended_bid after max_bid clamp (symmetric open: team_adjusted_value
+            equals adjusted_value). Not "profit vs FMV."
         valuation_explain:
           type: object
           description: Present when request `explain_valuation_rows` is true — replacement/slot context plus baseline risk multipliers (same values as `baseline_components`; does not change dollars).
@@ -933,7 +947,7 @@ paths:
                   type: number
                   minimum: 1
                   maximum: 5
-                  description: Optional clamp — recommended_bid ≤ ratio × auction_value after smoothing (auction_value unchanged).
+                  description: Optional clamp — recommended_bid ≤ ratio × auction_value after smoothing (auction_value unchanged); runs before team max_bid clamp.
                 injury_overrides:
                   type: array
                   description: Optional per-player injury severity from Draftroom; overrides Mongo catalog injurySeverity for the baseline injury pass only (see schemas/valuation-request.v1.schema.json).
