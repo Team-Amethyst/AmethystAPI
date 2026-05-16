@@ -10,6 +10,7 @@ import { getPlayerId } from "../lib/playerId";
 import type { BaselineRiskExplainFields } from "../types/baselineRiskExplain";
 import { pickBaselineRiskExplainFromMeta } from "../types/baselineRiskExplain";
 import type { ReplacementSlotsV2Result } from "./replacementSlotsV2";
+import type { AuctionCurveModel } from "./auctionCurveModel";
 import { valuedPlayerMarketFieldsFromLean } from "../lib/marketAdp/wire";
 
 const STEAL_SLOPE = 1.25;
@@ -62,6 +63,7 @@ export function buildValuedRows(params: {
   replacementValue: number;
   inflationFactor: number;
   minAuctionBid: number;
+  auctionCurveModel?: AuctionCurveModel;
   baselineOrderRank: Map<string, number>;
   catalogOrderRank: Map<string, number>;
   undraftedCount: number;
@@ -73,10 +75,15 @@ export function buildValuedRows(params: {
     replacementValue,
     inflationFactor,
     minAuctionBid,
+    auctionCurveModel = "linear_v1",
     baselineOrderRank,
     catalogOrderRank,
     undraftedCount,
   } = params;
+  const tieredSurplus =
+    v2Result?.playerIdToSurplusDollars != null &&
+    (auctionCurveModel === "tiered_surplus_v1" ||
+      auctionCurveModel === "adaptive_surplus_v1");
   return byValueRows.map((p) => {
     const pid = getPlayerId(p);
     const baselineValue = p.value || 0;
@@ -90,6 +97,9 @@ export function buildValuedRows(params: {
         v2Result.surplus_cash > 0
       ) {
         adjustedValue = parseFloat(Math.max(minAuctionBid, baselineValue).toFixed(2));
+      } else if (tieredSurplus) {
+        const surplusDollars = v2Result.playerIdToSurplusDollars!.get(pid) ?? 0;
+        adjustedValue = parseFloat((minAuctionBid + surplusDollars).toFixed(2));
       } else {
         adjustedValue = parseFloat((minAuctionBid + inflationFactor * sb).toFixed(2));
       }

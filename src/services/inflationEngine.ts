@@ -31,6 +31,12 @@ import {
 import {
   buildInflationResponse,
 } from "./inflationAssemble";
+import { resolveAuctionCurveModel, type AuctionCurveModel } from "./auctionCurveModel";
+import {
+  applyAuctionCurveToV2Result,
+  buildAuctionCurveLeagueState,
+  type AuctionCurveDebugMeta,
+} from "./auctionCurveApply";
 import type {
   CalculateInflationOptions,
   DraftedPlayer,
@@ -165,10 +171,44 @@ export function calculateInflation(
   const inflationBoundedBy = clamped.inflation_bounded_by;
   mark("inflation_clamp_ms", tClamp);
 
+  const leagueCap = leagueSlotCapacity(rosterSlots, numTeams);
+
+  const auctionCurveModel: AuctionCurveModel = resolveAuctionCurveModel(
+    options?.auctionCurveModel
+  );
+  let v2ForRows = v2Result;
+  let curveDebug: AuctionCurveDebugMeta | undefined;
+  if (inflationModelEffective === "replacement_slots_v2" && v2Result) {
+    const remainingSlotsCurve =
+      v2Meta.remaining_slots ?? Math.max(0, leagueCap - draftedPlayers.length);
+    const leagueState = buildAuctionCurveLeagueState({
+      leagueSlotCapacity: leagueCap,
+      remainingSlots: remainingSlotsCurve,
+      numTeams,
+      totalBudgetPerTeam,
+      budgetRemaining,
+      v2: v2Result,
+      rosteredForSlots: options?.rosteredPlayersForSlots ?? [],
+      draftedPlayers,
+      additionalDraftedIds: options?.additionalDraftedIds,
+      inflationRaw,
+      inflationFactor,
+    });
+    const applied = applyAuctionCurveToV2Result({
+      requestedModel: options?.auctionCurveModel,
+      v2Result,
+      undraftedFringeIds: undraftedFull.map((p) => getPlayerId(p)),
+      leagueState,
+      inflationFactor,
+    });
+    v2ForRows = applied.v2ForRows;
+    curveDebug = applied.debug;
+  }
+
   const tIdx = performance.now();
   const inflationIndexVsOpeningAuction = computeInflationIndexVsOpeningAuction({
     inflationModelEffective,
-    v2Result,
+    v2Result: v2ForRows,
     options,
     draftedPlayers,
     scoped: allPlayers,
@@ -185,10 +225,11 @@ export function calculateInflation(
   const valuations = buildValuedRows({
     byValueRows,
     inflationModelEffective,
-    v2Result,
+    v2Result: v2ForRows,
     replacementValue,
     inflationFactor,
     minAuctionBid: MIN_AUCTION_BID,
+    auctionCurveModel,
     baselineOrderRank,
     catalogOrderRank,
     undraftedCount: undraftedFull.length,
@@ -199,7 +240,6 @@ export function calculateInflation(
   attachAuctionBaselineRanksAndTiers(valuations, options);
   mark("inflation_attach_tiers_ms", tTiers);
 
-  const leagueCap = leagueSlotCapacity(rosterSlots, numTeams);
   const remainingSlotsLeague =
     v2Meta.remaining_slots ?? Math.max(0, leagueCap - draftedPlayers.length);
   const draftPhase = resolveDraftPhase({
@@ -212,8 +252,8 @@ export function calculateInflation(
   const rosterDemandMap = buildLeagueSlotDemand(rosterSlots, numTeams);
   const rosterSlotKeysForFit = new Set(rosterDemandMap.keys());
   const replForTeam: Record<string, number> =
-    inflationModelEffective === "replacement_slots_v2" && v2Result
-      ? v2Result.replacement_values_by_slot_or_position
+    inflationModelEffective === "replacement_slots_v2" && v2ForRows
+      ? v2ForRows.replacement_values_by_slot_or_position
       : {};
   const byRowPlayerId = new Map(byValueRows.map((p) => [getPlayerId(p), p]));
 
@@ -229,9 +269,11 @@ export function calculateInflation(
     replForTeam,
     rosterSlotKeysForFit,
     surplusBasisByPlayerId:
-      inflationModelEffective === "replacement_slots_v2" && v2Result
-        ? v2Result.playerIdToSurplusBasis
+      inflationModelEffective === "replacement_slots_v2" && v2ForRows
+        ? v2ForRows.playerIdToSurplusBasis
         : undefined,
+    curveTierByPlayerId: v2ForRows?.playerIdToSurplusTier,
+    curveWeightByPlayerId: v2ForRows?.playerIdToCurveWeight,
   });
 
   smoothRecommendedBids(valuations, MIN_AUCTION_BID);
@@ -273,6 +315,23 @@ export function calculateInflation(
 
   const slotMeta: Partial<ValuationResponse> = {
     ...v2Meta,
+    auction_curve_model: curveDebug?.auction_curve_model ?? auctionCurveModel,
+    ...(curveDebug
+      ? {
+          auction_curve_reason: curveDebug.auction_curve_reason,
+          curve_inputs: curveDebug.curve_inputs,
+          curve_guardrails: curveDebug.curve_guardrails,
+          ...(curveDebug.curve_guardrails_applied
+            ? { curve_guardrails_applied: curveDebug.curve_guardrails_applied }
+            : {}),
+          top10_linear_spread: curveDebug.top10_linear_spread,
+          selected_weights: curveDebug.selected_weights,
+          ...(curveDebug.surplus_conservation_delta != null
+            ? { surplus_conservation_delta: curveDebug.surplus_conservation_delta }
+            : {}),
+          internal_allocation_mode: curveDebug.internal_allocation_mode,
+        }
+      : {}),
     ...(v2Meta.remaining_slots == null
       ? { remaining_slots: Math.max(0, leagueCap - draftedPlayers.length) }
       : {}),

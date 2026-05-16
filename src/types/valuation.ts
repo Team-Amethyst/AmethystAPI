@@ -37,6 +37,7 @@ export interface ValuationRequest {
   eligible_player_ids?: string[];
   excluded_player_ids?: string[];
   inflation_model?: InflationModel;
+  auction_curve_model?: "linear_v1" | "tiered_surplus_v1" | "adaptive_surplus_v1";
   budget_by_team_id?: Record<string, number>;
   user_team_id?: string;
   scoring_format?: ScoringFormat;
@@ -113,6 +114,8 @@ export interface NormalizedValuationInput {
   budget_by_team_id?: Record<string, number>;
   user_team_id?: string;
   inflation_model?: InflationModel;
+  /** Surplus → auction dollar curve on replacement_slots_v2 (default linear_v1). */
+  auction_curve_model?: "linear_v1" | "tiered_surplus_v1" | "adaptive_surplus_v1";
   explain_valuation_rows?: boolean;
   /** Optional; applied after smoothing, before team `max_bid` clamp on `recommended_bid`. */
   recommended_bid_soft_cap_ratio?: number;
@@ -128,6 +131,9 @@ export interface CalculateInflationOptions {
   inflationCap?: number;
   inflationFloor?: number;
   inflationModel?: InflationModel;
+  auctionCurveModel?: "linear_v1" | "tiered_surplus_v1" | "adaptive_surplus_v1";
+  curveTierByPlayerId?: Map<string, string>;
+  curveWeightByPlayerId?: Map<string, number>;
   remainingLeagueSlots?: number;
   surplusDraftablePoolMultiplier?: number;
   rosteredPlayersForSlots?: DraftedPlayer[];
@@ -243,6 +249,8 @@ export interface ValuedPlayer {
     surplus_basis?: number;
     /** Echo of response `inflation_factor`. For `replacement_slots_v2`, treat as **surplus allocation factor** in `auction_value = min_bid + inflation_factor × surplus_basis`, not a simple market “inflation index.” */
     inflation_factor: number;
+    auction_curve_tier?: string;
+    auction_curve_weight?: number;
     /** Eligible valuation universe size (same for every row in a response). */
     pool_size?: number;
     /** League-wide empty roster slots used for thin-pool heuristics. */
@@ -264,6 +272,16 @@ export interface ValuedPlayer {
 export interface ValuationResponse {
   engine_contract_version: string;
   inflation_model: InflationModel;
+  /** How surplus_cash maps to per-player auction_value on replacement_slots_v2. */
+  auction_curve_model?: "linear_v1" | "tiered_surplus_v1" | "adaptive_surplus_v1";
+  auction_curve_reason?: string;
+  curve_inputs?: Record<string, number | string | boolean>;
+  curve_guardrails?: Record<string, number>;
+  curve_guardrails_applied?: string[];
+  top10_linear_spread?: number;
+  selected_weights?: Record<string, number>;
+  surplus_conservation_delta?: number;
+  internal_allocation_mode?: string;
   inflation_factor: number;
   inflation_index_vs_opening_auction?: number;
   inflation_percent_vs_auction_open?: number;

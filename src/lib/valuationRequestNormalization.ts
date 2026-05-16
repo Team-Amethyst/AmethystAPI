@@ -89,6 +89,9 @@ export function buildNormalizedFromNested(
     user_team_id: rest.user_team_id,
     inflation_model:
       rest.inflation_model ?? league.inflation_model ?? DEFAULT_INFLATION_MODEL,
+    ...(rest.auction_curve_model !== undefined
+      ? { auction_curve_model: rest.auction_curve_model }
+      : {}),
     eligible_player_ids: rest.eligible_player_ids,
     excluded_player_ids: rest.excluded_player_ids,
     explain_valuation_rows: rest.explain_valuation_rows,
@@ -131,6 +134,9 @@ export function buildNormalizedFromFlat(
     budget_by_team_id: parsed.budget_by_team_id,
     user_team_id: parsed.user_team_id,
     inflation_model: parsed.inflation_model ?? DEFAULT_INFLATION_MODEL,
+    ...(parsed.auction_curve_model !== undefined
+      ? { auction_curve_model: parsed.auction_curve_model }
+      : {}),
     eligible_player_ids: parsed.eligible_player_ids,
     excluded_player_ids: parsed.excluded_player_ids,
     explain_valuation_rows: parsed.explain_valuation_rows,

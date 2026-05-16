@@ -14,6 +14,12 @@ export const inflationModelSchema = z.enum([
   "replacement_slots_v2",
 ]);
 
+export const auctionCurveModelSchema = z.enum([
+  "linear_v1",
+  "tiered_surplus_v1",
+  "adaptive_surplus_v1",
+]);
+
 export const positionOverrideEntrySchema = z.object({
   player_id: z.string().min(1),
   positions: z.array(z.string().min(1)).min(1),
@@ -82,6 +88,7 @@ export const nestedValuationBodySchema = z.object({
   budget_by_team_id: budgetByTeamSchema.optional(),
   user_team_id: z.string().min(1).optional(),
   inflation_model: inflationModelSchema.optional(),
+  auction_curve_model: auctionCurveModelSchema.optional(),
   position_overrides: z.array(positionOverrideEntrySchema).optional(),
   injury_overrides: z.array(injuryOverrideEntrySchema).optional(),
   strict_scoring_categories: z.boolean().optional(),
@@ -122,6 +129,7 @@ export const flatValuationBodySchema = z.object({
   excluded_player_ids: z.array(z.string().min(1)).optional(),
   pre_draft_rosters: preDraftRostersInputSchema.optional(),
   inflation_model: inflationModelSchema.optional(),
+  auction_curve_model: auctionCurveModelSchema.optional(),
   strict_scoring_categories: z.boolean().optional(),
   explain_valuation_rows: z.boolean().optional(),
   recommended_bid_soft_cap_ratio: z

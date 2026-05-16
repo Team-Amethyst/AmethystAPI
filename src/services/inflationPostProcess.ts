@@ -58,6 +58,8 @@ export function applyRecommendedBidPass(params: {
   replForTeam: Record<string, number>;
   rosterSlotKeysForFit: Set<string>;
   surplusBasisByPlayerId?: Map<string, number>;
+  curveTierByPlayerId?: Map<string, string>;
+  curveWeightByPlayerId?: Map<string, number>;
 }): void {
   const {
     valuations,
@@ -70,6 +72,8 @@ export function applyRecommendedBidPass(params: {
     replForTeam,
     rosterSlotKeysForFit,
     surplusBasisByPlayerId,
+    curveTierByPlayerId,
+    curveWeightByPlayerId,
   } = params;
   const baselineOrderForDepth = [...byValueRows].sort(
     (a, b) => (b.value || 0) - (a.value || 0)
@@ -129,6 +133,16 @@ export function applyRecommendedBidPass(params: {
             ? Number(sbEx.toFixed(4))
             : undefined,
         inflation_factor: row.inflation_factor,
+        ...(curveTierByPlayerId?.get(row.player_id)
+          ? { auction_curve_tier: curveTierByPlayerId.get(row.player_id) }
+          : {}),
+        ...(curveWeightByPlayerId?.get(row.player_id) != null
+          ? {
+              auction_curve_weight: Number(
+                curveWeightByPlayerId.get(row.player_id)!.toFixed(4)
+              ),
+            }
+          : {}),
         ...(meta ? pickBaselineRiskExplainFromMeta(meta) : {}),
         ...(meta?.two_way_role_selected === "hitter" ||
         meta?.two_way_role_selected === "pitcher"

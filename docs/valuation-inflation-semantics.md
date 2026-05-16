@@ -112,13 +112,35 @@ So players at or below **replacement** in model dollars stay near **$1**; stars 
 - **`total_surplus_mass`** = Σ **`surplus_basis`** over undrafted players who **received** a slot in the undrafted greedy pass (the marginal draft economy).
 - **`pool_value_remaining`** = **`total_surplus_mass`** (denominator for `inflation_raw` when positive).
 - **`inflation_raw`** = `surplus_cash / total_surplus_mass` when both are positive; workflow **cap/floor** applies unless the engine marks a **terminal** path (**`skip`** clamp for `no_remaining_slots`, `no_surplus_cash`, `no_surplus_mass`, `no_undrafted_players`).
-- When many active slots remain after keepers (`remaining_slots / capacity` high), **`inflation_raw`** often falls below the workflow floor; a **higher first-pass floor** (up to **0.38**) applies so auction values are not over-compressed into a tight band. This does **not** create fake scarcity — it reflects limited **allocatable surplus cash** (~`$1,300` league-wide in a 9×$260 keeper board) spread across a large **total_surplus_mass**. **Baseline_value** may still show wider tier separation than **auction_value** when top catalog baselines cluster.
+- When many active slots remain after keepers, **`inflation_raw`** often falls below the workflow **floor (0.25)**. Raising the floor only shifts the **level** of auction prices, not top-tier **spread**, when top players share nearly identical **`surplus_basis`**.
+
+### Auction curve (`auction_curve_model`)
+
+Production default: **`adaptive_surplus_v1`** (economics resolver in `auctionCurveResolver.ts`). Manual overrides: **`linear_v1`**, **`tiered_surplus_v1`**.
+
+| Model | Per-row auction dollars |
+|--------|-------------------------|
+| **`linear_v1`** | **`min_bid + inflation_factor × surplus_basis`** — does **not** conserve **`surplus_cash`** (baseline comparison). |
+| **`tiered_surplus_v1`** | **`min_bid + tier_weighted_share(surplus_cash)`** with fixed tier weights. |
+| **`adaptive_surplus_v1`** | Resolver picks **linear** or **tiered** from league state; tier path uses **adaptive weights** + **guardrails** (top-player cap, surplus conservation). |
+
+**Adaptive selection (not `open_slot_ratio` alone):**
+
+- **Fresh** (no keepers, no auction picks): **linear** — avoids \$100+ tops on open boards.
+- **Keeper pre-draft** with **compressed linear top-10 spread** and high **`total_surplus_mass / surplus_cash`**: **tiered** with higher **`starWeight`**.
+- **Mid/late draft**: tier only when linear spread is still compressed; otherwise linear.
+- **Near-complete** (few slots left): **linear** / terminal v2 fallbacks.
+
+Response debug (audit / explain): `auction_curve_reason`, `curve_inputs`, `curve_guardrails`, `top10_linear_spread`, `selected_weights`, `internal_allocation_mode`, `surplus_conservation_delta`.
+
+Compare all models: `pnpm valuation-curve-audit`.
 
 ### Per row
 
 - **`adjusted_value`** = **`baseline`** when **`fallback_reason === "no_remaining_slots"`**.
 - When **`no_surplus_mass`** with **`surplus_cash > 0`**: **`adjusted_value = max(min_bid, baseline)`** (baseline-safe).
-- Otherwise: **`min_bid + inflation_factor × surplus_basis`**.
+- Otherwise (**linear** allocation): **`min_bid + inflation_factor × surplus_basis`**.
+- Otherwise (**tiered** allocation): **`min_bid +` allocated surplus dollars** (sums ≈ **`surplus_cash`**).
 - When **`no_surplus_cash`**: **`inflation_factor = 0`** so prices sit at **`min_bid`** for marginal surplus.
 
 ### Response metadata (always for v2)
@@ -152,6 +174,35 @@ Technical notes:
 - **`edge`** = **`team_adjusted_value − recommended_bid`** using the **post-clamp** suggested bid (symmetric open: **`team_adjusted_value`** equals **`adjusted_value`**). Negative edge is common when the anchor is aggressive versus marginal roster dollars; **edge is not “profit vs FMV.”**
 - Optional request **`recommended_bid_soft_cap_ratio`** (≥ 1) clamps **`recommended_bid`** to at most **`ratio × auction_value`** after smoothing (trust / UI alignment) **before** the **`max_bid`** clamp, without changing **`auction_value`**.
 - Optional **`explain_valuation_rows`** adds per-row **`valuation_explain`** (effective slot tokens, replacement key/value, surplus basis). The response also carries **`valuation_context`** / **`valuation_context_warnings`** for thin pools and skewed keeper layouts.
+
+---
+
+## Checkpoint fixtures and active slot demand
+
+**Canonical checkpoints** for curve audit and Draft engine integration live in **AmethystDraft** (`test-fixtures/player-api/checkpoints/`): nested JSON with `league` + `draft_state` + `pre_draft_rosters` + `minors` + `taxi`. Catalog ids (`after_pick_10`, …) map to shorter filenames (`after_10.json`, …).
+
+**AmethystAPI** also ships **legacy flat** files (`after_pick_10.json`, …) under `test-fixtures/player-api/checkpoints/`. Those use a **different roster template** (22 slots/team → **198** league capacity, combined `P` bucket). **`pnpm valuation-curve-audit` loads Draft nested fixtures only** — do not compare audit numbers to the legacy flat files.
+
+### Active rostered count (replacement_slots_v2)
+
+- **`active_slot_capacity`** = Σ `roster_slots[].count` × `num_teams` (includes **BN**; **MIN/TAXI** are not roster_slots keys in nested fixtures).
+- **`active_rostered`** = unique players from **`buildRosteredPlayersForSlotEngine`**: auction picks in `draft_state` / `drafted_players` **excluding MIN/TAXI**, plus keepers from **`pre_draft_rosters`** not already in draft_state. Auction rows **win** dedupe over keeper rows (a re-drafted keeper may lose `is_keeper` in the slot engine).
+- **`remaining_slots` (engine)** = open demand after **greedy per-slot assignment** of active rostered players — **not** simply `capacity − active_rostered`. When `active_rostered > capacity`, greedy demand floors at **0** while arithmetic `capacity − rostered` may be negative (late checkpoints with 130+ picks + 76 keeper rows).
+
+### Expected anchors (9-team nested fixture, 21 slots/team = 189)
+
+| Checkpoint | draft_state picks | Active rostered | Arithmetic remaining |
+|------------|------------------:|----------------:|---------------------:|
+| `pre_draft` | 0 | 76 (keepers) | 113 |
+| `after_pick_10` | 10 | 86 | 103 |
+| `after_pick_50` | 50 | 125 (1 keeper overlap) | 64 |
+| `after_pick_100` | 100 | 175 (1 keeper overlap) | 14 |
+| `after_pick_130` | 130 | 204 (2 keeper overlaps) | −15 |
+| `finished_league` | **133** (full Draft sheet) | 207 | −18 |
+
+**`finished_league`** uses **`draft_state` only** (133 auction rows from the workbook Draft sheet). Final Roster is validated at fixture generation but **not** embedded as a separate roster source.
+
+Run **`pnpm valuation-curve-audit`** (requires `MONGO_URI`) for per-checkpoint reconciliation JSON in `tmp/valuation-curve-audit.json` (`checkpoint_reconciliation` on each scenario).
 
 ---
 

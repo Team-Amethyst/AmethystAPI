@@ -14,6 +14,10 @@ export type ReplacementSlotsV2Result = {
   min_bid: number;
   surplus_cash: number;
   total_surplus_mass: number;
+  /** Tiered/adaptive auction curve: surplus dollars above min_bid per player (sums ≈ surplus_cash). */
+  playerIdToSurplusDollars?: Map<string, number>;
+  playerIdToSurplusTier?: Map<string, string>;
+  playerIdToCurveWeight?: Map<string, number>;
   replacement_values_by_slot_or_position: Record<string, number>;
   fallback_reason: string | null;
   baselineOnly: boolean;
