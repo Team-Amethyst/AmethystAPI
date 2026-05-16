@@ -1,3 +1,4 @@
+import path from "path";
 import {
   buildRosteredPlayersForSlotEngine,
   isReserveRosterSlotForEngine,
@@ -16,6 +17,26 @@ export const ENGINE_CHECKPOINT_IDS = [
 ] as const;
 
 export type EngineCheckpointId = (typeof ENGINE_CHECKPOINT_IDS)[number];
+
+/**
+ * Canonical nested checkpoints (AmethystDraft). Curve audit and reconciliation
+ * tests must load from here — not AmethystAPI legacy flat `after_pick_*.json`.
+ */
+export function resolveDraftCheckpointsDir(): string {
+  return path.resolve(
+    __dirname,
+    "../../../AmethystDraft/apps/api/test-fixtures/player-api/checkpoints"
+  );
+}
+
+export function resolveDraftCheckpointFixturePath(
+  checkpointId: EngineCheckpointId
+): string {
+  return path.join(
+    resolveDraftCheckpointsDir(),
+    DRAFT_CHECKPOINT_FILENAME[checkpointId]
+  );
+}
 
 /** AmethystDraft fixture filenames (canonical for curve audit). */
 export const DRAFT_CHECKPOINT_FILENAME: Record<EngineCheckpointId, string> = {

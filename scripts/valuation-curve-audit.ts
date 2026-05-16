@@ -42,16 +42,14 @@ import { getPlayerId } from "../src/lib/playerId";
 import {
   DRAFT_CHECKPOINT_FILENAME,
   reconcileCheckpointSlotDemand,
+  resolveDraftCheckpointFixturePath,
+  resolveDraftCheckpointsDir,
   summarizeReconciliationLine,
   type EngineCheckpointId,
 } from "../src/lib/checkpointSlotReconciliation";
 
 const ROOT = path.resolve(__dirname, "..");
-/** Canonical checkpoints — must match AmethystDraft `engineCheckpointCatalog.ts`. */
-const DRAFT_CHECKPOINTS_DIR = path.resolve(
-  ROOT,
-  "../AmethystDraft/apps/api/test-fixtures/player-api/checkpoints"
-);
+const DRAFT_CHECKPOINTS_DIR = resolveDraftCheckpointsDir();
 const OUT = path.join(ROOT, "tmp", "valuation-curve-audit.json");
 const TOP_N = 50;
 const TOP_25 = 25;
@@ -279,8 +277,7 @@ function runCurve(
 function loadDraftCheckpoint(
   checkpointId: EngineCheckpointId
 ): { input: NormalizedValuationInput; fixture_path: string } {
-  const file = DRAFT_CHECKPOINT_FILENAME[checkpointId];
-  const fixture_path = path.join(DRAFT_CHECKPOINTS_DIR, file);
+  const fixture_path = resolveDraftCheckpointFixturePath(checkpointId);
   const raw = JSON.parse(readFileSync(fixture_path, "utf8")) as Record<string, unknown>;
   if (
     typeof raw === "object" &&
