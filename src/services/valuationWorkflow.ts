@@ -286,7 +286,21 @@ export function executeValuationWorkflow(
         responseWithContext,
         input,
         basePlayers,
-        scope
+        scope,
+        {
+          inflationOptions: {
+            deterministic: input.deterministic,
+            seed: input.seed,
+            budgetByTeamId: input.budget_by_team_id,
+            additionalSpent: extra.additionalSpent,
+            additionalDraftedIds: extra.additionalDraftedIds,
+            inflationCap: pass.inflationCap,
+            inflationFloor: pass.inflationFloor,
+            auctionCurveModel: input.auction_curve_model,
+            rosteredPlayersForSlots,
+            positionOverrides,
+          },
+        }
       );
       if (diag) addTimingMs(diag, "workflow_attach_explain_ms", tEx0);
       let merged: ValuationResponse = {

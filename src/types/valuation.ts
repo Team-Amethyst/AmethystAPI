@@ -12,6 +12,7 @@ import type {
 } from "./core";
 import type { BaselineRiskExplainFields } from "./baselineRiskExplain";
 import type { DurabilityExpectation, DurabilityExpectationReason } from "./durabilityExpectation";
+import type { MarketPressureSnapshot } from "./marketPressure";
 export type PositionOverrideEntry = { player_id: string; positions: string[] };
 
 /** Per-player injury severity from Draftroom (roster / IL status); overrides Mongo `injurySeverity` for baseline injury pass only. */
@@ -360,5 +361,6 @@ export interface ValuationResponse {
       overall: number;
       notes?: string;
     };
+    market_pressure?: MarketPressureSnapshot;
   };
 }

@@ -3,7 +3,9 @@ import {
   buildPlayerWhy,
   clamp01,
 } from "./valuationExplainabilityHelpers";
+import { buildMarketPressureSnapshot } from "./marketPressure";
 import { getOrBuildExplainabilityContext } from "./valuationExplainabilityContext";
+import type { CalculateInflationOptions } from "../types/brain";
 import type {
   LeanPlayer,
   NormalizedValuationInput,
@@ -23,7 +25,8 @@ export function attachValuationExplainability(
   response: ValuationResponse,
   input: NormalizedValuationInput,
   allPlayers: LeanPlayer[],
-  scope: ContextScope = {}
+  scope: ContextScope = {},
+  attachOptions?: { inflationOptions?: CalculateInflationOptions }
 ): ValuationResponse {
   const selectedPositionFromRow =
     scope.playerId != null
@@ -77,6 +80,13 @@ export function attachValuationExplainability(
   const pctAuctionTop =
     idxTop != null && Number.isFinite(idxTop) ? Math.round((idxTop - 1) * 100) : undefined;
 
+  const market_pressure = buildMarketPressureSnapshot({
+    response,
+    input,
+    allPlayers,
+    inflationOptions: attachOptions?.inflationOptions,
+  });
+
   return {
     ...response,
     ...(pctAuctionTop != null ? { inflation_percent_vs_auction_open: pctAuctionTop } : {}),
@@ -87,6 +97,7 @@ export function attachValuationExplainability(
         ...cached.scope,
         position: effectiveScope.position ?? cached.scope.position,
       },
+      market_pressure,
     },
     valuations,
   };
