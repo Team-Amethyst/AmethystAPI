@@ -1,4 +1,7 @@
-import { playerTokensFromLean } from "../lib/fantasyRosterSlots";
+import {
+  bestAuctionSurplusSlot,
+  playerTokensFromLean,
+} from "../lib/fantasyRosterSlots";
 import { classifyDurabilityExpectation } from "../lib/durabilityExpectation";
 import type { DurabilityExpectationReason } from "../types/durabilityExpectation";
 import { getPlayerId } from "../lib/playerId";
@@ -58,6 +61,8 @@ export function applyRecommendedBidPass(params: {
   replForTeam: Record<string, number>;
   rosterSlotKeysForFit: Set<string>;
   surplusBasisByPlayerId?: Map<string, number>;
+  assignedSlotByPlayerId?: Map<string, string>;
+  marginalReplacementByPlayerId?: Map<string, number>;
   curveTierByPlayerId?: Map<string, string>;
   curveWeightByPlayerId?: Map<string, number>;
 }): void {
@@ -72,6 +77,8 @@ export function applyRecommendedBidPass(params: {
     replForTeam,
     rosterSlotKeysForFit,
     surplusBasisByPlayerId,
+    assignedSlotByPlayerId,
+    marginalReplacementByPlayerId,
     curveTierByPlayerId,
     curveWeightByPlayerId,
   } = params;
@@ -104,6 +111,19 @@ export function applyRecommendedBidPass(params: {
         replForTeam,
         rosterSlotKeysForFit
       );
+      const greedySlot = assignedSlotByPlayerId?.get(row.player_id);
+      const greedyRepl = marginalReplacementByPlayerId?.get(row.player_id);
+      const baselineForExplain =
+        lpEx?.value != null && Number.isFinite(lpEx.value) ? lpEx.value : row.baseline_value;
+      const auctionSurplusBest =
+        baselineForExplain != null && Number.isFinite(baselineForExplain)
+          ? bestAuctionSurplusSlot(
+              baselineForExplain,
+              tokens,
+              replForTeam,
+              rosterSlotKeysForFit
+            )
+          : null;
       const sbEx = surplusBasisByPlayerId?.get(row.player_id);
       const meta = (
         lpEx?.projection as { __valuation_meta__?: Record<string, unknown> } | undefined
@@ -121,12 +141,23 @@ export function applyRecommendedBidPass(params: {
             durability_expectation: "unknown" as const,
             durability_expectation_reasons: [] as DurabilityExpectationReason[],
           };
+      const explainSlot =
+        auctionSurplusBest?.slot ??
+        (greedySlot != null && greedySlot.toUpperCase() !== "BN"
+          ? greedySlot
+          : replBestEx?.key ?? null);
+      const explainRepl =
+        auctionSurplusBest != null
+          ? auctionSurplusBest.replacement
+          : greedySlot != null && greedySlot.toUpperCase() !== "BN"
+            ? (greedyRepl ?? 0)
+            : (replBestEx?.value ?? null);
       row.valuation_explain = {
         effective_positions: [...tokens],
-        replacement_key_used: replBestEx?.key ?? null,
+        replacement_key_used: explainSlot,
         replacement_value_used:
-          replBestEx?.value != null
-            ? Number(replBestEx.value.toFixed(4))
+          explainRepl != null && Number.isFinite(explainRepl)
+            ? Number(explainRepl.toFixed(4))
             : null,
         surplus_basis:
           sbEx != null && Number.isFinite(sbEx)

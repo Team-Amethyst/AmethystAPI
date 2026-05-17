@@ -101,7 +101,13 @@ export function buildValuedRows(params: {
         const surplusDollars = v2Result.playerIdToSurplusDollars!.get(pid) ?? 0;
         adjustedValue = parseFloat((minAuctionBid + surplusDollars).toFixed(2));
       } else {
-        adjustedValue = parseFloat((minAuctionBid + inflationFactor * sb).toFixed(2));
+        const draftableIds = v2Result.draftablePlayerIds;
+        const inDraftable =
+          draftableIds.length === 0 || draftableIds.includes(pid);
+        const allocSb = inDraftable ? sb : 0;
+        adjustedValue = parseFloat(
+          (minAuctionBid + inflationFactor * allocSb).toFixed(2)
+        );
       }
     } else if (inflationModelEffective === "surplus_slots_v1") {
       adjustedValue = parseFloat(

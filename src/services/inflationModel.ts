@@ -78,6 +78,8 @@ export function selectInflationModel(params: {
         deterministic: options?.deterministic,
         seed: options?.seed,
         positionOverrides: options?.positionOverrides,
+        hybridSurplusCalibration: options?.hybridSurplusCalibration,
+        categoryProjectionById: options?.categoryProjectionById,
       }
     );
     if (inflationPhaseTimings) {

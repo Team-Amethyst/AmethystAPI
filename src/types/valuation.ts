@@ -13,6 +13,7 @@ import type {
 import type { BaselineRiskExplainFields } from "./baselineRiskExplain";
 import type { DurabilityExpectation, DurabilityExpectationReason } from "./durabilityExpectation";
 import type { MarketPressureSnapshot } from "./marketPressure";
+import type { HybridSurplusCalibration } from "../services/replacementSlotsV2Config";
 export type PositionOverrideEntry = { player_id: string; positions: string[] };
 
 /** Per-player injury severity from Draftroom (roster / IL status); overrides Mongo `injurySeverity` for baseline injury pass only. */
@@ -151,6 +152,10 @@ export interface CalculateInflationOptions {
   recommendedBidSoftCapRatio?: number;
   /** When set, Engine accumulates inflation sub-phase durations (ms) for ops / staging. */
   inflationPhaseTimings?: Record<string, number>;
+  /** Audit / calibration: override hybrid surplus lift (production uses defaults). */
+  hybridSurplusCalibration?: HybridSurplusCalibration;
+  /** Audit: projection_component by player_id for position-aware hybrid gate. */
+  categoryProjectionById?: Map<string, number>;
 }
 
 export interface ValuedPlayer {

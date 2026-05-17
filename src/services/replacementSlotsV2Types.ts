@@ -4,6 +4,14 @@ export type ReplacementSlotsV2Result = {
   inflation_factor_precap: number;
   pool_value_remaining: number;
   playerIdToSurplusBasis: Map<string, number>;
+  /** Slot-marginal surplus before hybrid lift (audit). */
+  playerIdToSlotOnlySurplusBasis?: Map<string, number>;
+  /** Hybrid lift amount applied over slot surplus (audit). */
+  playerIdToHybridLift?: Map<string, number>;
+  /** Greedy undrafted slot each player received (audit / explain). */
+  playerIdToAssignedSlot?: Map<string, string>;
+  /** Replacement floor at assignment (`marginalReplacement` in greedy pass). */
+  playerIdToMarginalReplacement?: Map<string, number>;
   draftablePoolSize: number;
   /**
    * Undrafted players whose greedy slot assignment reduced remaining league demand

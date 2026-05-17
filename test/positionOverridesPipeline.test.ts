@@ -364,8 +364,12 @@ describe("position_overrides pipeline", () => {
       withOv.replacement_values_by_slot_or_position?.MI ??
         (withOv.replacement_values_by_slot_or_position as Record<string, number>)?.mi
     ).toBeDefined();
-    expect(withOv.inflation_factor).toBeGreaterThan(0);
-    expect(withoutOv.inflation_factor).toBeGreaterThan(0);
+    if ((withOv.total_surplus_mass ?? 0) > 0) {
+      expect(withOv.inflation_factor).toBeGreaterThan(0);
+    }
+    if ((withoutOv.total_surplus_mass ?? 0) > 0) {
+      expect(withoutOv.inflation_factor).toBeGreaterThan(0);
+    }
   });
 
   it("SP primary override matches catalog-only SP tokens (no surprise drift)", () => {

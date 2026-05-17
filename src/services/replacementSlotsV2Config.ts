@@ -18,3 +18,45 @@ export const SLOT_REPLACEMENT_PERCENTILE: Record<string, number> = {
 };
 
 export const SLOT_REPLACEMENT_DEFAULT_PERCENTILE = 0.24;
+
+/**
+ * Hybrid surplus: slot marginal remains primary; baseline strength lifts elites
+ * assigned into saturated slots (e.g. SS) without UTIL/BN artifacts or ADP.
+ */
+export const HYBRID_SURPLUS_BASELINE_PERCENTILE = 0.18;
+/** Scales baseline excess above undrafted-pool percentile (not slot replacement). */
+export const HYBRID_SURPLUS_STRENGTH_MULTIPLIER = 2.15;
+/** Only lift players whose slot marginal surplus is below this draftable-pool quantile. */
+export const HYBRID_SURPLUS_SLOT_BELOW_PERCENTILE = 0.52;
+/** Max hybrid surplus_basis for saturated-slot elite hitters (targets starter-tier spread). */
+export const HYBRID_SURPLUS_MAX_LIFT_PER_PLAYER = 46;
+
+/** Production default hybrid calibration (pre_draft fixture tuned). */
+export const DEFAULT_HYBRID_SURPLUS_CALIBRATION = {
+  eliteGateMin: 60.5,
+  hybridCap: 46,
+  strengthMultiplier: 2.15,
+  gateMode: "hard" as const,
+  smoothRampSpan: 4,
+  baselinePercentile: HYBRID_SURPLUS_BASELINE_PERCENTILE,
+  slotBelowPercentile: HYBRID_SURPLUS_SLOT_BELOW_PERCENTILE,
+};
+
+export type HybridSurplusGateMode = "hard" | "smooth";
+
+export type HybridSurplusCalibration = {
+  eliteGateMin: number;
+  hybridCap: number;
+  strengthMultiplier: number;
+  gateMode?: HybridSurplusGateMode;
+  /** Smooth ramp width above `eliteGateMin` when gateMode is smooth. */
+  smoothRampSpan?: number;
+  baselinePercentile?: number;
+  slotBelowPercentile?: number;
+  /** Scenario 5: require projection_component >= this (no ADP). */
+  minCategoryProjection?: number;
+  /** Scenario 5: assigned slot must be one of these (uppercase). */
+  scarceSlotsOnly?: readonly string[];
+  /** Scenario 5: lower effective gate by this much on scarce slots when category passes. */
+  categoryStrongGateRelax?: number;
+};

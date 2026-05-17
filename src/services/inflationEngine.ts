@@ -197,7 +197,8 @@ export function calculateInflation(
     const applied = applyAuctionCurveToV2Result({
       requestedModel: options?.auctionCurveModel,
       v2Result,
-      undraftedFringeIds: undraftedFull.map((p) => getPlayerId(p)),
+      // Surplus tiers apply only to greedy draftable winners; others stay at min_bid.
+      undraftedFringeIds: [],
       leagueState,
       inflationFactor,
     });
@@ -272,6 +273,8 @@ export function calculateInflation(
       inflationModelEffective === "replacement_slots_v2" && v2ForRows
         ? v2ForRows.playerIdToSurplusBasis
         : undefined,
+    assignedSlotByPlayerId: v2ForRows?.playerIdToAssignedSlot,
+    marginalReplacementByPlayerId: v2ForRows?.playerIdToMarginalReplacement,
     curveTierByPlayerId: v2ForRows?.playerIdToSurplusTier,
     curveWeightByPlayerId: v2ForRows?.playerIdToCurveWeight,
   });

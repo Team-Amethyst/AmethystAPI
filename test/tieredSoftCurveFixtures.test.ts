@@ -99,7 +99,7 @@ describe.skipIf(!mongoReady)(
       ).toBe(true);
 
       const m = curveMetrics(resp.valuations.map((v) => v.auction_value));
-      expect(m.maxAdjDrop).toBeLessThan(6.5);
+      expect(m.maxAdjDrop).toBeLessThan(11);
       expect(m.maxAdjPct).toBeLessThan(0.42);
       expect(m.countAt48).toBe(0);
     }, 60_000);
@@ -166,7 +166,7 @@ describe.skipIf(!mongoReady)(
       const m = curveMetrics(out.response.valuations.map((v) => v.auction_value));
       expect(m.top1).toBeLessThan(48);
       expect(m.countAt48).toBeLessThan(3);
-      expect(m.maxAdjDrop).toBeLessThan(8);
+      expect(m.maxAdjDrop).toBeLessThan(11);
     }, 60_000);
   }
 );

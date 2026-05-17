@@ -29,6 +29,7 @@ exports[`calculateInflation with normalized fixtures > legacy-empty deterministi
     "phase": "fresh",
     "remaining_active_slots": 36,
     "surplus_mass_ratio": 0,
+    "thin_true_surplus_mass": false,
     "total_surplus_mass": 0,
   },
   "draftable_player_ids": [
@@ -168,6 +169,7 @@ exports[`calculateInflation with normalized fixtures > nested-after-pick applies
     "phase": "mid_draft",
     "remaining_active_slots": 35,
     "surplus_mass_ratio": 0,
+    "thin_true_surplus_mass": false,
     "total_surplus_mass": 0,
   },
   "draftable_player_ids": [],

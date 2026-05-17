@@ -12,13 +12,21 @@ export {
   type PositionOverrideMap,
 } from "./fantasyPositioning";
 export {
+  AUCTION_SURPLUS_SPECIFIC_SLOTS,
+  assignCandidateToSlot,
+  bestMarginalSlotPick,
+  marginalScoreForSlot,
   buildLeagueSlotDemand,
   cloneDemandMap,
+  eligibleAuctionSurplusSlots,
   greedyAssignLeagueSlots,
   greedyAssignLeagueSlotsMutable,
+  bestAuctionSurplusSlot,
   maxSurplusOverSlots,
+  replacementForSlotKey,
   replacementLevelsFromSlotValues,
   replacementLevelsFromSlotValuesPercentile,
+  slotCurrentMin,
   sumDemand,
   type SlotAssignmentCandidate,
 } from "./fantasySlotAssignment";

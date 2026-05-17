@@ -177,6 +177,12 @@ export function resolveAuctionCurveForLeague(params: {
   const massRatio =
     state.totalSurplusMass / Math.max(state.allocatableSurplusDollars, 1);
   const compressed = isLinearCurveOverCompressedState(state, linearPreview);
+  /** After UTIL/BN surplus fix, mass ratio is often << 2.5; tiered allocation avoids linear inflation blow-up. */
+  const thinTrueSurplusMass =
+    massRatio < 2.5 &&
+    state.keeperCount > 0 &&
+    phase !== "fresh" &&
+    phase !== "near_complete";
 
   const curveInputs: Record<string, number | string | boolean> = {
     phase,
@@ -195,6 +201,7 @@ export function resolveAuctionCurveForLeague(params: {
     linear_top10_spread: parseFloat(linearPreview.top10Spread.toFixed(4)),
     linear_top1: parseFloat(linearPreview.top1.toFixed(2)),
     linear_over_compressed: compressed,
+    thin_true_surplus_mass: thinTrueSurplusMass,
   };
 
   let internalMode: SurplusAllocationMode = "linear";
@@ -211,15 +218,28 @@ export function resolveAuctionCurveForLeague(params: {
       internalMode = "linear";
       reason = "fresh_board_linear";
     } else if (phase === "near_complete") {
-      internalMode = "linear";
-      reason = "near_complete_linear";
-    } else if (compressed) {
+      if (
+        massRatio < 2.5 &&
+        state.allocatableSurplusDollars > 0 &&
+        state.draftablePoolSize > 0
+      ) {
+        internalMode = "tiered_soft";
+        reason = "near_complete_thin_true_surplus_tiered_soft";
+      } else {
+        internalMode = "linear";
+        reason = "near_complete_linear";
+      }
+    } else if (compressed || thinTrueSurplusMass) {
       internalMode =
         phase === "keeper_pre_draft" ? "tiered_keeper" : "tiered_soft";
       reason =
         phase === "keeper_pre_draft"
-          ? "keeper_compressed_linear_tiered"
-          : "mid_draft_compressed_tiered_soft";
+          ? compressed
+            ? "keeper_compressed_linear_tiered"
+            : "keeper_thin_true_surplus_tiered"
+          : compressed
+            ? "mid_draft_compressed_tiered_soft"
+            : "mid_draft_thin_true_surplus_tiered_soft";
     } else {
       internalMode = "linear";
       reason = "healthy_linear_spread";
@@ -272,7 +292,7 @@ export function computeSurplusGuardrailCaps(
     maxTopAuction = Math.min(maxTopAuction, perTeam * 0.17, 42);
   }
   if (phase === "keeper_pre_draft") {
-    maxTopAuction = Math.min(Math.max(maxTopAuction, 28), 48);
+    maxTopAuction = Math.min(Math.max(maxTopAuction, 28), 44);
   }
   const maxTop10Avg = Math.min(
     state.remainingAuctionDollars * 0.12,

@@ -3,6 +3,10 @@ import { getPlayerId } from "../lib/playerId";
 import {
   buildLeagueSlotDemand,
   cloneDemandMap,
+  bestMarginalSlotPick,
+  assignCandidateToSlot,
+  marginalScoreForSlot,
+  slotCurrentMin,
   greedyAssignLeagueSlotsMutable,
   maxSurplusOverSlots,
   playerTokensFromLean,
@@ -12,6 +16,7 @@ import {
   sumDemand,
 } from "../lib/fantasyRosterSlots";
 import {
+  type HybridSurplusCalibration,
   REPLACEMENT_SLOTS_V2_MIN_BID,
   SLOT_REPLACEMENT_DEFAULT_PERCENTILE,
   SLOT_REPLACEMENT_PERCENTILE,
@@ -19,9 +24,14 @@ import {
 import type { ReplacementSlotsV2Result } from "./replacementSlotsV2Types";
 import {
   buildRosteredCandidates,
+  applyHybridDraftableSurplusBasis,
   buildSurplusBasisMap,
   buildUndraftedCandidates,
-  computeTotalSurplusMass,
+  buildUndraftedPoolReplacementFloors,
+  effectiveMarginalReplacement,
+  finalizeReplacementValuesForSurplus,
+  surplusForDraftableAssignment,
+  type MarginalAssignmentSurplus,
 } from "./replacementSlotsV2Helpers";
 
 export type { ReplacementSlotsV2Result } from "./replacementSlotsV2Types";
@@ -42,6 +52,8 @@ export function computeReplacementSlotsV2(
     inflationCap?: number;
     inflationFloor?: number;
     positionOverrides?: PositionOverrideMap;
+    hybridSurplusCalibration?: HybridSurplusCalibration;
+    categoryProjectionById?: Map<string, number>;
   }
 ): ReplacementSlotsV2Result {
   const deterministic = Boolean(options?.deterministic);
@@ -139,38 +151,188 @@ export function computeReplacementSlotsV2(
   const undraftedCandidateById = new Map(
     undraftedCandidates.map((c) => [c.player_id, c] as const)
   );
+  const replAfterRostered = replacementLevelsFromSlotValues(
+    slotValues,
+    rosterSlotKeys
+  );
+  const replPoolFloor = buildUndraftedPoolReplacementFloors(
+    undraftedCandidates,
+    rosterSlotKeys,
+    SLOT_REPLACEMENT_PERCENTILE,
+    SLOT_REPLACEMENT_DEFAULT_PERCENTILE
+  );
 
   const undraftedAssignedIds = new Set<string>();
   const undraftedSlotValues = new Map<string, number[]>();
+  const marginalByPlayerId = new Map<string, MarginalAssignmentSurplus>();
+  const playerIdToAssignedSlot = new Map<string, string>();
+  const playerIdToMarginalReplacement = new Map<string, number>();
+  const remainingUndraftedIds = new Set(
+    undraftedCandidates.map((c) => c.player_id)
+  );
 
-  for (const c of undraftedCandidates) {
-    if (sumDemand(demand) <= 0) break;
+  const onAssignPlayer = (
+    playerId: string,
+    slotKey: string,
+    baseline: number,
+    marginalReplacement: number
+  ) => {
+    const arr = undraftedSlotValues.get(slotKey) ?? [];
+    arr.push(baseline);
+    undraftedSlotValues.set(slotKey, arr);
+    const c = undraftedCandidateById.get(playerId);
+    const tokens = c?.tokens ?? [];
+    const effectiveMarginal = effectiveMarginalReplacement(
+      slotKey,
+      marginalReplacement,
+      replAfterRostered,
+      replPoolFloor
+    );
+    const surplus = surplusForDraftableAssignment({
+      baseline,
+      tokens,
+      slotKey,
+      marginalReplacement,
+      replAfterRostered,
+      replPoolFloor,
+      rosterSlotKeys,
+    });
+    marginalByPlayerId.set(playerId, {
+      slot: slotKey,
+      marginalReplacement: effectiveMarginal,
+      surplus,
+    });
+    playerIdToAssignedSlot.set(playerId, slotKey);
+    playerIdToMarginalReplacement.set(playerId, effectiveMarginal);
+  };
+
+  const assignOneToSlot = (
+    bestCandidate: (typeof undraftedCandidates)[number],
+    slotKey: string
+  ) => {
     const before = sumDemand(demand);
-    greedyAssignLeagueSlotsMutable(
-      [c],
+    const ok = assignCandidateToSlot(
+      bestCandidate,
+      slotKey,
       demand,
       slotValues,
-      rosterSlotKeys,
       {
-        deterministic,
-        seed,
-        onAssign: (_playerId, slotKey, baseline) => {
-          const arr = undraftedSlotValues.get(slotKey) ?? [];
-          arr.push(baseline);
-          undraftedSlotValues.set(slotKey, arr);
-        },
+        rosteredReplFloor: replAfterRostered,
+        replPoolFloor,
+        onAssign: onAssignPlayer,
       }
     );
+    if (!ok) return;
     const after = sumDemand(demand);
-    if (after < before) undraftedAssignedIds.add(c.player_id);
+    remainingUndraftedIds.delete(bestCandidate.player_id);
+    if (after < before) undraftedAssignedIds.add(bestCandidate.player_id);
+  };
+
+  const activeSlotOrder = [...rosterSlotKeys].filter(
+    (k) => k.toUpperCase() !== "BN"
+  );
+  const baselineFirstSlots = new Set(
+    ["C", "1B", "2B", "3B", "SS"].filter((s) => rosterSlotKeys.has(s))
+  );
+
+  /** One pass per active slot per round so OF/SP both advance (not baseline-sorted SP monopolization). */
+  while (sumDemand(demand) > 0 && remainingUndraftedIds.size > 0) {
+    let progressed = false;
+    for (const slotKey of activeSlotOrder) {
+      if ((demand.get(slotKey) ?? 0) <= 0) continue;
+
+      let bestCandidate: (typeof undraftedCandidates)[number] | null = null;
+      let bestScore = Number.NEGATIVE_INFINITY;
+      let bestBaseline = Number.NEGATIVE_INFINITY;
+      let bestTieId = "";
+      const preferBaseline =
+        baselineFirstSlots.has(slotKey) &&
+        slotCurrentMin(slotValues, slotKey) <= 1e-9;
+
+      for (const c of undraftedCandidates) {
+        if (!remainingUndraftedIds.has(c.player_id)) continue;
+        const pick = marginalScoreForSlot(
+          c,
+          slotKey,
+          demand,
+          slotValues,
+          replAfterRostered,
+          replPoolFloor
+        );
+        if (pick == null || pick.score <= 0) continue;
+        if (preferBaseline) {
+          if (
+            c.baseline > bestBaseline + 1e-9 ||
+            (Math.abs(c.baseline - bestBaseline) < 1e-9 &&
+              c.player_id.localeCompare(bestTieId) < 0)
+          ) {
+            bestCandidate = c;
+            bestBaseline = c.baseline;
+            bestScore = pick.score;
+            bestTieId = c.player_id;
+          }
+          continue;
+        }
+        if (
+          pick.score > bestScore + 1e-9 ||
+          (Math.abs(pick.score - bestScore) < 1e-9 &&
+            c.player_id.localeCompare(bestTieId) < 0)
+        ) {
+          bestCandidate = c;
+          bestScore = pick.score;
+          bestBaseline = c.baseline;
+          bestTieId = c.player_id;
+        }
+      }
+
+      if (bestCandidate == null) continue;
+      assignOneToSlot(bestCandidate, slotKey);
+      progressed = true;
+    }
+    if (!progressed) break;
+  }
+
+  while (sumDemand(demand) > 0 && remainingUndraftedIds.size > 0) {
+    let bestCandidate: (typeof undraftedCandidates)[number] | null = null;
+    let bestPick: ReturnType<typeof bestMarginalSlotPick> = null;
+    let bestTieId = "";
+
+    for (const c of undraftedCandidates) {
+      if (!remainingUndraftedIds.has(c.player_id)) continue;
+      const pick = bestMarginalSlotPick(
+        c,
+        demand,
+        slotValues,
+        rosterSlotKeys,
+        replAfterRostered,
+        replPoolFloor,
+        { deterministic, seed }
+      );
+      if (pick == null) continue;
+      if (
+        bestPick == null ||
+        pick.score > bestPick.score + 1e-9 ||
+        (Math.abs(pick.score - bestPick.score) < 1e-9 &&
+          c.player_id.localeCompare(bestTieId) < 0)
+      ) {
+        bestCandidate = c;
+        bestPick = pick;
+        bestTieId = c.player_id;
+      }
+    }
+    if (bestCandidate == null || bestPick == null) break;
+    assignOneToSlot(bestCandidate, bestPick.slot);
   }
 
   const replacement_values_by_slot_or_position =
-    replacementLevelsFromSlotValuesPercentile(
-      undraftedSlotValues,
-      rosterSlotKeys,
-      SLOT_REPLACEMENT_PERCENTILE,
-      SLOT_REPLACEMENT_DEFAULT_PERCENTILE
+    finalizeReplacementValuesForSurplus(
+      replacementLevelsFromSlotValuesPercentile(
+        undraftedSlotValues,
+        rosterSlotKeys,
+        SLOT_REPLACEMENT_PERCENTILE,
+        SLOT_REPLACEMENT_DEFAULT_PERCENTILE
+      ),
+      rosterSlotKeys
     );
 
   const surplus_cash = Math.max(
@@ -178,12 +340,55 @@ export function computeReplacementSlotsV2(
     budgetRemaining - remaining_slots * REPLACEMENT_SLOTS_V2_MIN_BID
   );
 
-  const total_surplus_mass = computeTotalSurplusMass({
-    assignedIds: undraftedAssignedIds,
-    candidateById: undraftedCandidateById,
-    replacementValues: replacement_values_by_slot_or_position,
+  const slotOnlySurplusBasis = buildSurplusBasisMap(
+    undrafted,
+    replacement_values_by_slot_or_position,
     rosterSlotKeys,
-  });
+    positionOverrides,
+    marginalByPlayerId,
+    undraftedAssignedIds,
+    replPoolFloor
+  );
+
+  let slotOnlyMass = 0;
+  for (const id of undraftedAssignedIds) {
+    slotOnlyMass += slotOnlySurplusBasis.get(id) ?? 0;
+  }
+
+  const draftableBaselineById = new Map<string, number>();
+  const draftableTokensById = new Map<string, readonly string[]>();
+  for (const c of undraftedCandidates) {
+    draftableBaselineById.set(c.player_id, c.baseline);
+    draftableTokensById.set(c.player_id, c.tokens);
+  }
+  const undraftedBaselinesForFloor: number[] = [];
+  for (const p of undrafted) {
+    const b = baselineById.get(getPlayerId(p)) ?? 0;
+    if (b > 0) undraftedBaselinesForFloor.push(b);
+  }
+
+  const hybridApply =
+    slotOnlyMass > 0
+      ? applyHybridDraftableSurplusBasis({
+          surplusBasisById: slotOnlySurplusBasis,
+          assignedIds: undraftedAssignedIds,
+          baselineById: draftableBaselineById,
+          strengthFloorBaselines: undraftedBaselinesForFloor,
+          playerTokensById: draftableTokensById,
+          assignedSlotById: playerIdToAssignedSlot,
+          categoryProjectionById: options?.categoryProjectionById,
+          targetTotalMass: slotOnlyMass,
+          calibration: options?.hybridSurplusCalibration,
+        })
+      : null;
+  const playerIdToSurplusBasis =
+    hybridApply?.surplusBasisById ?? slotOnlySurplusBasis;
+  const playerIdToHybridLift = hybridApply?.hybridLiftByPlayerId;
+
+  let total_surplus_mass = 0;
+  for (const id of undraftedAssignedIds) {
+    total_surplus_mass += playerIdToSurplusBasis.get(id) ?? 0;
+  }
 
   const draftablePoolSize = undraftedAssignedIds.size;
 
@@ -207,13 +412,6 @@ export function computeReplacementSlotsV2(
     inflation_factor_precap = inflation_raw;
   }
 
-  const playerIdToSurplusBasis = buildSurplusBasisMap(
-    undrafted,
-    replacement_values_by_slot_or_position,
-    rosterSlotKeys,
-    positionOverrides
-  );
-
   const draftablePlayerIds = Array.from(undraftedAssignedIds);
 
   const pool_value_remaining = total_surplus_mass;
@@ -223,6 +421,10 @@ export function computeReplacementSlotsV2(
     inflation_factor_precap,
     pool_value_remaining,
     playerIdToSurplusBasis,
+    playerIdToSlotOnlySurplusBasis: slotOnlySurplusBasis,
+    playerIdToHybridLift,
+    playerIdToAssignedSlot,
+    playerIdToMarginalReplacement,
     draftablePoolSize,
     draftablePlayerIds,
     remaining_slots,

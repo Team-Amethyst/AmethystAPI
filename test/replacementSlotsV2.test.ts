@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { calculateInflation, getPlayerId } from "../src/services/inflationEngine";
 import {
   fitsRosterSlot,
+  maxSurplusOverSlots,
   playerTokensFromLean,
   replacementLevelsFromSlotValuesPercentile,
   tokenizeFantasyPositions,
@@ -480,6 +481,47 @@ describe("fantasyRosterSlots helpers", () => {
     expect(fitsRosterSlot("RP", rpTokens)).toBe(true);
     expect(hybridTokens.includes("SP")).toBe(true);
     expect(hybridTokens.includes("RP")).toBe(true);
+  });
+
+  it("draftable surplus uses marginal replacement at greedy assignment, not global OF percentile", () => {
+    const players = [
+      mk(1, 58, "OF", 1),
+      mk(2, 52, "3B", 1),
+      ...Array.from({ length: 40 }, (_, i) => mk(100 + i, 18 + (i % 8), "OF", 4)),
+    ];
+    const r = roster(
+      [
+        { pos: "OF", count: 4 },
+        { pos: "3B", count: 1 },
+        { pos: "BN", count: 2 },
+      ],
+      1,
+      [],
+      players,
+      "replacement_slots_v2",
+      { budget: 200, inflationCap: 10, inflationFloor: 0.1 }
+    );
+    const elite = r.valuations.find((v) => v.player_id === "1")!;
+    expect(elite.adjusted_value).toBeGreaterThan(5);
+    expect(elite.adjusted_value).toBeLessThan(150);
+  });
+
+  it("surplus_basis excludes UTIL@0 and BN@0 when a specific slot fits", () => {
+    const repl = {
+      C: 40,
+      "1B": 38,
+      "3B": 36,
+      OF: 42,
+      UTIL: 0,
+      BN: 0,
+      SP: 40,
+      RP: 38,
+    };
+    const keys = new Set(Object.keys(repl));
+    expect(maxSurplusOverSlots(55, ["3B", "DH"], repl, keys)).toBe(19);
+    expect(maxSurplusOverSlots(55, ["3B", "DH"], repl, keys)).not.toBe(55);
+    expect(maxSurplusOverSlots(60, ["P", "SP"], repl, keys)).toBeLessThan(25);
+    expect(maxSurplusOverSlots(60, ["P", "SP"], repl, keys)).not.toBe(60);
   });
 
   it("generic P starter no longer collapses to BN-level replacement in SP/RP leagues", () => {

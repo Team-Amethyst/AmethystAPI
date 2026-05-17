@@ -123,7 +123,7 @@ export function computeOpeningAuctionValueByPlayerId(params: {
   const applied = applyAuctionCurveToV2Result({
     requestedModel: options?.auctionCurveModel,
     v2Result: v2Open,
-    undraftedFringeIds: undraftedOpen.map((p) => getPlayerId(p)),
+    undraftedFringeIds: [],
     leagueState,
     inflationFactor: inflationFactorOpen,
   });
