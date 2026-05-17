@@ -110,14 +110,6 @@ describe("buildMarketPressureSnapshot (unit)", () => {
 describe.skipIf(!draftCheckpointFixturesAvailable())(
   "market_pressure checkpoints (Draft fixtures)",
   () => {
-    const preInput = loadCheckpoint("pre_draft");
-    const preIds = collectFixturePlayerIds(
-      JSON.parse(
-        readFileSync(resolveDraftCheckpointFixturePath("pre_draft"), "utf8")
-      ) as Record<string, unknown>
-    );
-    const catalog = mockCatalogForIds(preIds);
-
     function runCheckpoint(id: (typeof ENGINE_CHECKPOINT_IDS)[number]) {
       const input = loadCheckpoint(id);
       const ids = collectFixturePlayerIds(
@@ -138,6 +130,13 @@ describe.skipIf(!draftCheckpointFixturesAvailable())(
     }
 
     it("pre_draft keeper: not_started inflation, high compression, tight budget", () => {
+      const preInput = loadCheckpoint("pre_draft");
+      const preIds = collectFixturePlayerIds(
+        JSON.parse(
+          readFileSync(resolveDraftCheckpointFixturePath("pre_draft"), "utf8")
+        ) as Record<string, unknown>
+      );
+      const catalog = mockCatalogForIds(preIds);
       const out = executeValuationWorkflow(catalog, {
         ...preInput,
         deterministic: true,
