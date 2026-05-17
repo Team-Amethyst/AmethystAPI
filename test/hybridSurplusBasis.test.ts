@@ -2,6 +2,10 @@ import { describe, expect, it } from "vitest";
 import {
   applyHybridDraftableSurplusBasis,
 } from "../src/services/replacementSlotsV2Helpers";
+import {
+  DEFAULT_HYBRID_SURPLUS_CALIBRATION,
+  STAGE1_HYBRID_SURPLUS_CALIBRATION,
+} from "../src/services/replacementSlotsV2Config";
 import { maxSurplusOverSlots } from "../src/lib/fantasyRosterSlots";
 
 describe("applyHybridDraftableSurplusBasis", () => {
@@ -28,7 +32,7 @@ describe("applyHybridDraftableSurplusBasis", () => {
         ["b", ["SS"]],
         ["c", ["3B"]],
       ]),
-      calibration: { eliteGateMin: 60, hybridCap: 46, strengthMultiplier: 2.15 },
+      calibration: { ...STAGE1_HYBRID_SURPLUS_CALIBRATION, eliteGateMin: 60 },
     });
     expect(out.surplusBasisById.get("a")).toBe(50);
     expect(out.surplusBasisById.get("b") ?? 0).toBeGreaterThan(30);
@@ -49,6 +53,62 @@ describe("applyHybridDraftableSurplusBasis", () => {
       calibration: { eliteGateMin: 58, hybridCap: 46, strengthMultiplier: 2.15 },
     });
     expect(out.surplusBasisById.get("fringe")).toBe(8);
+  });
+});
+
+describe("position-aware scarce-slot calibration", () => {
+  it("lifts 3B elite with strong category projection but not OF peer at same baseline", () => {
+    const assigned = new Set(["of_star", "third"]);
+    const surplusBasisById = new Map([
+      ["of_star", 5],
+      ["third", 4],
+    ]);
+    const baselineById = new Map([
+      ["of_star", 58],
+      ["third", 58],
+    ]);
+    const categoryProjectionById = new Map([
+      ["of_star", 42],
+      ["third", 42],
+    ]);
+    const assignedSlotById = new Map([
+      ["of_star", "OF"],
+      ["third", "3B"],
+    ]);
+    const out = applyHybridDraftableSurplusBasis({
+      surplusBasisById,
+      assignedIds: assigned,
+      baselineById,
+      targetTotalMass: 9,
+      strengthFloorBaselines: [40, 45, 50, 55, 58],
+      playerTokensById: new Map([
+        ["of_star", ["OF"]],
+        ["third", ["3B"]],
+      ]),
+      categoryProjectionById,
+      assignedSlotById,
+      calibration: DEFAULT_HYBRID_SURPLUS_CALIBRATION,
+    });
+    expect(out.surplusBasisById.get("of_star")).toBe(5);
+    expect(out.surplusBasisById.get("third") ?? 0).toBeGreaterThan(20);
+    expect(out.hybridLiftByPlayerId.get("third") ?? 0).toBeGreaterThan(0);
+  });
+
+  it("does not lift scarce-slot hitter below minCategoryProjection", () => {
+    const assigned = new Set(["weak"]);
+    const out = applyHybridDraftableSurplusBasis({
+      surplusBasisById: new Map([["weak", 3]]),
+      assignedIds: assigned,
+      baselineById: new Map([["weak", 58]]),
+      targetTotalMass: 3,
+      strengthFloorBaselines: [50, 55, 58],
+      playerTokensById: new Map([["weak", ["SS"]]]),
+      categoryProjectionById: new Map([["weak", 35]]),
+      assignedSlotById: new Map([["weak", "SS"]]),
+      calibration: DEFAULT_HYBRID_SURPLUS_CALIBRATION,
+    });
+    expect(out.surplusBasisById.get("weak")).toBe(3);
+    expect(out.hybridLiftByPlayerId.size).toBe(0);
   });
 });
 

@@ -10,6 +10,7 @@ import {
 } from "../lib/fantasyRosterSlots";
 import {
   DEFAULT_HYBRID_SURPLUS_CALIBRATION,
+  HYBRID_SURPLUS_CORE,
   type HybridSurplusCalibration,
   HYBRID_SURPLUS_BASELINE_PERCENTILE,
   HYBRID_SURPLUS_SLOT_BELOW_PERCENTILE,
@@ -326,10 +327,9 @@ export function applyHybridDraftableSurplusBasis(params: {
   assignedSlotById?: Map<string, string>;
   calibration?: HybridSurplusCalibration;
 }): HybridSurplusApplyResult {
-  const cal = {
-    ...DEFAULT_HYBRID_SURPLUS_CALIBRATION,
-    ...params.calibration,
-  };
+  const cal: HybridSurplusCalibration = params.calibration
+    ? { ...HYBRID_SURPLUS_CORE, ...params.calibration }
+    : { ...HYBRID_SURPLUS_CORE, ...DEFAULT_HYBRID_SURPLUS_CALIBRATION };
   const {
     surplusBasisById,
     assignedIds,

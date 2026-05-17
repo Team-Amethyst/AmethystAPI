@@ -31,15 +31,31 @@ export const HYBRID_SURPLUS_SLOT_BELOW_PERCENTILE = 0.52;
 /** Max hybrid surplus_basis for saturated-slot elite hitters (targets starter-tier spread). */
 export const HYBRID_SURPLUS_MAX_LIFT_PER_PLAYER = 46;
 
-/** Production default hybrid calibration (pre_draft fixture tuned). */
-export const DEFAULT_HYBRID_SURPLUS_CALIBRATION = {
-  eliteGateMin: 60.5,
-  hybridCap: 46,
-  strengthMultiplier: 2.15,
-  gateMode: "hard" as const,
-  smoothRampSpan: 4,
+/** Shared hybrid knobs (merged under scenario-specific calibration). */
+export const HYBRID_SURPLUS_CORE = {
+  hybridCap: HYBRID_SURPLUS_MAX_LIFT_PER_PLAYER,
+  strengthMultiplier: HYBRID_SURPLUS_STRENGTH_MULTIPLIER,
   baselinePercentile: HYBRID_SURPLUS_BASELINE_PERCENTILE,
   slotBelowPercentile: HYBRID_SURPLUS_SLOT_BELOW_PERCENTILE,
+};
+
+/** Stage 1 shipped hybrid calibration (sensitivity baseline; hard gate 60.5). */
+export const STAGE1_HYBRID_SURPLUS_CALIBRATION: HybridSurplusCalibration = {
+  ...HYBRID_SURPLUS_CORE,
+  eliteGateMin: 60.5,
+  gateMode: "hard",
+  smoothRampSpan: 4,
+};
+
+/** Stage 2: smooth, position-aware saturated-slot lift (no ADP, capped). */
+export const DEFAULT_HYBRID_SURPLUS_CALIBRATION: HybridSurplusCalibration = {
+  ...HYBRID_SURPLUS_CORE,
+  eliteGateMin: 56,
+  gateMode: "smooth",
+  smoothRampSpan: 5,
+  minCategoryProjection: 40,
+  scarceSlotsOnly: ["C", "SS", "2B", "3B", "1B", "MI", "CI"],
+  categoryStrongGateRelax: 4,
 };
 
 export type HybridSurplusGateMode = "hard" | "smooth";
