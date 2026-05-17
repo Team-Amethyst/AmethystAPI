@@ -382,7 +382,7 @@ export function computeReplacementSlotsV2(
           calibration: options?.hybridSurplusCalibration,
         })
       : null;
-  let playerIdToSurplusBasis = new Map(
+  const playerIdToSurplusBasis = new Map(
     hybridApply?.surplusBasisById ?? slotOnlySurplusBasis
   );
   const playerIdToHybridLift = hybridApply?.hybridLiftByPlayerId;

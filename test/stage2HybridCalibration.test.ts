@@ -14,7 +14,6 @@ import {
 } from "../src/lib/checkpointSlotReconciliation";
 import { loadMongoCatalogForEngine } from "../src/lib/mongoCatalogPipeline";
 import { scriptMongoConnectOptions } from "../src/lib/mongoPoolConfig";
-import { sumAuctionValueForDraftablePool } from "../src/lib/rosterUniverseValuationCalibration";
 import { executeValuationWorkflow } from "../src/services/valuationWorkflow";
 import {
   applyHybridDraftableSurplusBasis,
@@ -23,21 +22,6 @@ import { DEFAULT_HYBRID_SURPLUS_CALIBRATION } from "../src/services/replacementS
 
 const mongoReady =
   Boolean(process.env.MONGO_URI) && draftCheckpointFixturesAvailable();
-
-const TRACKED = [
-  "Aaron Judge",
-  "Julio Rodríguez",
-  "Tarik Skubal",
-  "Bobby Witt Jr.",
-  "José Ramírez",
-  "Vladimir Guerrero Jr.",
-  "Gunnar Henderson",
-  "Cal Raleigh",
-  "Anthony Volpe",
-  "Spencer Jones",
-  "Will Warren",
-  "Camilo Doval",
-] as const;
 
 function loadPreDraft() {
   const raw = JSON.parse(
