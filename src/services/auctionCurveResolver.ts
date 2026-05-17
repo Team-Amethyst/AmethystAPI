@@ -419,6 +419,7 @@ export function allocateSurplusForCurve(params: {
   draftablePlayerIds: readonly string[];
   surplusBasisById: Map<string, number>;
   fringePlayerIds?: readonly string[];
+  hybridLiftById?: Map<string, number>;
   state: AuctionCurveLeagueState;
 }): {
   dollarsByPlayerId: Map<string, number>;
@@ -453,6 +454,7 @@ export function allocateSurplusForCurve(params: {
     surplusBasisById,
     fringePlayerIds,
     tierConfig: resolution.weights,
+    hybridLiftById: params.hybridLiftById,
   });
 
   const smoothed = applyTieredSurplusSmoothing({

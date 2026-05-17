@@ -56,6 +56,54 @@ describe("applyHybridDraftableSurplusBasis", () => {
   });
 });
 
+describe("incremental lift mode", () => {
+  it("adds differentiated lift without flattening elites to the same cap", () => {
+    const assigned = new Set(["witt", "ramirez", "filler"]);
+    const surplusBasisById = new Map([
+      ["witt", 3],
+      ["ramirez", 4.6],
+      ["filler", 45],
+    ]);
+    const baselineById = new Map([
+      ["witt", 61],
+      ["ramirez", 56],
+      ["filler", 40],
+    ]);
+    const categoryProjectionById = new Map([
+      ["witt", 45],
+      ["ramirez", 44],
+      ["filler", 30],
+    ]);
+    const assignedSlotById = new Map([
+      ["witt", "SS"],
+      ["ramirez", "3B"],
+      ["filler", "OF"],
+    ]);
+    const out = applyHybridDraftableSurplusBasis({
+      surplusBasisById,
+      assignedIds: assigned,
+      baselineById,
+      targetTotalMass: 8,
+      strengthFloorBaselines: [40, 50, 55, 56, 61],
+      playerTokensById: new Map([
+        ["witt", ["SS"]],
+        ["ramirez", ["3B"]],
+        ["filler", ["OF"]],
+      ]),
+      categoryProjectionById,
+      assignedSlotById,
+      calibration: DEFAULT_HYBRID_SURPLUS_CALIBRATION,
+    });
+    const wittSb = out.surplusBasisById.get("witt") ?? 0;
+    const ramirezSb = out.surplusBasisById.get("ramirez") ?? 0;
+    expect(wittSb).toBeGreaterThan(15);
+    expect(ramirezSb).toBeGreaterThan(12);
+    expect(Math.abs(wittSb - ramirezSb)).toBeGreaterThan(0.5);
+    expect(wittSb).toBeLessThan(46);
+    expect(ramirezSb).toBeLessThan(46);
+  });
+});
+
 describe("position-aware scarce-slot calibration", () => {
   it("lifts 3B elite with strong category projection but not OF peer at same baseline", () => {
     const assigned = new Set(["of_star", "third"]);
@@ -92,6 +140,22 @@ describe("position-aware scarce-slot calibration", () => {
     expect(out.surplusBasisById.get("of_star")).toBe(5);
     expect(out.surplusBasisById.get("third") ?? 0).toBeGreaterThan(20);
     expect(out.hybridLiftByPlayerId.get("third") ?? 0).toBeGreaterThan(0);
+  });
+
+  it("lifts scarce-slot elite when category projection meta is missing but baseline passes gate", () => {
+    const assigned = new Set(["ss_elite"]);
+    const out = applyHybridDraftableSurplusBasis({
+      surplusBasisById: new Map([["ss_elite", 3]]),
+      assignedIds: assigned,
+      baselineById: new Map([["ss_elite", 62]]),
+      targetTotalMass: 3,
+      strengthFloorBaselines: [50, 55, 60, 62],
+      playerTokensById: new Map([["ss_elite", ["SS"]]]),
+      assignedSlotById: new Map([["ss_elite", "SS"]]),
+      calibration: DEFAULT_HYBRID_SURPLUS_CALIBRATION,
+    });
+    expect(out.surplusBasisById.get("ss_elite") ?? 0).toBeGreaterThan(15);
+    expect(out.hybridLiftByPlayerId.get("ss_elite") ?? 0).toBeGreaterThan(10);
   });
 
   it("does not lift scarce-slot hitter below minCategoryProjection", () => {

@@ -59,6 +59,8 @@ export function buildTieredSurplusDollars(params: {
   surplusBasisById: Map<string, number>;
   fringePlayerIds?: readonly string[];
   tierConfig?: TierSurplusConfig;
+  /** Saturated-slot hybrid lift → at least starter-tier auction weight. */
+  hybridLiftById?: Map<string, number>;
 }): {
   dollarsByPlayerId: Map<string, number>;
   tierByPlayerId: Map<string, TieredSurplusTier>;
@@ -101,6 +103,16 @@ export function buildTieredSurplusDollars(params: {
     } else {
       tier = "depth";
       w = sb * cfg.depthWeight;
+    }
+    const hybridLift = params.hybridLiftById?.get(id) ?? 0;
+    if (hybridLift > 1e-9 && sb > 0) {
+      if (tier === "depth") {
+        tier = "starter";
+        w = sb * cfg.starterWeight * 1.12;
+      } else if (tier === "starter" && hybridLift >= 18) {
+        tier = "star";
+        w = sb * cfg.starWeight * 0.9;
+      }
     }
     tierByPlayerId.set(id, tier);
     weights.set(id, w);

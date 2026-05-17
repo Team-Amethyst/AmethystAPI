@@ -28,8 +28,15 @@ export const HYBRID_SURPLUS_BASELINE_PERCENTILE = 0.18;
 export const HYBRID_SURPLUS_STRENGTH_MULTIPLIER = 2.15;
 /** Only lift players whose slot marginal surplus is below this draftable-pool quantile. */
 export const HYBRID_SURPLUS_SLOT_BELOW_PERCENTILE = 0.52;
-/** Max hybrid surplus_basis for saturated-slot elite hitters (targets starter-tier spread). */
+/** Legacy replace-mode ceiling (Stage 1); incremental mode uses hybridLiftCap instead. */
 export const HYBRID_SURPLUS_MAX_LIFT_PER_PLAYER = 46;
+/** Default max surplus added on top of slot marginal (incremental lift mode). */
+export const HYBRID_SURPLUS_DEFAULT_LIFT_CAP = 30;
+/**
+ * Post-hybrid mass vs slot-only (1.0 = budget-neutral redistribution).
+ * Small values >1 allow modest inflation dilution for saturated-slot lifts.
+ */
+export const HYBRID_SURPLUS_MASS_GROWTH_CAP = 1.035;
 
 /** Shared hybrid knobs (merged under scenario-specific calibration). */
 export const HYBRID_SURPLUS_CORE = {
@@ -45,9 +52,10 @@ export const STAGE1_HYBRID_SURPLUS_CALIBRATION: HybridSurplusCalibration = {
   eliteGateMin: 60.5,
   gateMode: "hard",
   smoothRampSpan: 4,
+  liftMode: "replace",
 };
 
-/** Stage 2: smooth, position-aware saturated-slot lift (no ADP, capped). */
+/** Stage 2: incremental saturated-slot lift (slot-primary, no flat cap collision). */
 export const DEFAULT_HYBRID_SURPLUS_CALIBRATION: HybridSurplusCalibration = {
   ...HYBRID_SURPLUS_CORE,
   eliteGateMin: 56,
@@ -56,12 +64,23 @@ export const DEFAULT_HYBRID_SURPLUS_CALIBRATION: HybridSurplusCalibration = {
   minCategoryProjection: 40,
   scarceSlotsOnly: ["C", "SS", "2B", "3B", "1B", "MI", "CI"],
   categoryStrongGateRelax: 4,
+  liftMode: "incremental",
+  hybridLiftCap: HYBRID_SURPLUS_DEFAULT_LIFT_CAP,
+  hybridTotalCeiling: 48,
+  liftSoftness: 10,
+  baselineSpreadPerPoint: 0.72,
+  categoryLiftWeight: 0.18,
+  elitePartialLiftCap: 16,
+  massGrowthCap: HYBRID_SURPLUS_MASS_GROWTH_CAP,
+  slotLiftScale: { C: 1.06, SS: 1.02, "3B": 1.04, "1B": 0.98, "2B": 1, MI: 1, CI: 1 },
 };
 
 export type HybridSurplusGateMode = "hard" | "smooth";
+export type HybridSurplusLiftMode = "incremental" | "replace";
 
 export type HybridSurplusCalibration = {
   eliteGateMin: number;
+  /** Replace-mode total surplus ceiling (legacy). */
   hybridCap: number;
   strengthMultiplier: number;
   gateMode?: HybridSurplusGateMode;
@@ -69,10 +88,28 @@ export type HybridSurplusCalibration = {
   smoothRampSpan?: number;
   baselinePercentile?: number;
   slotBelowPercentile?: number;
-  /** Scenario 5: require projection_component >= this (no ADP). */
+  /** Require projection_component >= this (no ADP). */
   minCategoryProjection?: number;
-  /** Scenario 5: assigned slot must be one of these (uppercase). */
+  /** Assigned slot must be one of these (uppercase). */
   scarceSlotsOnly?: readonly string[];
-  /** Scenario 5: lower effective gate by this much on scarce slots when category passes. */
+  /** Lower effective gate on scarce slots when category passes. */
   categoryStrongGateRelax?: number;
+  /** incremental = slotSb + soft lift; replace = legacy min(cap, strength) total. */
+  liftMode?: HybridSurplusLiftMode;
+  /** Max surplus added above slot marginal (incremental mode). */
+  hybridLiftCap?: number;
+  /** Soft max final surplus_basis after lift. */
+  hybridTotalCeiling?: number;
+  /** Soft-cap knee for incremental lift curve (exp). */
+  liftSoftness?: number;
+  /** Baseline spread above gate so elites do not share identical surplus. */
+  baselineSpreadPerPoint?: number;
+  /** Extra lift scale from category projection above minCategoryProjection. */
+  categoryLiftWeight?: number;
+  /** Max add when slot surplus is already above pool median but still below ceiling. */
+  elitePartialLiftCap?: number;
+  /** Per-slot multiplier on incremental lift. */
+  slotLiftScale?: Readonly<Record<string, number>>;
+  /** Cap post-hybrid total mass vs slot-only (e.g. 1.045 = +4.5%). */
+  massGrowthCap?: number;
 };

@@ -81,6 +81,8 @@ export function buildValuedRows(params: {
     undraftedCount,
   } = params;
   const tieredSurplus =
+    v2Result?.auctionCurveInternalMode != null &&
+    v2Result.auctionCurveInternalMode !== "linear" &&
     v2Result?.playerIdToSurplusDollars != null &&
     (auctionCurveModel === "tiered_surplus_v1" ||
       auctionCurveModel === "adaptive_surplus_v1");
@@ -97,7 +99,10 @@ export function buildValuedRows(params: {
         v2Result.surplus_cash > 0
       ) {
         adjustedValue = parseFloat(Math.max(minAuctionBid, baselineValue).toFixed(2));
-      } else if (tieredSurplus) {
+      } else if (
+        tieredSurplus &&
+        (v2Result.playerIdToSurplusDollars?.size ?? 0) > 0
+      ) {
         const surplusDollars = v2Result.playerIdToSurplusDollars!.get(pid) ?? 0;
         adjustedValue = parseFloat((minAuctionBid + surplusDollars).toFixed(2));
       } else {

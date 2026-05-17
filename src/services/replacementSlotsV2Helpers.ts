@@ -305,9 +305,24 @@ function smoothGateWeight(
   gateMin: number,
   rampSpan: number
 ): number {
-  if (baseline <= gateMin + 1e-9) return 0;
+  if (baseline < gateMin - 1e-9) return 0;
   const t = Math.min(1, (baseline - gateMin) / Math.max(rampSpan, 1e-6));
   return t * t * (3 - 2 * t);
+}
+
+/** Soft asymptotic cap for incremental lift amounts (not a hard total-SB cliff). */
+function softIncrementalLift(raw: number, cap: number, softness: number): number {
+  if (cap <= 0 || raw <= 0) return 0;
+  const k = Math.max(softness, 0.5);
+  return cap * (1 - Math.exp(-raw / k));
+}
+
+function slotLiftMultiplier(
+  slot: string,
+  scales?: Readonly<Record<string, number>>
+): number {
+  if (!scales || Object.keys(scales).length === 0) return 1;
+  return scales[slot.toUpperCase()] ?? scales[slot] ?? 1;
 }
 
 export type HybridSurplusApplyResult = {
@@ -380,12 +395,23 @@ export function applyHybridDraftableSurplusBasis(params: {
 
   for (const id of assignedIds) {
     const slotSb = surplusBasisById.get(id) ?? 0;
-    if (slotSb >= slotMedian - 1e-9) continue;
     const tokens = playerTokensById?.get(id) ?? [];
     if (tokens.length > 0 && !tokensIncludeHitterSlot(tokens)) continue;
     const baseline = baselineById.get(id) ?? 0;
-    const proj = categoryProjectionById?.get(id) ?? 0;
-    if (cal.minCategoryProjection != null && proj < cal.minCategoryProjection - 1e-9) {
+    const projRaw = categoryProjectionById?.get(id);
+    const proj = projRaw ?? baseline;
+    if (
+      cal.minCategoryProjection != null &&
+      projRaw != null &&
+      projRaw < cal.minCategoryProjection - 1e-9
+    ) {
+      continue;
+    }
+    if (
+      cal.minCategoryProjection != null &&
+      projRaw == null &&
+      baseline < cal.minCategoryProjection - 1e-9
+    ) {
       continue;
     }
     const slot = (assignedSlotById?.get(id) ?? "").toUpperCase();
@@ -411,12 +437,72 @@ export function applyHybridDraftableSurplusBasis(params: {
           ? 1
           : 0;
     if (gateW <= 0) continue;
-    const rawStrength = Math.max(0, baseline - strengthFloor) * strengthMultiplier;
-    const strengthSb = Math.min(cal.hybridCap, rawStrength * gateW);
-    if (strengthSb > slotSb + 1e-9) {
-      out.set(id, strengthSb);
-      hybridLiftByPlayerId.set(id, strengthSb - slotSb);
+
+    const liftMode = cal.liftMode ?? "incremental";
+    const spread =
+      Math.max(0, baseline - effectiveGate) *
+      (cal.baselineSpreadPerPoint ?? 0);
+    const categoryBoost =
+      cal.minCategoryProjection != null && cal.categoryLiftWeight
+        ? Math.max(
+            0,
+            ((categoryProjectionById?.get(id) ?? 0) -
+              cal.minCategoryProjection) *
+              cal.categoryLiftWeight
+          )
+        : 0;
+    const slotScale = slotLiftMultiplier(slot, cal.slotLiftScale);
+
+    if (liftMode === "replace") {
+      const rawStrength =
+        Math.max(0, baseline - strengthFloor) * strengthMultiplier;
+      const strengthSb = Math.min(cal.hybridCap, rawStrength * gateW + spread);
+      if (strengthSb > slotSb + 1e-9) {
+        out.set(id, strengthSb);
+        hybridLiftByPlayerId.set(id, strengthSb - slotSb);
+      }
+      continue;
     }
+
+    const belowMedian = slotSb < slotMedian - 1e-9;
+    const totalCeiling = cal.hybridTotalCeiling ?? cal.hybridCap;
+    const headroom = Math.max(0, totalCeiling - slotSb);
+    const partialEligible =
+      !belowMedian &&
+      headroom > 1e-9 &&
+      (cal.elitePartialLiftCap ?? 0) > 0 &&
+      baseline >= effectiveGate - 1e-9;
+
+    if (!belowMedian && !partialEligible) continue;
+
+    const rawStrength =
+      Math.max(0, baseline - strengthFloor) * strengthMultiplier * gateW;
+    const liftCap = belowMedian
+      ? (cal.hybridLiftCap ?? cal.hybridCap)
+      : (cal.elitePartialLiftCap ?? 0);
+    const softness = cal.liftSoftness ?? 11;
+    let lift = softIncrementalLift(
+      rawStrength + categoryBoost,
+      Math.min(liftCap, headroom),
+      softness
+    );
+    lift = lift * slotScale + spread * gateW;
+    if (partialEligible) {
+      const partialRamp =
+        (cal.smoothRampSpan ?? 5) > 0
+          ? Math.min(
+              1,
+              Math.max(0.4, (baseline - effectiveGate) / (cal.smoothRampSpan ?? 5))
+            )
+          : 1;
+      lift *= partialRamp;
+    }
+    lift = Math.min(lift, headroom);
+
+    if (lift <= 1e-9) continue;
+    const finalSb = slotSb + lift;
+    out.set(id, finalSb);
+    hybridLiftByPlayerId.set(id, lift);
   }
   return { surplusBasisById: out, hybridLiftByPlayerId };
 }

@@ -26,6 +26,8 @@ export type ReplacementSlotsV2Result = {
   playerIdToSurplusDollars?: Map<string, number>;
   playerIdToSurplusTier?: Map<string, string>;
   playerIdToCurveWeight?: Map<string, number>;
+  /** `linear` | `tiered_soft` | `tiered_keeper` from adaptive curve resolver. */
+  auctionCurveInternalMode?: string;
   replacement_values_by_slot_or_position: Record<string, number>;
   fallback_reason: string | null;
   baselineOnly: boolean;
