@@ -127,6 +127,11 @@ describe("pitcher balance regression (synthetic calibration pool)", () => {
     deterministic: true,
     seed: 42,
     inflation_model: "replacement_slots_v2",
+    hybrid_surplus_calibration: {
+      eliteGateMin: 999,
+      hybridCap: 0,
+      strengthMultiplier: 0,
+    },
   });
 
   it("2× C slot raises top catcher auction vs 1× C", () => {

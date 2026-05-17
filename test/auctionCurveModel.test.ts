@@ -54,6 +54,22 @@ describe("buildTieredSurplusDollars", () => {
     );
   });
 
+  it("promotes hybrid-lifted starter to star tier when lift is material", () => {
+    const ids = Array.from({ length: 20 }, (_, i) => `p${i}`);
+    const surplusBasisById = new Map(ids.map((id, i) => [id, 50 - i * 0.1]));
+    const hybridLiftById = new Map([["p2", 22]]);
+    const { tierByPlayerId, dollarsByPlayerId } = buildTieredSurplusDollars({
+      surplusCash: 500,
+      draftablePlayerIds: ids,
+      surplusBasisById,
+      hybridLiftById,
+    });
+    expect(tierByPlayerId.get("p2")).toBe("star");
+    expect(dollarsByPlayerId.get("p2")!).toBeGreaterThan(
+      dollarsByPlayerId.get("p3")!
+    );
+  });
+
   it("returns empty maps when surplus cash is zero", () => {
     const { dollarsByPlayerId } = buildTieredSurplusDollars({
       surplusCash: 0,

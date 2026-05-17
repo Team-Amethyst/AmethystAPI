@@ -125,6 +125,7 @@ export function applyAuctionCurveToV2Result(params: {
       draftablePlayerIds: v2Result.draftablePlayerIds,
       surplusBasisById: v2Result.playerIdToSurplusBasis,
       fringePlayerIds: undraftedFringeIds,
+      hybridLiftById: v2Result.playerIdToHybridLift,
       state: leagueState,
     });
     guardrailsApplied = alloc.guardrailsApplied;
@@ -134,6 +135,12 @@ export function applyAuctionCurveToV2Result(params: {
       playerIdToSurplusDollars: alloc.dollarsByPlayerId,
       playerIdToSurplusTier: alloc.tierByPlayerId,
       playerIdToCurveWeight: alloc.weightByPlayerId,
+      auctionCurveInternalMode: resolution.internalMode,
+    };
+  } else if (canAllocate) {
+    v2ForRows = {
+      ...v2Result,
+      auctionCurveInternalMode: resolution.internalMode,
     };
   }
 

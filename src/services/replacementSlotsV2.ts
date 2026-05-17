@@ -16,6 +16,7 @@ import {
   sumDemand,
 } from "../lib/fantasyRosterSlots";
 import {
+  DEFAULT_HYBRID_SURPLUS_CALIBRATION,
   type HybridSurplusCalibration,
   REPLACEMENT_SLOTS_V2_MIN_BID,
   SLOT_REPLACEMENT_DEFAULT_PERCENTILE,
@@ -381,13 +382,35 @@ export function computeReplacementSlotsV2(
           calibration: options?.hybridSurplusCalibration,
         })
       : null;
-  const playerIdToSurplusBasis =
-    hybridApply?.surplusBasisById ?? slotOnlySurplusBasis;
+  const playerIdToSurplusBasis = new Map(
+    hybridApply?.surplusBasisById ?? slotOnlySurplusBasis
+  );
   const playerIdToHybridLift = hybridApply?.hybridLiftByPlayerId;
 
   let total_surplus_mass = 0;
   for (const id of undraftedAssignedIds) {
     total_surplus_mass += playerIdToSurplusBasis.get(id) ?? 0;
+  }
+
+  const massGrowthCap =
+    options?.hybridSurplusCalibration?.massGrowthCap ??
+    DEFAULT_HYBRID_SURPLUS_CALIBRATION.massGrowthCap ??
+    1.045;
+  const massCap = slotOnlyMass * massGrowthCap;
+  if (slotOnlyMass > 0 && total_surplus_mass > massCap + 1e-6) {
+    const scale = massCap / total_surplus_mass;
+    for (const id of undraftedAssignedIds) {
+      const sb = playerIdToSurplusBasis.get(id) ?? 0;
+      playerIdToSurplusBasis.set(id, sb * scale);
+      if (playerIdToHybridLift?.has(id)) {
+        const slotOnly = slotOnlySurplusBasis.get(id) ?? 0;
+        playerIdToHybridLift.set(
+          id,
+          (playerIdToSurplusBasis.get(id) ?? 0) - slotOnly
+        );
+      }
+    }
+    total_surplus_mass = massCap;
   }
 
   const draftablePoolSize = undraftedAssignedIds.size;
