@@ -246,6 +246,7 @@ export function executeValuationWorkflow(
         explainValuationRows: input.explain_valuation_rows === true,
         recommendedBidSoftCapRatio: input.recommended_bid_soft_cap_ratio,
         positionOverrides,
+        hybridSurplusCalibration: input.hybrid_surplus_calibration,
         inflationPhaseTimings: diag?.timings_ms,
       }
     );

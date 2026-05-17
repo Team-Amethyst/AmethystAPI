@@ -17,6 +17,7 @@ import {
   buildLeagueSlotDemand,
 } from "../lib/fantasyRosterSlots";
 import { getPlayerId } from "../lib/playerId";
+import { categoryProjectionByIdFromPlayers } from "../lib/categoryProjectionById";
 import { attachAuctionBaselineRanksAndTiers } from "../lib/distributionTier";
 import {
   buildValuedRows,
@@ -72,7 +73,14 @@ export function calculateInflation(
   leagueScope: LeagueScope = "Mixed",
   options?: CalculateInflationOptions
 ): ValuationResponse {
-  const timings = options?.inflationPhaseTimings;
+  const inflationOptions: CalculateInflationOptions = {
+    ...options,
+    categoryProjectionById:
+      options?.categoryProjectionById ??
+      categoryProjectionByIdFromPlayers(allPlayers),
+  };
+
+  const timings = inflationOptions.inflationPhaseTimings;
   const mark = (key: string, start: number) => {
     if (!timings) return;
     timings[key] = (timings[key] ?? 0) + (performance.now() - start);
@@ -80,10 +88,10 @@ export function calculateInflation(
 
   void leagueScope;
   const requestedModel: InflationModel =
-    options?.inflationModel ?? DEFAULT_INFLATION_MODEL;
+    inflationOptions.inflationModel ?? DEFAULT_INFLATION_MODEL;
 
   const draftedIds = new Set(draftedPlayers.map((d) => d.player_id));
-  for (const pid of options?.additionalDraftedIds ?? []) {
+  for (const pid of inflationOptions.additionalDraftedIds ?? []) {
     draftedIds.add(pid);
   }
 
@@ -92,8 +100,8 @@ export function calculateInflation(
   const undraftedFull = allPlayers.filter((p) => !draftedIds.has(getPlayerId(p)));
 
   let undraftedForRows = undraftedFull;
-  if (options?.playerIdsFilter && options.playerIdsFilter.length > 0) {
-    const allow = new Set(options.playerIdsFilter);
+  if (inflationOptions.playerIdsFilter && inflationOptions.playerIdsFilter.length > 0) {
+    const allow = new Set(inflationOptions.playerIdsFilter);
     undraftedForRows = undraftedFull.filter((p) => allow.has(getPlayerId(p)));
   }
 
@@ -101,17 +109,17 @@ export function calculateInflation(
     draftedPlayers,
     totalBudgetPerTeam,
     numTeams,
-    budgetByTeamId: options?.budgetByTeamId,
-    additionalSpent: options?.additionalSpent,
+    budgetByTeamId: inflationOptions.budgetByTeamId,
+    additionalSpent: inflationOptions.additionalSpent,
   });
 
   const poolValueFull = undraftedFull.reduce((sum, p) => sum + (p.value || 0), 0);
 
   const byValueFull = [...undraftedFull].sort((a, b) =>
-    compareByValueDesc(a, b, options)
+    compareByValueDesc(a, b, inflationOptions)
   );
   const byCatalogRankFull = [...undraftedFull].sort((a, b) =>
-    compareByCatalogRankAsc(a, b, options)
+    compareByCatalogRankAsc(a, b, inflationOptions)
   );
   const baselineOrderRank = new Map(
     byValueFull.map((p, i) => [getPlayerId(p), i + 1])
@@ -121,7 +129,7 @@ export function calculateInflation(
   );
 
   const byValueRows = [...undraftedForRows].sort((a, b) =>
-    compareByValueDesc(a, b, options)
+    compareByValueDesc(a, b, inflationOptions)
   );
   mark("inflation_prep_ms", tPrep);
 
@@ -135,7 +143,7 @@ export function calculateInflation(
     rosterSlots,
     numTeams,
     budgetRemaining,
-    options,
+    options: inflationOptions,
     poolValueFull,
     getPlayerId,
     minAuctionBid: MIN_AUCTION_BID,

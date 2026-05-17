@@ -121,6 +121,8 @@ export interface NormalizedValuationInput {
   explain_valuation_rows?: boolean;
   /** Optional; applied after smoothing, before team `max_bid` clamp on `recommended_bid`. */
   recommended_bid_soft_cap_ratio?: number;
+  /** Audit / calibration only: override hybrid surplus lift (production omits). */
+  hybrid_surplus_calibration?: HybridSurplusCalibration;
 }
 
 export interface CalculateInflationOptions {

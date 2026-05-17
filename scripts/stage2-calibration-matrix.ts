@@ -10,14 +10,14 @@ import { nestedValuationBodySchema } from "../src/lib/valuationRequestSchemas";
 import { applyInjuryOverridesToPool } from "../src/lib/valuationInjuryOverrides";
 import { filterValuationUniverse } from "../src/lib/valuationPlayerPool";
 import { getPlayerId } from "../src/lib/playerId";
+import { categoryProjectionByIdFromPlayers } from "../src/lib/categoryProjectionById";
 import { resolveDraftCheckpointFixturePath } from "../src/lib/checkpointSlotReconciliation";
 import { buildRosteredPlayersForSlotEngine } from "../src/lib/rosteredPlayersForSlots";
-import { computeRemainingLeagueRosterSlots } from "../src/lib/remainingLeagueRosterSlots";
+import { executeValuationWorkflow } from "../src/services/valuationWorkflow";
 import { positionOverridesFromRequest } from "../src/lib/fantasyRosterSlots";
 import { loadMongoCatalogForEngine } from "../src/lib/mongoCatalogPipeline";
 import { scriptMongoConnectOptions } from "../src/lib/mongoPoolConfig";
 import { scoringAwareBaselinePlayers } from "../src/services/baselineValueEngine";
-import { calculateInflation } from "../src/services/inflationEngine";
 import { computeBudgetRemaining } from "../src/services/inflationModel";
 import { computeReplacementSlotsV2 } from "../src/services/replacementSlotsV2";
 import {
@@ -122,19 +122,6 @@ const SCENARIOS: Scenario[] = [
   },
 ];
 
-function categoryProjectionFromPlayers(players: LeanPlayer[]): Map<string, number> {
-  const m = new Map<string, number>();
-  for (const p of players) {
-    const meta = (
-      p.projection as { __valuation_meta__?: { projection_component?: number } }
-    )?.__valuation_meta__;
-    if (meta?.projection_component != null) {
-      m.set(getPlayerId(p), meta.projection_component);
-    }
-  }
-  return m;
-}
-
 function curveMetrics(draftableVals: number[]) {
   const ge40 = draftableVals.filter((v) => v >= 40).length;
   const ge30 = draftableVals.filter((v) => v >= 30).length;
@@ -181,14 +168,8 @@ async function main() {
     nested.roster_slots,
     positionOverrides,
   );
-  const categoryProjectionById = categoryProjectionFromPlayers(basePlayers);
+  const categoryProjectionById = categoryProjectionByIdFromPlayers(basePlayers);
   const rosteredPlayersForSlots = buildRosteredPlayersForSlotEngine(nested);
-  const remainingLeagueSlots = computeRemainingLeagueRosterSlots(
-    nested.roster_slots,
-    nested.num_teams,
-    nested.drafted_players,
-    [],
-  );
 
   const baselineById = new Map<string, number>();
   for (const p of basePlayers) {
@@ -206,28 +187,25 @@ async function main() {
   const playersByScenario: Record<string, unknown> = {};
 
   for (const scenario of SCENARIOS) {
-    const response = calculateInflation(
-      basePlayers,
-      nested.drafted_players,
-      nested.total_budget,
-      nested.num_teams,
-      nested.roster_slots,
-      nested.league_scope,
+    const wf = executeValuationWorkflow(
+      poolInj,
       {
+        ...nested,
         deterministic: true,
         seed: 42,
-        inflationModel: "replacement_slots_v2",
-        auctionCurveModel: "adaptive_surplus_v1",
-        remainingLeagueSlots,
-        rosteredPlayersForSlots,
-        positionOverrides,
-        explainValuationRows: true,
-        hybridSurplusCalibration: scenario.calibration,
-        categoryProjectionById,
-        inflationCap: 3,
-        inflationFloor: 0.25,
+        inflation_model: "replacement_slots_v2",
+        auction_curve_model: "adaptive_surplus_v1",
+        explain_valuation_rows: true,
+        hybrid_surplus_calibration: scenario.calibration,
       },
+      {},
+      {},
     );
+    if (!wf.ok) {
+      scenarioRows.push({ id: scenario.id, error: wf.issues });
+      continue;
+    }
+    const response = wf.response;
 
     const draftable = new Set(response.draftable_player_ids ?? []);
     const draftableVals = response.valuations
