@@ -13,7 +13,6 @@ export function boardShapeMetrics(r: ValuationResponse) {
     .filter((v) => ids.has(v.player_id))
     .sort((a, b) => b.auction_value - a.auction_value);
   const vals = draftable.map((v) => v.auction_value);
-  const sb = draftable.map((v) => v.valuation_explain?.surplus_basis ?? 0);
   let drop25 = 0;
   for (let i = 0; i < Math.min(24, vals.length - 1); i++) {
     drop25 = Math.max(drop25, vals[i]! - vals[i + 1]!);

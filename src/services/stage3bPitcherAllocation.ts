@@ -202,7 +202,6 @@ export function applyTargetedSpSurplusFloors(params: {
   if (dollarPerSb == null || dollarPerSb <= 0) return;
 
   const minSb = pa.minSurplusBasis ?? 5;
-  const maxSb = pa.promoteStarterMinSurplus != null ? 24 : 22;
   const maxSbCap = 24;
 
   const boosts = new Map<string, number>();

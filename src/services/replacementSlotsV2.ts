@@ -384,7 +384,7 @@ export function computeReplacementSlotsV2(
           playerFilter: "hitter",
         })
       : null;
-  let playerIdToSurplusBasis = new Map(
+  const playerIdToSurplusBasis = new Map(
     hybridApply?.surplusBasisById ?? slotOnlySurplusBasis
   );
   const playerIdToHybridLift = hybridApply?.hybridLiftByPlayerId ?? new Map();
