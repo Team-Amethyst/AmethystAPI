@@ -401,6 +401,62 @@ function sumMapValues(map: Map<string, number>): number {
   return sum;
 }
 
+/**
+ * True-empty opening boards: avoid a hard cap shelf where many SPs share the same
+ * auction dollars after guardrails. Taper only the top band; preserves total surplus.
+ */
+export function softenFreshEmptyOpeningTopShelf(params: {
+  dollarsByPlayerId: Map<string, number>;
+  surplusCash: number;
+  minBid: number;
+  draftablePlayerIds: readonly string[];
+  maxTopAuction: number;
+}): Map<string, number> {
+  const { dollarsByPlayerId, surplusCash, minBid, draftablePlayerIds, maxTopAuction } =
+    params;
+  const shelfFloor = maxTopAuction - 5;
+  const ranked = draftablePlayerIds
+    .map((id) => ({
+      id,
+      d: dollarsByPlayerId.get(id) ?? 0,
+    }))
+    .filter((r) => r.d >= shelfFloor)
+    .sort((a, b) => b.d - a.d);
+
+  if (ranked.length <= 1) return new Map(dollarsByPlayerId);
+
+  const out = new Map(dollarsByPlayerId);
+  for (let i = 0; i < ranked.length; i++) {
+    const { id, d } = ranked[i]!;
+    const tapered = maxTopAuction - i * 0.75;
+    if (d > tapered) out.set(id, tapered);
+  }
+
+  let sum = sumMapValues(out);
+  let missing = surplusCash - sum;
+  if (missing > 0.05) {
+    const receivers = [...out.entries()].filter(
+      ([, d]) => d < maxTopAuction - 0.5,
+    );
+    const room = receivers.reduce((s, [, d]) => s + (maxTopAuction - d), 0);
+    if (room > 0) {
+      const give = Math.min(missing, room);
+      for (const [id, d] of receivers) {
+        out.set(id, d + give * ((maxTopAuction - d) / room));
+      }
+      sum = sumMapValues(out);
+      missing = surplusCash - sum;
+    }
+  }
+  if (missing < -0.05 && sum > 0) {
+    const scale = surplusCash / sum;
+    for (const [id, d] of out) out.set(id, d * scale);
+  }
+
+  void minBid;
+  return out;
+}
+
 /** Cap top surplus share; preserves total surplus when input already sums to `surplusCash`. */
 export function applySurplusGuardrails(params: {
   dollarsByPlayerId: Map<string, number>;
@@ -615,7 +671,17 @@ export function allocateSurplusForCurve(params: {
     keeperCount: state.keeperCount,
   });
 
-  const finalDollars = new Map(guarded.dollarsByPlayerId);
+  let finalDollars = new Map(guarded.dollarsByPlayerId);
+  if (resolution.reason === "fresh_empty_opening_tiered") {
+    const maxTop = resolution.guardrails.max_top_player_auction_value ?? 36;
+    finalDollars = softenFreshEmptyOpeningTopShelf({
+      dollarsByPlayerId: finalDollars,
+      surplusCash,
+      minBid,
+      draftablePlayerIds: surplusDraftableIds,
+      maxTopAuction: maxTop,
+    });
+  }
   applyTargetedSpSurplusFloors({
     dollarsByPlayerId: finalDollars,
     tierByPlayerId: tiered.tierByPlayerId,
