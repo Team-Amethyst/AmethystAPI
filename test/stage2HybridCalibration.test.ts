@@ -18,7 +18,10 @@ import { executeValuationWorkflow } from "../src/services/valuationWorkflow";
 import {
   applyHybridDraftableSurplusBasis,
 } from "../src/services/replacementSlotsV2Helpers";
-import { DEFAULT_HYBRID_SURPLUS_CALIBRATION } from "../src/services/replacementSlotsV2Config";
+import {
+  DEFAULT_HYBRID_SURPLUS_CALIBRATION,
+  STAGE3_HYBRID_SURPLUS_CALIBRATION,
+} from "../src/services/replacementSlotsV2Config";
 
 const mongoReady =
   Boolean(process.env.MONGO_URI) && draftCheckpointFixturesAvailable();
@@ -163,9 +166,7 @@ describe.skipIf(!mongoReady)("Stage 2 pre_draft integration", () => {
     expect(ramirez?.auction_value ?? 0).toBeGreaterThan(4);
     expect(vlad?.valuation_explain?.surplus_basis ?? 0).toBeGreaterThan(5);
     expect(witt?.valuation_explain?.surplus_basis ?? 0).toBeGreaterThan(10);
-    expect(witt?.auction_value ?? 0).toBeGreaterThan(4);
-    expect(vlad?.valuation_explain?.surplus_basis ?? 0).toBeGreaterThan(5);
-    expect(witt?.valuation_explain?.surplus_basis ?? 0).toBeGreaterThan(10);
+    expect(witt?.auction_value ?? 0).toBeGreaterThan(15);
     expect(ramirez?.valuation_explain?.replacement_key_used).toBe("3B");
     expect(vlad?.valuation_explain?.replacement_key_used).toBe("1B");
 

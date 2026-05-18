@@ -50,7 +50,9 @@
     "catalog-universe:dry-run": "ts-node --project tsconfig.scripts.json scripts/catalog-universe-dry-run.ts",
     "calibrate:roster-universe-valuation": "ts-node --project tsconfig.scripts.json scripts/calibrate-roster-universe-valuation.ts",
     "investigate:roster-universe-of-collapse": "ts-node --project tsconfig.scripts.json scripts/investigate-roster-universe-of-collapse.ts",
-    "audit:value-confidence": "ts-node --project tsconfig.scripts.json scripts/audit-value-confidence.ts"
+    "audit:value-confidence": "ts-node --project tsconfig.scripts.json scripts/audit-value-confidence.ts",
+    "audit:stage2-confidence": "ts-node --project tsconfig.scripts.json scripts/stage2-valuation-confidence-audit.ts",
+    "audit:stage3-matrix": "ts-node --project tsconfig.scripts.json scripts/stage3-calibration-matrix.ts"
   },
   "keywords": [
     "api",

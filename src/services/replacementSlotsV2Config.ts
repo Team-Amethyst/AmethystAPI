@@ -55,8 +55,8 @@ export const STAGE1_HYBRID_SURPLUS_CALIBRATION: HybridSurplusCalibration = {
   liftMode: "replace",
 };
 
-/** Stage 2: incremental saturated-slot lift (slot-primary, no flat cap collision). */
-export const DEFAULT_HYBRID_SURPLUS_CALIBRATION: HybridSurplusCalibration = {
+/** Stage 2 shipped hybrid calibration (audit baseline). */
+export const STAGE2_HYBRID_SURPLUS_CALIBRATION: HybridSurplusCalibration = {
   ...HYBRID_SURPLUS_CORE,
   eliteGateMin: 56,
   gateMode: "smooth",
@@ -74,6 +74,29 @@ export const DEFAULT_HYBRID_SURPLUS_CALIBRATION: HybridSurplusCalibration = {
   massGrowthCap: HYBRID_SURPLUS_MASS_GROWTH_CAP,
   slotLiftScale: { C: 1.06, SS: 1.02, "3B": 1.04, "1B": 0.98, "2B": 1, MI: 1, CI: 1 },
 };
+
+/**
+ * Stage 3: stronger saturated-slot → auction conversion (SS/3B), same pool/UTIL semantics.
+ */
+export const STAGE3_HYBRID_SURPLUS_CALIBRATION: HybridSurplusCalibration = {
+  ...STAGE2_HYBRID_SURPLUS_CALIBRATION,
+  hybridLiftCap: 34,
+  elitePartialLiftCap: 22,
+  baselineSpreadPerPoint: 0.82,
+  categoryLiftWeight: 0.22,
+  slotLiftScale: {
+    C: 1.06,
+    SS: 1.1,
+    "3B": 1.06,
+    "1B": 0.98,
+    "2B": 1.02,
+    MI: 1,
+    CI: 1,
+  },
+};
+
+/** Production default — Stage 3 calibration on Stage 2 foundation. */
+export const DEFAULT_HYBRID_SURPLUS_CALIBRATION = STAGE3_HYBRID_SURPLUS_CALIBRATION;
 
 export type HybridSurplusGateMode = "hard" | "smooth";
 export type HybridSurplusLiftMode = "incremental" | "replace";

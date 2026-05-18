@@ -150,8 +150,11 @@ export function computeAdaptiveTierWeights(
   const compression = clamp(massRatio / 6, 0, 1);
   let starWeight = 1 + keeperShare * compression * 1.75;
 
-  if (phase === "mid_draft" || phase === "late_draft") {
-    starWeight = 1 + (starWeight - 1) * 0.5;
+  const manySlotsOpen = state.remainingActiveSlots >= 70;
+  if (phase === "mid_draft") {
+    starWeight = 1 + (starWeight - 1) * (manySlotsOpen ? 0.75 : 0.5);
+  } else if (phase === "late_draft") {
+    starWeight = 1 + (starWeight - 1) * (manySlotsOpen ? 0.82 : 0.5);
   }
   if (phase === "near_complete") {
     starWeight = 1 + (starWeight - 1) * 0.25;
@@ -464,6 +467,7 @@ export function allocateSurplusForCurve(params: {
     surplusBasisById,
     internalMode: resolution.internalMode,
     phase: resolution.phase,
+    remainingActiveSlots: state.remainingActiveSlots,
   });
 
   const guarded = applySurplusGuardrails({

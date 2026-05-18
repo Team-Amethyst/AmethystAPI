@@ -125,25 +125,29 @@ export function smoothSurplusAlongBasisRank(params: {
 
 export function resolveSurplusSmoothingConfig(
   internalMode: SurplusAllocationMode,
-  phase: LeagueBoardPhase
+  phase: LeagueBoardPhase,
+  remainingActiveSlots?: number,
 ): SurplusSmoothingConfig | null {
   if (internalMode === "linear") return null;
+
+  const manySlotsOpen =
+    remainingActiveSlots != null && remainingActiveSlots >= 70;
 
   if (internalMode === "tiered_soft") {
     if (phase === "mid_draft") {
       return {
-        tieredFraction: 0.52,
-        maxDropAbs: 2.75,
-        maxDropPct: 0.17,
+        tieredFraction: manySlotsOpen ? 0.78 : 0.52,
+        maxDropAbs: manySlotsOpen ? 3.5 : 2.75,
+        maxDropPct: manySlotsOpen ? 0.2 : 0.17,
         smoothRankCount: 160,
         maxIterations: 4,
       };
     }
     if (phase === "late_draft") {
       return {
-        tieredFraction: 0.62,
-        maxDropAbs: 2.35,
-        maxDropPct: 0.14,
+        tieredFraction: manySlotsOpen ? 0.84 : 0.62,
+        maxDropAbs: manySlotsOpen ? 4 : 2.35,
+        maxDropPct: manySlotsOpen ? 0.22 : 0.14,
         smoothRankCount: 130,
         maxIterations: 3,
       };
@@ -174,10 +178,12 @@ export function applyTieredSurplusSmoothing(params: {
   surplusBasisById: Map<string, number>;
   internalMode: SurplusAllocationMode;
   phase: LeagueBoardPhase;
+  remainingActiveSlots?: number;
 }): { dollarsByPlayerId: Map<string, number>; applied: string[] } {
   const config = resolveSurplusSmoothingConfig(
     params.internalMode,
-    params.phase
+    params.phase,
+    params.remainingActiveSlots,
   );
   if (!config) {
     return { dollarsByPlayerId: new Map(params.tieredDollars), applied: [] };

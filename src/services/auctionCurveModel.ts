@@ -106,12 +106,14 @@ export function buildTieredSurplusDollars(params: {
     }
     const hybridLift = params.hybridLiftById?.get(id) ?? 0;
     if (hybridLift > 1e-9 && sb > 0) {
-      if (tier === "depth") {
-        tier = "starter";
-        w = sb * cfg.starterWeight * 1.12;
-      } else if (tier === "starter" && hybridLift >= 18) {
+      if (hybridLift >= 10 && (tier === "starter" || tier === "depth")) {
         tier = "star";
-        w = sb * cfg.starWeight * 0.9;
+        w = sb * cfg.starWeight * 0.94;
+      } else if (tier === "depth") {
+        tier = "starter";
+        w = sb * cfg.starterWeight * 1.15;
+      } else if (tier === "starter" && hybridLift >= 6) {
+        w = sb * cfg.starWeight * 0.72;
       }
     }
     tierByPlayerId.set(id, tier);
