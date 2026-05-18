@@ -16,6 +16,7 @@ import {
 import {
   buildLeagueSlotDemand,
 } from "../lib/fantasyRosterSlots";
+import { playerTokensFromLean } from "../lib/fantasyRosterSlots";
 import { getPlayerId } from "../lib/playerId";
 import { categoryProjectionByIdFromPlayers } from "../lib/categoryProjectionById";
 import { attachAuctionBaselineRanksAndTiers } from "../lib/distributionTier";
@@ -174,10 +175,28 @@ export function calculateInflation(
       inflation_bounded_by: "none",
     };
   }
-  const inflationFactor = clamped.inflation_factor;
+  let inflationFactor = clamped.inflation_factor;
   const inflationRaw = clamped.inflation_raw;
-  const inflationBoundedBy = clamped.inflation_bounded_by;
+  let inflationBoundedBy = clamped.inflation_bounded_by;
   mark("inflation_clamp_ms", tClamp);
+
+  const midSpread = options?.stage3bCalibration?.midDraftSpread;
+  const remainingForMid = v2Meta.remaining_slots ?? 0;
+  if (
+    midSpread?.enabled &&
+    midSpread.linearInflationFloor != null &&
+    inflationModelEffective === "replacement_slots_v2"
+  ) {
+    const lo = midSpread.minRemainingSlots ?? 45;
+    const hi = midSpread.maxRemainingSlots ?? 75;
+    if (remainingForMid >= lo && remainingForMid <= hi) {
+      const floor = midSpread.linearInflationFloor;
+      if (inflationFactor < floor - 1e-9) {
+        inflationFactor = floor;
+        inflationBoundedBy = "floor";
+      }
+    }
+  }
 
   const leagueCap = leagueSlotCapacity(rosterSlots, numTeams);
 
@@ -202,6 +221,13 @@ export function calculateInflation(
       inflationRaw,
       inflationFactor,
     });
+    const tokensById = new Map<string, readonly string[]>();
+    const positionById = new Map<string, string>();
+    for (const p of undraftedForRows) {
+      const id = getPlayerId(p);
+      tokensById.set(id, playerTokensFromLean(p, options?.positionOverrides));
+      positionById.set(id, p.position ?? "");
+    }
     const applied = applyAuctionCurveToV2Result({
       requestedModel: options?.auctionCurveModel,
       v2Result,
@@ -209,6 +235,9 @@ export function calculateInflation(
       undraftedFringeIds: [],
       leagueState,
       inflationFactor,
+      stage3bCalibration: options?.stage3bCalibration,
+      tokensById,
+      positionById,
     });
     v2ForRows = applied.v2ForRows;
     curveDebug = applied.debug;
@@ -239,6 +268,8 @@ export function calculateInflation(
     inflationFactor,
     minAuctionBid: MIN_AUCTION_BID,
     auctionCurveModel,
+    stage3bCalibration: options?.stage3bCalibration,
+    positionOverrides: options?.positionOverrides,
     baselineOrderRank,
     catalogOrderRank,
     undraftedCount: undraftedFull.length,

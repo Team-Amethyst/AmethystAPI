@@ -6,6 +6,12 @@ import {
   type TieredSurplusTier,
 } from "./auctionCurveModel";
 import { applyTieredSurplusSmoothing } from "./auctionSurplusSmoothing";
+import type { Stage3bCalibration } from "./stage3bPitcherCalibration";
+import {
+  applyTargetedSpSurplusFloors,
+  buildPitcherAuctionSlotById,
+  buildBucketTieredSurplusDollars,
+} from "./stage3bPitcherAllocation";
 
 export type LeagueBoardPhase =
   | "fresh"
@@ -174,6 +180,7 @@ export function resolveAuctionCurveForLeague(params: {
   requestedModel: AuctionCurveModel;
   state: AuctionCurveLeagueState & { draftablePoolSize: number };
   linearPreview: LinearSpreadPreview;
+  stage3bCalibration?: Stage3bCalibration;
 }): AuctionCurveResolution {
   const { requestedModel, state, linearPreview } = params;
   const phase = classifyLeagueBoardPhase(state);
@@ -246,6 +253,26 @@ export function resolveAuctionCurveForLeague(params: {
     } else {
       internalMode = "linear";
       reason = "healthy_linear_spread";
+    }
+  }
+
+  const midSpread = params.stage3bCalibration?.midDraftSpread;
+  if (
+    midSpread?.enabled &&
+    midSpread.preferTieredSoft &&
+    internalMode === "linear" &&
+    reason === "healthy_linear_spread" &&
+    phase !== "fresh" &&
+    phase !== "near_complete"
+  ) {
+    const lo = midSpread.minRemainingSlots ?? 35;
+    const hi = midSpread.maxRemainingSlots ?? 85;
+    if (
+      state.remainingActiveSlots >= lo &&
+      state.remainingActiveSlots <= hi
+    ) {
+      internalMode = "tiered_soft";
+      reason = "stage3b_mid_draft_tiered_spread";
     }
   }
 
@@ -423,6 +450,10 @@ export function allocateSurplusForCurve(params: {
   surplusBasisById: Map<string, number>;
   fringePlayerIds?: readonly string[];
   hybridLiftById?: Map<string, number>;
+  assignedSlotById?: Map<string, string>;
+  tokensById?: Map<string, readonly string[]>;
+  positionById?: Map<string, string>;
+  stage3bCalibration?: Stage3bCalibration;
   state: AuctionCurveLeagueState;
 }): {
   dollarsByPlayerId: Map<string, number>;
@@ -451,14 +482,35 @@ export function allocateSurplusForCurve(params: {
     };
   }
 
-  const tiered = buildTieredSurplusDollars({
-    surplusCash,
-    draftablePlayerIds,
-    surplusBasisById,
-    fringePlayerIds,
-    tierConfig: resolution.weights,
-    hybridLiftById: params.hybridLiftById,
+  const pitcherSlotById = buildPitcherAuctionSlotById({
+    playerIds: draftablePlayerIds,
+    assignedSlotById: params.assignedSlotById,
+    tokensById: params.tokensById,
+    positionById: params.positionById,
   });
+  const prb = params.stage3bCalibration?.pitcherRelativeBudget;
+  const tiered = prb?.enabled
+    ? buildBucketTieredSurplusDollars({
+        surplusCash,
+        draftablePlayerIds,
+        surplusBasisById,
+        fringePlayerIds,
+        hitterTierConfig: resolution.weights,
+        pitcherRelative: prb,
+        hybridLiftById: params.hybridLiftById,
+        assignedSlotById: pitcherSlotById,
+        pitcherAuction: params.stage3bCalibration?.pitcherAuction,
+      })
+    : buildTieredSurplusDollars({
+        surplusCash,
+        draftablePlayerIds,
+        surplusBasisById,
+        fringePlayerIds,
+        tierConfig: resolution.weights,
+        hybridLiftById: params.hybridLiftById,
+        assignedSlotById: pitcherSlotById,
+        pitcherAuction: params.stage3bCalibration?.pitcherAuction,
+      });
 
   const smoothed = applyTieredSurplusSmoothing({
     tieredDollars: tiered.dollarsByPlayerId,
@@ -468,6 +520,8 @@ export function allocateSurplusForCurve(params: {
     internalMode: resolution.internalMode,
     phase: resolution.phase,
     remainingActiveSlots: state.remainingActiveSlots,
+    tieredFractionOverride:
+      params.stage3bCalibration?.midDraftSpread?.tieredFraction,
   });
 
   const guarded = applySurplusGuardrails({
@@ -479,8 +533,21 @@ export function allocateSurplusForCurve(params: {
     keeperCount: state.keeperCount,
   });
 
+  const finalDollars = new Map(guarded.dollarsByPlayerId);
+  applyTargetedSpSurplusFloors({
+    dollarsByPlayerId: finalDollars,
+    tierByPlayerId: tiered.tierByPlayerId,
+    surplusCash,
+    draftablePlayerIds,
+    surplusBasisById,
+    assignedSlotById: params.assignedSlotById,
+    tokensById: params.tokensById,
+    positionById: params.positionById,
+    pitcherAuction: params.stage3bCalibration?.pitcherAuction,
+  });
+
   return {
-    dollarsByPlayerId: guarded.dollarsByPlayerId,
+    dollarsByPlayerId: finalDollars,
     tierByPlayerId: tiered.tierByPlayerId,
     weightByPlayerId: tiered.weightByPlayerId,
     guardrailsApplied: [...smoothed.applied, ...guarded.guardrailsApplied],

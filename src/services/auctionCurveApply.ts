@@ -12,6 +12,7 @@ import {
   type AuctionCurveLeagueState,
   type AuctionCurveResolution,
 } from "./auctionCurveResolver";
+import type { Stage3bCalibration } from "./stage3bPitcherCalibration";
 
 export type AuctionCurveDebugMeta = {
   auction_curve_model: AuctionCurveModel;
@@ -86,6 +87,9 @@ export function applyAuctionCurveToV2Result(params: {
   undraftedFringeIds: string[];
   leagueState: AuctionCurveLeagueState & { draftablePoolSize: number };
   inflationFactor: number;
+  stage3bCalibration?: Stage3bCalibration;
+  tokensById?: Map<string, readonly string[]>;
+  positionById?: Map<string, string>;
 }): {
   v2ForRows: ReplacementSlotsV2Result;
   resolution: AuctionCurveResolution;
@@ -106,6 +110,7 @@ export function applyAuctionCurveToV2Result(params: {
     requestedModel: requested,
     state: leagueState,
     linearPreview,
+    stage3bCalibration: params.stage3bCalibration,
   });
 
   let v2ForRows = v2Result;
@@ -126,6 +131,10 @@ export function applyAuctionCurveToV2Result(params: {
       surplusBasisById: v2Result.playerIdToSurplusBasis,
       fringePlayerIds: undraftedFringeIds,
       hybridLiftById: v2Result.playerIdToHybridLift,
+      assignedSlotById: v2Result.playerIdToAssignedSlot,
+      tokensById: params.tokensById,
+      positionById: params.positionById,
+      stage3bCalibration: params.stage3bCalibration,
       state: leagueState,
     });
     guardrailsApplied = alloc.guardrailsApplied;

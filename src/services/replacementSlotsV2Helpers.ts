@@ -300,6 +300,16 @@ function tokensIncludeHitterSlot(tokens: readonly string[]): boolean {
   return false;
 }
 
+function tokensIncludePitcherSlot(tokens: readonly string[]): boolean {
+  for (const t of tokens) {
+    const u = t.toUpperCase();
+    if (isPitcherReplKey(u) || u === "P") return true;
+  }
+  return false;
+}
+
+export type HybridSurplusPlayerFilter = "hitter" | "pitcher";
+
 function smoothGateWeight(
   baseline: number,
   gateMin: number,
@@ -341,6 +351,8 @@ export function applyHybridDraftableSurplusBasis(params: {
   categoryProjectionById?: Map<string, number>;
   assignedSlotById?: Map<string, string>;
   calibration?: HybridSurplusCalibration;
+  /** Default hitter (Stage 2/3 saturated slots). Stage 3b uses pitcher for SP/RP lift. */
+  playerFilter?: HybridSurplusPlayerFilter;
 }): HybridSurplusApplyResult {
   const cal: HybridSurplusCalibration = params.calibration
     ? { ...HYBRID_SURPLUS_CORE, ...params.calibration }
@@ -396,7 +408,21 @@ export function applyHybridDraftableSurplusBasis(params: {
   for (const id of assignedIds) {
     const slotSb = surplusBasisById.get(id) ?? 0;
     const tokens = playerTokensById?.get(id) ?? [];
-    if (tokens.length > 0 && !tokensIncludeHitterSlot(tokens)) continue;
+    const playerFilter = params.playerFilter ?? "hitter";
+    if (
+      playerFilter === "hitter" &&
+      tokens.length > 0 &&
+      !tokensIncludeHitterSlot(tokens)
+    ) {
+      continue;
+    }
+    if (
+      playerFilter === "pitcher" &&
+      tokens.length > 0 &&
+      !tokensIncludePitcherSlot(tokens)
+    ) {
+      continue;
+    }
     const baseline = baselineById.get(id) ?? 0;
     const projRaw = categoryProjectionById?.get(id);
     const proj = projRaw ?? baseline;

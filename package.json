@@ -52,7 +52,9 @@
     "investigate:roster-universe-of-collapse": "ts-node --project tsconfig.scripts.json scripts/investigate-roster-universe-of-collapse.ts",
     "audit:value-confidence": "ts-node --project tsconfig.scripts.json scripts/audit-value-confidence.ts",
     "audit:stage2-confidence": "ts-node --project tsconfig.scripts.json scripts/stage2-valuation-confidence-audit.ts",
-    "audit:stage3-matrix": "ts-node --project tsconfig.scripts.json scripts/stage3-calibration-matrix.ts"
+    "audit:stage3-matrix": "ts-node --project tsconfig.scripts.json scripts/stage3-calibration-matrix.ts",
+    "audit:stage3b-diagnosis": "ts-node --project tsconfig.scripts.json scripts/stage3b-pitcher-diagnosis.ts",
+    "audit:stage3b-matrix": "ts-node --project tsconfig.scripts.json scripts/stage3b-calibration-matrix.ts"
   },
   "keywords": [
     "api",

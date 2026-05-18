@@ -6,15 +6,23 @@ import type {
   ValuedPlayer,
 } from "../types/brain";
 import type { ScoringFormat } from "../types/core";
+import { playerTokensFromLean } from "../lib/fantasyRosterSlots";
 import { getPlayerId } from "../lib/playerId";
+import { resolvePitcherRoleSlot } from "./stage3bPitcherAllocation";
 import type { BaselineRiskExplainFields } from "../types/baselineRiskExplain";
 import { pickBaselineRiskExplainFromMeta } from "../types/baselineRiskExplain";
 import type { ReplacementSlotsV2Result } from "./replacementSlotsV2";
 import type { AuctionCurveModel } from "./auctionCurveModel";
+import type { Stage3bCalibration } from "./stage3bPitcherCalibration";
 import { valuedPlayerMarketFieldsFromLean } from "../lib/marketAdp/wire";
 
 const STEAL_SLOPE = 1.25;
 const REACH_SLOPE = 0.75;
+
+function isPitcherReplSlot(slot: string): boolean {
+  const u = slot.toUpperCase();
+  return u === "SP" || u === "RP" || u === "P";
+}
 
 function hash32(seed: number, s: string): number {
   let h = seed >>> 0;
@@ -64,6 +72,8 @@ export function buildValuedRows(params: {
   inflationFactor: number;
   minAuctionBid: number;
   auctionCurveModel?: AuctionCurveModel;
+  stage3bCalibration?: Stage3bCalibration;
+  positionOverrides?: CalculateInflationOptions["positionOverrides"];
   baselineOrderRank: Map<string, number>;
   catalogOrderRank: Map<string, number>;
   undraftedCount: number;
@@ -76,6 +86,8 @@ export function buildValuedRows(params: {
     inflationFactor,
     minAuctionBid,
     auctionCurveModel = "linear_v1",
+    stage3bCalibration,
+    positionOverrides,
     baselineOrderRank,
     catalogOrderRank,
     undraftedCount,
@@ -110,8 +122,31 @@ export function buildValuedRows(params: {
         const inDraftable =
           draftableIds.length === 0 || draftableIds.includes(pid);
         const allocSb = inDraftable ? sb : 0;
+        let factor = inflationFactor;
+        const lin = stage3bCalibration?.pitcherLinear;
+        if (lin?.enabled && inDraftable && allocSb > 0) {
+          const role = resolvePitcherRoleSlot({
+            assignedSlot: v2Result.playerIdToAssignedSlot?.get(pid),
+            tokens: playerTokensFromLean(p, positionOverrides),
+            position: p.position,
+          });
+          const minSb = lin.minSurplusBasis ?? 5;
+          const maxSb = lin.maxSurplusBasis ?? 22;
+          if (
+            allocSb >= minSb &&
+            allocSb <= maxSb &&
+            role &&
+            isPitcherReplSlot(role)
+          ) {
+            const mult =
+              role === "RP"
+                ? (lin.rpInflationMult ?? 1.06)
+                : (lin.spInflationMult ?? 1.2);
+            factor = inflationFactor * mult;
+          }
+        }
         adjustedValue = parseFloat(
-          (minAuctionBid + inflationFactor * allocSb).toFixed(2)
+          (minAuctionBid + factor * allocSb).toFixed(2)
         );
       }
     } else if (inflationModelEffective === "surplus_slots_v1") {

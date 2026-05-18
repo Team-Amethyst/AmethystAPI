@@ -13,6 +13,7 @@ import {
   scoringCategorySupportWarnings,
 } from "../lib/scoringCategorySupport";
 import { calculateInflation } from "./inflationEngine";
+import { DEFAULT_STAGE3B_CALIBRATION } from "./stage3bPitcherCalibration";
 import { applyInjuryOverridesToPool } from "../lib/valuationInjuryOverrides";
 import { scoringAwareBaselinePlayers } from "./baselineValueEngine";
 import { filterValuationUniverse } from "../lib/valuationPlayerPool";
@@ -247,6 +248,8 @@ export function executeValuationWorkflow(
         recommendedBidSoftCapRatio: input.recommended_bid_soft_cap_ratio,
         positionOverrides,
         hybridSurplusCalibration: input.hybrid_surplus_calibration,
+        stage3bCalibration:
+          input.stage3b_calibration ?? DEFAULT_STAGE3B_CALIBRATION,
         inflationPhaseTimings: diag?.timings_ms,
       }
     );

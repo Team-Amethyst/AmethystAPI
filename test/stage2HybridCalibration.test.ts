@@ -118,7 +118,7 @@ describe.skipIf(!mongoReady)("Stage 2 pre_draft integration", () => {
     );
   }, 60_000);
 
-  it("tracked elites: Ramírez/Vlad lifted, Spencer Jones no row, tail not in pool", async () => {
+  it("tracked elites: Stage 3 top band, Witt/Ramírez gains, Spencer Jones no row", async () => {
     await mongoose.connect(process.env.MONGO_URI!, scriptMongoConnectOptions());
     let pool;
     try {
@@ -149,6 +149,7 @@ describe.skipIf(!mongoReady)("Stage 2 pre_draft integration", () => {
 
     const judge = byName("Aaron Judge");
     const julio = byName("Julio Rodríguez");
+    const skubal = byName("Tarik Skubal");
     const ramirez = byName("José Ramírez");
     const vlad = byName("Vladimir Guerrero Jr.");
     const witt = byName("Bobby Witt Jr.");
@@ -157,13 +158,36 @@ describe.skipIf(!mongoReady)("Stage 2 pre_draft integration", () => {
     const doval = byName("Camilo Doval");
     const spencer = byName("Spencer Jones");
 
-    expect(judge?.auction_value ?? 0).toBeGreaterThanOrEqual(34);
-    expect(julio?.auction_value ?? 0).toBeGreaterThanOrEqual(34);
+    const draftableVals = res.valuations
+      .filter((v) => draftable.has(v.player_id))
+      .map((v) => v.auction_value)
+      .sort((a, b) => b - a);
+    const top1 = draftableVals[0] ?? 0;
+    const top10Spread =
+      draftableVals.length >= 10
+        ? top1 - (draftableVals[9] ?? top1)
+        : 0;
+    const plateau48 = draftableVals.filter(
+      (v) => v >= 47.5 && v <= 48.5,
+    ).length;
+
+    expect(top1).toBeGreaterThanOrEqual(30);
+    expect(top1).toBeLessThanOrEqual(36);
+    expect(top10Spread).toBeGreaterThanOrEqual(1.2);
+    expect(plateau48).toBe(0);
+
+    expect(judge?.auction_value ?? 0).toBeGreaterThanOrEqual(27);
+    expect(julio?.auction_value ?? 0).toBeGreaterThanOrEqual(27);
+    expect(skubal?.auction_value ?? 0).toBeGreaterThanOrEqual(27);
+    expect((judge?.auction_rank ?? 99)).toBeLessThanOrEqual(5);
+    expect((julio?.auction_rank ?? 99)).toBeLessThanOrEqual(5);
+    expect((skubal?.auction_rank ?? 99)).toBeLessThanOrEqual(3);
+
     expect(ramirez?.valuation_explain?.surplus_basis ?? 0).toBeGreaterThan(10);
-    expect(ramirez?.auction_value ?? 0).toBeGreaterThan(4);
+    expect(ramirez?.auction_value ?? 0).toBeGreaterThan(20);
     expect(vlad?.valuation_explain?.surplus_basis ?? 0).toBeGreaterThan(5);
     expect(witt?.valuation_explain?.surplus_basis ?? 0).toBeGreaterThan(10);
-    expect(witt?.auction_value ?? 0).toBeGreaterThan(15);
+    expect(witt?.auction_value ?? 0).toBeGreaterThan(25);
     expect(ramirez?.valuation_explain?.replacement_key_used).toBe("3B");
     expect(vlad?.valuation_explain?.replacement_key_used).toBe("1B");
 

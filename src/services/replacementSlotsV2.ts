@@ -368,6 +368,7 @@ export function computeReplacementSlotsV2(
     if (b > 0) undraftedBaselinesForFloor.push(b);
   }
 
+  const hybridCal = options?.hybridSurplusCalibration;
   const hybridApply =
     slotOnlyMass > 0
       ? applyHybridDraftableSurplusBasis({
@@ -379,13 +380,14 @@ export function computeReplacementSlotsV2(
           assignedSlotById: playerIdToAssignedSlot,
           categoryProjectionById: options?.categoryProjectionById,
           targetTotalMass: slotOnlyMass,
-          calibration: options?.hybridSurplusCalibration,
+          calibration: hybridCal,
+          playerFilter: "hitter",
         })
       : null;
-  const playerIdToSurplusBasis = new Map(
+  let playerIdToSurplusBasis = new Map(
     hybridApply?.surplusBasisById ?? slotOnlySurplusBasis
   );
-  const playerIdToHybridLift = hybridApply?.hybridLiftByPlayerId;
+  const playerIdToHybridLift = hybridApply?.hybridLiftByPlayerId ?? new Map();
 
   let total_surplus_mass = 0;
   for (const id of undraftedAssignedIds) {

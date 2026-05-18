@@ -14,6 +14,7 @@ import type { BaselineRiskExplainFields } from "./baselineRiskExplain";
 import type { DurabilityExpectation, DurabilityExpectationReason } from "./durabilityExpectation";
 import type { MarketPressureSnapshot } from "./marketPressure";
 import type { HybridSurplusCalibration } from "../services/replacementSlotsV2Config";
+import type { Stage3bCalibration } from "../services/stage3bPitcherCalibration";
 export type PositionOverrideEntry = { player_id: string; positions: string[] };
 
 /** Per-player injury severity from Draftroom (roster / IL status); overrides Mongo `injurySeverity` for baseline injury pass only. */
@@ -123,6 +124,8 @@ export interface NormalizedValuationInput {
   recommended_bid_soft_cap_ratio?: number;
   /** Audit / calibration only: override hybrid surplus lift (production omits). */
   hybrid_surplus_calibration?: HybridSurplusCalibration;
+  /** Audit / calibration: Stage 3b pitcher allocation + mid-draft spread. */
+  stage3b_calibration?: Stage3bCalibration;
 }
 
 export interface CalculateInflationOptions {
@@ -156,6 +159,7 @@ export interface CalculateInflationOptions {
   inflationPhaseTimings?: Record<string, number>;
   /** Audit / calibration: override hybrid surplus lift (production uses defaults). */
   hybridSurplusCalibration?: HybridSurplusCalibration;
+  stage3bCalibration?: Stage3bCalibration;
   /** Audit: projection_component by player_id for position-aware hybrid gate. */
   categoryProjectionById?: Map<string, number>;
 }

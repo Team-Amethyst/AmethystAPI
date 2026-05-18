@@ -1,3 +1,5 @@
+import type { Stage3bPitcherAuctionConfig } from "./stage3bPitcherCalibration";
+
 /**
  * Auction dollar curve on top of replacement_slots_v2 surplus_basis.
  */
@@ -61,6 +63,8 @@ export function buildTieredSurplusDollars(params: {
   tierConfig?: TierSurplusConfig;
   /** Saturated-slot hybrid lift → at least starter-tier auction weight. */
   hybridLiftById?: Map<string, number>;
+  assignedSlotById?: Map<string, string>;
+  pitcherAuction?: Stage3bPitcherAuctionConfig;
 }): {
   dollarsByPlayerId: Map<string, number>;
   tierByPlayerId: Map<string, TieredSurplusTier>;
@@ -114,6 +118,21 @@ export function buildTieredSurplusDollars(params: {
         w = sb * cfg.starterWeight * 1.15;
       } else if (tier === "starter" && hybridLift >= 6) {
         w = sb * cfg.starWeight * 0.72;
+      }
+    }
+    const pa = params.pitcherAuction;
+    if (pa?.enabled && sb >= (pa.minSurplusBasis ?? 6)) {
+      const slot = (params.assignedSlotById?.get(id) ?? "").toUpperCase();
+      const isSp = slot === "SP" || slot === "P";
+      const isRp = slot === "RP";
+      if (isSp || isRp) {
+        const promoteMin = pa.promoteStarterMinSurplus ?? 10;
+        if (tier === "depth" && isSp && sb >= promoteMin) {
+          tier = "starter";
+          w = sb * cfg.starterWeight;
+        }
+        if (isSp) w *= pa.spWeightMult ?? 1;
+        else if (isRp) w *= pa.rpWeightMult ?? 1;
       }
     }
     tierByPlayerId.set(id, tier);
