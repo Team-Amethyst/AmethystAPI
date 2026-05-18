@@ -18,10 +18,7 @@ import { executeValuationWorkflow } from "../src/services/valuationWorkflow";
 import {
   applyHybridDraftableSurplusBasis,
 } from "../src/services/replacementSlotsV2Helpers";
-import {
-  DEFAULT_HYBRID_SURPLUS_CALIBRATION,
-  STAGE3_HYBRID_SURPLUS_CALIBRATION,
-} from "../src/services/replacementSlotsV2Config";
+import { DEFAULT_HYBRID_SURPLUS_CALIBRATION } from "../src/services/replacementSlotsV2Config";
 
 const mongoReady =
   Boolean(process.env.MONGO_URI) && draftCheckpointFixturesAvailable();
