@@ -100,7 +100,7 @@ describe("resolveAuctionCurveForLeague", () => {
     expect(res.reason).toBe("fresh_board_linear");
   });
 
-  it("adaptive uses linear on large zero-keeper fresh boards without demo calibration", () => {
+  it("adaptive tiers large zero-keeper fresh boards when linear preview is over-compressed", () => {
     const ids = Array.from({ length: 252 }, (_, i) => `p${i}`);
     const sb = new Map(ids.map((id, i) => [id, Math.max(0.5, 8 - i * 0.02)]));
     const preview = previewLinearSurplusAuction(ids, sb, 0.27, 1);
@@ -109,8 +109,9 @@ describe("resolveAuctionCurveForLeague", () => {
       state: fresh12TeamState(),
       linearPreview: preview,
     });
-    expect(res.internalMode).toBe("linear");
-    expect(res.reason).toBe("fresh_board_linear");
+    expect(res.internalMode).toBe("tiered_soft");
+    expect(res.reason).toBe("fresh_empty_opening_tiered");
+    expect(res.curveInputs.fresh_linear_over_compressed).toBe(true);
   });
 
   it("adaptive tiers keeper-compressed boards", () => {

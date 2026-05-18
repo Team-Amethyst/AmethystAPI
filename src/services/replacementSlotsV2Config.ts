@@ -7,6 +7,13 @@ export const REPLACEMENT_SLOTS_V2_MIN_BID = 1;
  */
 export const STAGE3B_OPENING_DRAFTABLE_DEMAND_SLOTS = 113;
 
+/**
+ * Per-team open-slot demand cap for real zero-keeper opening boards (no fake rosters).
+ * Bench/relief depth is trimmed so anchor scarcity is not diluted across full roster capacity.
+ */
+/** ~20 slots/team keeps draftable pool near full league capacity while trimming bench dilution. */
+export const TRUE_EMPTY_STRATEGIC_OPENING_SLOTS_PER_TEAM = 20;
+
 /** Slot-tail percentiles for replacement $ (see replacement v2 design notes). */
 export const SLOT_REPLACEMENT_PERCENTILE: Record<string, number> = {
   C: 0.28,

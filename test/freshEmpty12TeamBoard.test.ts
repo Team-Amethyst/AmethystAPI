@@ -45,22 +45,22 @@ const baseInput = {
 };
 
 describe.skipIf(!mongoReady)("fresh empty 12-team board", () => {
-  it("without demo flag uses true empty-league linear economics (~$17 tops)", async () => {
+  it("without demo flag uses real-empty opening tiered economics (~$28+ tops)", async () => {
     const poolInj = await loadPool();
     const out = executeValuationWorkflow(poolInj, baseInput);
     expect(out.ok).toBe(true);
     if (!out.ok) return;
 
     const res = out.response;
-    expect(res.auction_curve_reason).toBe("fresh_board_linear");
-    expect((res.draftable_player_ids ?? []).length).toBeGreaterThan(200);
+    expect(res.auction_curve_reason).toBe("fresh_empty_opening_tiered");
+    expect((res.draftable_player_ids ?? []).length).toBeGreaterThan(150);
 
     const draftable = new Set(res.draftable_player_ids ?? []);
     const top = res.valuations
       .filter((v) => draftable.has(v.player_id))
       .sort((a, b) => b.auction_value - a.auction_value)[0]!;
-    expect(top.auction_value).toBeGreaterThan(14);
-    expect(top.auction_value).toBeLessThan(22);
+    expect(top.auction_value).toBeGreaterThanOrEqual(28);
+    expect(top.auction_value).toBeLessThanOrEqual(36);
   }, 90_000);
 
   it("with stage3b_demo_v1 trims open slot demand to 113", async () => {

@@ -175,17 +175,27 @@ describe("Draftroom contract: position_overrides isolation", () => {
     const ov = positionOverridesFromRequest([...DRAFTROOM_OVERRIDE_FRAGMENT]);
     const baseYes = scoringAwareBaselinePlayers(pool, "5x5", cats5x5, slots, ov);
 
-    const infNo = calculateInflation(baseNo, [], 260, 12, slots, "Mixed", {
+    const onePick: DraftedPlayer[] = [
+      {
+        player_id: "1000",
+        name: "Filler Pick",
+        team_id: "team_1",
+        paid: 12,
+        positions: ["OF"],
+        is_keeper: false,
+      },
+    ];
+    const infNo = calculateInflation(baseNo, onePick, 260, 12, slots, "Mixed", {
       ...det,
       inflationModel: "replacement_slots_v2",
-      rosteredPlayersForSlots: [],
+      rosteredPlayersForSlots: onePick,
       inflationCap: 100,
       inflationFloor: 0.05,
     });
-    const infYes = calculateInflation(baseYes, [], 260, 12, slots, "Mixed", {
+    const infYes = calculateInflation(baseYes, onePick, 260, 12, slots, "Mixed", {
       ...det,
       inflationModel: "replacement_slots_v2",
-      rosteredPlayersForSlots: [],
+      rosteredPlayersForSlots: onePick,
       inflationCap: 100,
       inflationFloor: 0.05,
       positionOverrides: ov,

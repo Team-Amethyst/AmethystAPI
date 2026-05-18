@@ -53,13 +53,12 @@ const VIRTUAL_OPENING_DEMAND_CONSUME_ORDER = [
   "C",
 ] as const;
 
-/**
- * Trim excess open slot demand to {@link STAGE3B_OPENING_DRAFTABLE_DEMAND_SLOTS}.
- * Only when BFF sends `opening_board_calibration: stage3b_demo_v1` (Original demo preset).
- */
-function applyStage3bVirtualOpeningDemand(demand: Map<string, number>): void {
+function trimVirtualOpeningDemandToTarget(
+  demand: Map<string, number>,
+  targetSlots: number,
+): void {
   const current = sumDemand(demand);
-  let toConsume = current - STAGE3B_OPENING_DRAFTABLE_DEMAND_SLOTS;
+  let toConsume = current - targetSlots;
   if (toConsume <= 0) return;
 
   const consumeSlot = (slot: string) => {
@@ -76,6 +75,14 @@ function applyStage3bVirtualOpeningDemand(demand: Map<string, number>): void {
     consumeSlot(slot);
     if (toConsume <= 0) break;
   }
+}
+
+/**
+ * Trim excess open slot demand to {@link STAGE3B_OPENING_DRAFTABLE_DEMAND_SLOTS}.
+ * Only when BFF sends `opening_board_calibration: stage3b_demo_v1` (Original demo preset).
+ */
+function applyStage3bVirtualOpeningDemand(demand: Map<string, number>): void {
+  trimVirtualOpeningDemandToTarget(demand, STAGE3B_OPENING_DRAFTABLE_DEMAND_SLOTS);
 }
 
 /**

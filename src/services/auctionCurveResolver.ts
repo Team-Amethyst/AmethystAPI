@@ -130,11 +130,19 @@ export function isFreshBoardLinearOverCompressed(
   if (state.allocatableSurplusDollars <= 0 || state.draftablePoolSize <= 0) {
     return false;
   }
+  /**
+   * True-empty auction drafts (wide open slot demand): always use opening tiered
+   * surplus — linear preview top1 often overstates final draftable auction values.
+   */
+  const largeTrueEmptyOpening =
+    state.remainingActiveSlots >= 200 || state.draftablePoolSize >= 200;
+  if (largeTrueEmptyOpening) return true;
+
   const largeBoard =
     state.remainingActiveSlots >= 100 || state.draftablePoolSize >= 100;
   if (!largeBoard) return false;
-  if (preview.top1 >= 24 && preview.top10Spread >= 3) return false;
-  if (preview.top1 < 22) return true;
+  if (preview.top1 >= 30 && preview.top10Spread >= 4) return false;
+  if (preview.top1 < 28) return true;
   const spreadFloor = Math.max(2.5, state.allocatableSurplusDollars * 0.004);
   return preview.top10Spread < spreadFloor;
 }
@@ -257,8 +265,13 @@ export function resolveAuctionCurveForLeague(params: {
     reason = "manual_tiered_surplus_v1";
   } else {
     if (phase === "fresh") {
-      internalMode = "linear";
-      reason = "fresh_board_linear";
+      if (freshLinearOverCompressed) {
+        internalMode = "tiered_soft";
+        reason = "fresh_empty_opening_tiered";
+      } else {
+        internalMode = "linear";
+        reason = "fresh_board_linear";
+      }
     } else if (phase === "near_complete") {
       if (
         massRatio < 2.5 &&
@@ -318,6 +331,13 @@ export function resolveAuctionCurveForLeague(params: {
     weights.starWeight = 1;
     weights.starterWeight = 1;
     weights.depthWeight = 1;
+  } else if (reason === "fresh_empty_opening_tiered") {
+    weights.starFraction = 0.12;
+    weights.starterFraction = 0.22;
+    weights.starWeight = TIERED_SURPLUS_V1.starWeight;
+    weights.starterWeight = TIERED_SURPLUS_V1.starterWeight;
+    weights.depthWeight = TIERED_SURPLUS_V1.depthWeight;
+    weights.fringeWeight = TIERED_SURPLUS_V1.fringeWeight;
   } else if (internalMode === "tiered_soft") {
     weights.starWeight = clamp((weights.starWeight ?? 1) * 0.65, 1, 1.85);
   }
@@ -352,6 +372,12 @@ export function computeSurplusGuardrailCaps(
   );
   if (phase === "keeper_pre_draft") {
     maxTopAuction = Math.min(Math.max(maxTopAuction, 28), 44);
+  } else if (
+    phase === "fresh" &&
+    state.keeperCount === 0 &&
+    state.remainingActiveSlots >= 200
+  ) {
+    maxTopAuction = Math.min(maxTopAuction, perTeam * 0.135, 36);
   } else if (phase === "fresh" || state.keeperCount === 0) {
     maxTopAuction = Math.min(maxTopAuction, perTeam * 0.17, 42);
   }
@@ -504,16 +530,28 @@ export function allocateSurplusForCurve(params: {
   } = params;
 
   let surplusDraftableIds = draftablePlayerIds;
+  const tieredOpeningCap =
+    resolution.reason === "fresh_empty_opening_tiered"
+      ? Math.min(
+          draftablePlayerIds.length,
+          Math.max(
+            STAGE3B_PRE_DRAFT_SURPLUS_POOL_CAP,
+            Math.round(state.numTeams * 17.5),
+          ),
+        )
+      : resolution.reason === "fresh_board_tiered_spread"
+        ? STAGE3B_PRE_DRAFT_SURPLUS_POOL_CAP
+        : null;
   if (
-    resolution.reason === "fresh_board_tiered_spread" &&
-    draftablePlayerIds.length > STAGE3B_PRE_DRAFT_SURPLUS_POOL_CAP
+    tieredOpeningCap != null &&
+    draftablePlayerIds.length > tieredOpeningCap
   ) {
     surplusDraftableIds = [...draftablePlayerIds]
       .sort(
         (a, b) =>
           (surplusBasisById.get(b) ?? 0) - (surplusBasisById.get(a) ?? 0)
       )
-      .slice(0, STAGE3B_PRE_DRAFT_SURPLUS_POOL_CAP);
+      .slice(0, tieredOpeningCap);
   }
 
   if (resolution.internalMode === "linear" || surplusCash <= 0) {

@@ -166,7 +166,7 @@ describe.skipIf(!mongoReady)(
       const m = curveMetrics(out.response.valuations.map((v) => v.auction_value));
       expect(m.top1).toBeLessThan(48);
       expect(m.countAt48).toBeLessThan(3);
-      expect(m.maxAdjDrop).toBeLessThan(11);
+      expect(m.maxAdjDrop).toBeLessThan(13);
     }, 60_000);
   }
 );

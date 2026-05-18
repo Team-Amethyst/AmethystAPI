@@ -88,11 +88,11 @@ describe("Draftroom synthetic calibration (golden ranges)", () => {
     expect(m.draftablePoolSize).toBeGreaterThanOrEqual(240);
     expect(m.draftablePoolSize).toBeLessThanOrEqual(252);
 
-    // Synthetic pool uses fresh-board linear v2: surplus only on greedy draftable winners.
-    expect(m.topAuction).toBeGreaterThanOrEqual(14);
-    expect(m.topAuction).toBeLessThanOrEqual(45);
+    // Synthetic pool uses real-empty opening tiered surplus on greedy draftable winners.
+    expect(m.topAuction).toBeGreaterThanOrEqual(28);
+    expect(m.topAuction).toBeLessThanOrEqual(36);
 
-    expect(m.ge10).toBeGreaterThanOrEqual(100);
+    expect(m.ge10).toBeGreaterThanOrEqual(85);
 
     expect(m.hitterShare).toBeGreaterThanOrEqual(0.22);
     expect(m.hitterShare).toBeLessThanOrEqual(0.82);
