@@ -250,6 +250,7 @@ export function executeValuationWorkflow(
         hybridSurplusCalibration: input.hybrid_surplus_calibration,
         stage3bCalibration:
           input.stage3b_calibration ?? DEFAULT_STAGE3B_CALIBRATION,
+        openingBoardCalibration: input.opening_board_calibration,
         inflationPhaseTimings: diag?.timings_ms,
       }
     );

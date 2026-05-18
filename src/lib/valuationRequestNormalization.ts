@@ -92,6 +92,9 @@ export function buildNormalizedFromNested(
     ...(rest.auction_curve_model !== undefined
       ? { auction_curve_model: rest.auction_curve_model }
       : {}),
+    ...(rest.opening_board_calibration !== undefined
+      ? { opening_board_calibration: rest.opening_board_calibration }
+      : {}),
     eligible_player_ids: rest.eligible_player_ids,
     excluded_player_ids: rest.excluded_player_ids,
     explain_valuation_rows: rest.explain_valuation_rows,
@@ -136,6 +139,9 @@ export function buildNormalizedFromFlat(
     inflation_model: parsed.inflation_model ?? DEFAULT_INFLATION_MODEL,
     ...(parsed.auction_curve_model !== undefined
       ? { auction_curve_model: parsed.auction_curve_model }
+      : {}),
+    ...(parsed.opening_board_calibration !== undefined
+      ? { opening_board_calibration: parsed.opening_board_calibration }
       : {}),
     eligible_player_ids: parsed.eligible_player_ids,
     excluded_player_ids: parsed.excluded_player_ids,

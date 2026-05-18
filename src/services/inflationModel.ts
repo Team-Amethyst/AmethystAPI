@@ -80,6 +80,7 @@ export function selectInflationModel(params: {
         positionOverrides: options?.positionOverrides,
         hybridSurplusCalibration: options?.hybridSurplusCalibration,
         categoryProjectionById: options?.categoryProjectionById,
+        openingBoardCalibration: options?.openingBoardCalibration,
       }
     );
     if (inflationPhaseTimings) {

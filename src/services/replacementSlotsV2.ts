@@ -21,6 +21,7 @@ import {
   REPLACEMENT_SLOTS_V2_MIN_BID,
   SLOT_REPLACEMENT_DEFAULT_PERCENTILE,
   SLOT_REPLACEMENT_PERCENTILE,
+  STAGE3B_OPENING_DRAFTABLE_DEMAND_SLOTS,
 } from "./replacementSlotsV2Config";
 import type { ReplacementSlotsV2Result } from "./replacementSlotsV2Types";
 import {
@@ -36,6 +37,46 @@ import {
 } from "./replacementSlotsV2Helpers";
 
 export type { ReplacementSlotsV2Result } from "./replacementSlotsV2Types";
+
+const VIRTUAL_OPENING_DEMAND_CONSUME_ORDER = [
+  "BN",
+  "RP",
+  "OF",
+  "SP",
+  "UTIL",
+  "CI",
+  "MI",
+  "SS",
+  "3B",
+  "2B",
+  "1B",
+  "C",
+] as const;
+
+/**
+ * Trim excess open slot demand to {@link STAGE3B_OPENING_DRAFTABLE_DEMAND_SLOTS}.
+ * Only when BFF sends `opening_board_calibration: stage3b_demo_v1` (Original demo preset).
+ */
+function applyStage3bVirtualOpeningDemand(demand: Map<string, number>): void {
+  const current = sumDemand(demand);
+  let toConsume = current - STAGE3B_OPENING_DRAFTABLE_DEMAND_SLOTS;
+  if (toConsume <= 0) return;
+
+  const consumeSlot = (slot: string) => {
+    while (toConsume > 0 && (demand.get(slot) ?? 0) > 0) {
+      demand.set(slot, (demand.get(slot) ?? 0) - 1);
+      toConsume--;
+    }
+  };
+
+  for (const slot of VIRTUAL_OPENING_DEMAND_CONSUME_ORDER) {
+    consumeSlot(slot);
+  }
+  for (const slot of demand.keys()) {
+    consumeSlot(slot);
+    if (toConsume <= 0) break;
+  }
+}
 
 /**
  * Position/slot-aware surplus inflation (Draftroom preferred). No global_v1 fallback.
@@ -55,6 +96,7 @@ export function computeReplacementSlotsV2(
     positionOverrides?: PositionOverrideMap;
     hybridSurplusCalibration?: HybridSurplusCalibration;
     categoryProjectionById?: Map<string, number>;
+    openingBoardCalibration?: "stage3b_demo_v1";
   }
 ): ReplacementSlotsV2Result {
   const deterministic = Boolean(options?.deterministic);
@@ -83,6 +125,10 @@ export function computeReplacementSlotsV2(
     rosterSlotKeys,
     { deterministic, seed }
   );
+
+  if (options?.openingBoardCalibration === "stage3b_demo_v1") {
+    applyStage3bVirtualOpeningDemand(demand);
+  }
 
   const remaining_slots = sumDemand(demand);
 

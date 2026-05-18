@@ -3,6 +3,7 @@ import {
   applySurplusGuardrails,
   classifyLeagueBoardPhase,
   computeSurplusGuardrailCaps,
+  isFreshBoardLinearOverCompressed,
   isLinearCurveOverCompressedState,
   previewLinearSurplusAuction,
   resolveAuctionCurveForLeague,
@@ -53,6 +54,29 @@ function freshState() {
   };
 }
 
+/** Draftroom default: 12 teams × 21 active slots, zero keepers/picks. */
+function fresh12TeamState() {
+  return {
+    activeSlotCapacity: 252,
+    activeRosteredCount: 0,
+    remainingActiveSlots: 252,
+    openSlotRatio: 1,
+    keeperCount: 0,
+    draftedAuctionCount: 0,
+    minTaxiPoolCount: 0,
+    numTeams: 12,
+    totalBudgetPerTeam: 260,
+    leagueAuctionDollars: 3120,
+    remainingAuctionDollars: 3120,
+    minimumReserveDollars: 252,
+    allocatableSurplusDollars: 2868,
+    totalSurplusMass: 10670,
+    inflationRaw: 0.27,
+    inflationFactor: 0.27,
+    draftablePoolSize: 252,
+  };
+}
+
 describe("classifyLeagueBoardPhase", () => {
   it("classifies keeper pre-draft and fresh boards", () => {
     expect(classifyLeagueBoardPhase(keeperPreDraftState())).toBe(
@@ -63,16 +87,27 @@ describe("classifyLeagueBoardPhase", () => {
 });
 
 describe("resolveAuctionCurveForLeague", () => {
-  it("adaptive uses linear on fresh boards", () => {
-    const sb = new Map([
-      ["a", 9.4],
-      ["b", 8.8],
-      ["c", 7.8],
-    ]);
-    const preview = previewLinearSurplusAuction(["a", "b", "c"], sb, 3, 1);
+  it("adaptive uses linear on small fresh boards with healthy spread", () => {
+    const ids = Array.from({ length: 40 }, (_, i) => `p${i}`);
+    const sb = new Map(ids.map((id, i) => [id, 40 - i * 0.5]));
+    const preview = previewLinearSurplusAuction(ids, sb, 3, 1);
+    expect(preview.top10Spread).toBeGreaterThan(10);
     const res = resolveAuctionCurveForLeague({
       requestedModel: "adaptive_surplus_v1",
       state: freshState(),
+      linearPreview: preview,
+    });
+    expect(res.internalMode).toBe("linear");
+    expect(res.reason).toBe("fresh_board_linear");
+  });
+
+  it("adaptive uses linear on large zero-keeper fresh boards without demo calibration", () => {
+    const ids = Array.from({ length: 252 }, (_, i) => `p${i}`);
+    const sb = new Map(ids.map((id, i) => [id, Math.max(0.5, 8 - i * 0.02)]));
+    const preview = previewLinearSurplusAuction(ids, sb, 0.27, 1);
+    const res = resolveAuctionCurveForLeague({
+      requestedModel: "adaptive_surplus_v1",
+      state: fresh12TeamState(),
       linearPreview: preview,
     });
     expect(res.internalMode).toBe("linear");

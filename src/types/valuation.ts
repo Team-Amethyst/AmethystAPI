@@ -126,6 +126,11 @@ export interface NormalizedValuationInput {
   hybrid_surplus_calibration?: HybridSurplusCalibration;
   /** Audit / calibration: Stage 3b pitcher allocation + mid-draft spread. */
   stage3b_calibration?: Stage3bCalibration;
+  /**
+   * Explicit opening-board calibration from Draftroom BFF (demo preset only).
+   * `stage3b_demo_v1` — never infer from hidden roster injection on real leagues.
+   */
+  opening_board_calibration?: "stage3b_demo_v1";
 }
 
 export interface CalculateInflationOptions {
@@ -159,6 +164,8 @@ export interface CalculateInflationOptions {
   inflationPhaseTimings?: Record<string, number>;
   /** Audit / calibration: override hybrid surplus lift (production uses defaults). */
   hybridSurplusCalibration?: HybridSurplusCalibration;
+  /** When set, apply Stage 3b demo opening-board slot/surplus calibration (see BFF). */
+  openingBoardCalibration?: "stage3b_demo_v1";
   stage3bCalibration?: Stage3bCalibration;
   /** Audit: projection_component by player_id for position-aware hybrid gate. */
   categoryProjectionById?: Map<string, number>;

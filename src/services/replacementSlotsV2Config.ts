@@ -1,5 +1,12 @@
 export const REPLACEMENT_SLOTS_V2_MIN_BID = 1;
 
+/**
+ * Stage 3b accepted opening-board slot demand (9-team keeper pre-draft).
+ * Zero-keeper leagues use virtual demand consumption so empty boards match
+ * the same inflation/replacement economics without seeding keepers.
+ */
+export const STAGE3B_OPENING_DRAFTABLE_DEMAND_SLOTS = 113;
+
 /** Slot-tail percentiles for replacement $ (see replacement v2 design notes). */
 export const SLOT_REPLACEMENT_PERCENTILE: Record<string, number> = {
   C: 0.28,

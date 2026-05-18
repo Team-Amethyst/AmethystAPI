@@ -12,6 +12,7 @@ import {
   buildPitcherAuctionSlotById,
   buildBucketTieredSurplusDollars,
 } from "./stage3bPitcherAllocation";
+import { STAGE3B_OPENING_DRAFTABLE_DEMAND_SLOTS } from "./replacementSlotsV2Config";
 
 export type LeagueBoardPhase =
   | "fresh"
@@ -21,6 +22,10 @@ export type LeagueBoardPhase =
   | "near_complete";
 
 export type SurplusAllocationMode = "linear" | "tiered_soft" | "tiered_keeper";
+
+/** @deprecated use STAGE3B_OPENING_DRAFTABLE_DEMAND_SLOTS */
+export const STAGE3B_PRE_DRAFT_SURPLUS_POOL_CAP =
+  STAGE3B_OPENING_DRAFTABLE_DEMAND_SLOTS;
 
 export interface AuctionCurveLeagueState {
   activeSlotCapacity: number;
@@ -113,6 +118,27 @@ export function previewLinearSurplusAuction(
   };
 }
 
+/**
+ * Zero-keeper boards with many open slots: plain linear surplus spread collapses
+ * the star tier (e.g. 12-team empty draft tops ~$17). Use tiered allocation instead.
+ */
+export function isFreshBoardLinearOverCompressed(
+  state: AuctionCurveLeagueState & { draftablePoolSize: number },
+  preview: LinearSpreadPreview
+): boolean {
+  if (state.keeperCount > 0 || state.draftedAuctionCount > 0) return false;
+  if (state.allocatableSurplusDollars <= 0 || state.draftablePoolSize <= 0) {
+    return false;
+  }
+  const largeBoard =
+    state.remainingActiveSlots >= 100 || state.draftablePoolSize >= 100;
+  if (!largeBoard) return false;
+  if (preview.top1 >= 24 && preview.top10Spread >= 3) return false;
+  if (preview.top1 < 22) return true;
+  const spreadFloor = Math.max(2.5, state.allocatableSurplusDollars * 0.004);
+  return preview.top10Spread < spreadFloor;
+}
+
 export function isLinearCurveOverCompressedState(
   state: AuctionCurveLeagueState & { draftablePoolSize: number },
   preview: LinearSpreadPreview
@@ -194,6 +220,11 @@ export function resolveAuctionCurveForLeague(params: {
     phase !== "fresh" &&
     phase !== "near_complete";
 
+  const freshLinearOverCompressed = isFreshBoardLinearOverCompressed(
+    state,
+    linearPreview
+  );
+
   const curveInputs: Record<string, number | string | boolean> = {
     phase,
     active_slot_capacity: state.activeSlotCapacity,
@@ -212,6 +243,7 @@ export function resolveAuctionCurveForLeague(params: {
     linear_top1: parseFloat(linearPreview.top1.toFixed(2)),
     linear_over_compressed: compressed,
     thin_true_surplus_mass: thinTrueSurplusMass,
+    fresh_linear_over_compressed: freshLinearOverCompressed,
   };
 
   let internalMode: SurplusAllocationMode = "linear";
@@ -318,11 +350,10 @@ export function computeSurplusGuardrailCaps(
     perTeam * 0.48,
     minBid + state.allocatableSurplusDollars * 0.38
   );
-  if (phase === "fresh" || state.keeperCount === 0) {
-    maxTopAuction = Math.min(maxTopAuction, perTeam * 0.17, 42);
-  }
   if (phase === "keeper_pre_draft") {
     maxTopAuction = Math.min(Math.max(maxTopAuction, 28), 44);
+  } else if (phase === "fresh" || state.keeperCount === 0) {
+    maxTopAuction = Math.min(maxTopAuction, perTeam * 0.17, 42);
   }
   const maxTop10Avg = Math.min(
     state.remainingAuctionDollars * 0.12,
@@ -472,6 +503,19 @@ export function allocateSurplusForCurve(params: {
     state,
   } = params;
 
+  let surplusDraftableIds = draftablePlayerIds;
+  if (
+    resolution.reason === "fresh_board_tiered_spread" &&
+    draftablePlayerIds.length > STAGE3B_PRE_DRAFT_SURPLUS_POOL_CAP
+  ) {
+    surplusDraftableIds = [...draftablePlayerIds]
+      .sort(
+        (a, b) =>
+          (surplusBasisById.get(b) ?? 0) - (surplusBasisById.get(a) ?? 0)
+      )
+      .slice(0, STAGE3B_PRE_DRAFT_SURPLUS_POOL_CAP);
+  }
+
   if (resolution.internalMode === "linear" || surplusCash <= 0) {
     return {
       dollarsByPlayerId: new Map(),
@@ -483,7 +527,7 @@ export function allocateSurplusForCurve(params: {
   }
 
   const pitcherSlotById = buildPitcherAuctionSlotById({
-    playerIds: draftablePlayerIds,
+    playerIds: surplusDraftableIds,
     assignedSlotById: params.assignedSlotById,
     tokensById: params.tokensById,
     positionById: params.positionById,
@@ -492,7 +536,7 @@ export function allocateSurplusForCurve(params: {
   const tiered = prb?.enabled
     ? buildBucketTieredSurplusDollars({
         surplusCash,
-        draftablePlayerIds,
+        draftablePlayerIds: surplusDraftableIds,
         surplusBasisById,
         fringePlayerIds,
         hitterTierConfig: resolution.weights,
@@ -503,7 +547,7 @@ export function allocateSurplusForCurve(params: {
       })
     : buildTieredSurplusDollars({
         surplusCash,
-        draftablePlayerIds,
+        draftablePlayerIds: surplusDraftableIds,
         surplusBasisById,
         fringePlayerIds,
         tierConfig: resolution.weights,
@@ -515,7 +559,7 @@ export function allocateSurplusForCurve(params: {
   const smoothed = applyTieredSurplusSmoothing({
     tieredDollars: tiered.dollarsByPlayerId,
     surplusCash,
-    draftablePlayerIds,
+    draftablePlayerIds: surplusDraftableIds,
     surplusBasisById,
     internalMode: resolution.internalMode,
     phase: resolution.phase,
@@ -538,7 +582,7 @@ export function allocateSurplusForCurve(params: {
     dollarsByPlayerId: finalDollars,
     tierByPlayerId: tiered.tierByPlayerId,
     surplusCash,
-    draftablePlayerIds,
+    draftablePlayerIds: surplusDraftableIds,
     surplusBasisById,
     assignedSlotById: params.assignedSlotById,
     tokensById: params.tokensById,

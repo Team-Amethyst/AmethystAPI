@@ -89,6 +89,7 @@ export const nestedValuationBodySchema = z.object({
   user_team_id: z.string().min(1).optional(),
   inflation_model: inflationModelSchema.optional(),
   auction_curve_model: auctionCurveModelSchema.optional(),
+  opening_board_calibration: z.literal("stage3b_demo_v1").optional(),
   position_overrides: z.array(positionOverrideEntrySchema).optional(),
   injury_overrides: z.array(injuryOverrideEntrySchema).optional(),
   strict_scoring_categories: z.boolean().optional(),
@@ -130,6 +131,7 @@ export const flatValuationBodySchema = z.object({
   pre_draft_rosters: preDraftRostersInputSchema.optional(),
   inflation_model: inflationModelSchema.optional(),
   auction_curve_model: auctionCurveModelSchema.optional(),
+  opening_board_calibration: z.literal("stage3b_demo_v1").optional(),
   strict_scoring_categories: z.boolean().optional(),
   explain_valuation_rows: z.boolean().optional(),
   recommended_bid_soft_cap_ratio: z
