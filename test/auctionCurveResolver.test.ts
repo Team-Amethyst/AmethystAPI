@@ -3,7 +3,6 @@ import {
   applySurplusGuardrails,
   classifyLeagueBoardPhase,
   computeSurplusGuardrailCaps,
-  isFreshBoardLinearOverCompressed,
   isLinearCurveOverCompressedState,
   previewLinearSurplusAuction,
   resolveAuctionCurveForLeague,
